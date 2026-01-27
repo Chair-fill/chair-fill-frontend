@@ -1,10 +1,15 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { Upload, Loader2, CheckCircle2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Upload, Loader2, CheckCircle2, X } from 'lucide-react';
 import { useContacts } from '../context/ContactsContext';
 
-export default function ContactUpload() {
+interface ContactUploadModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function ContactUploadModal({ isOpen, onClose }: ContactUploadModalProps) {
   const { addContacts } = useContacts();
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -19,15 +24,36 @@ export default function ContactUpload() {
     [key: string]: string | undefined;
   }
 
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   const parseCSV = (text: string): ParsedContact[] => {
     const lines = text.split('\n').filter(line => line.trim());
     if (lines.length === 0) return [];
 
-    // Parse header row
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
     const contacts: ParsedContact[] = [];
 
-    // Find column indices
     const nameIndex = headers.findIndex(h => 
       h.includes('name') || h.includes('full name') || h.includes('contact')
     );
@@ -41,7 +67,6 @@ export default function ContactUpload() {
       h.includes('organization') || h.includes('company') || h.includes('org')
     );
 
-    // Parse data rows
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(',').map(v => v.trim());
       const contact: ParsedContact = {
@@ -51,14 +76,12 @@ export default function ContactUpload() {
         organization: orgIndex >= 0 ? values[orgIndex] || '' : '',
       };
 
-      // Add any additional fields
       headers.forEach((header, index) => {
         if (!['name', 'email', 'phone', 'organization', 'company', 'org'].some(h => header.includes(h))) {
           contact[header] = values[index] || '';
         }
       });
 
-      // Only add if at least name or email is present
       if (contact.name || contact.email) {
         contacts.push(contact);
       }
@@ -81,20 +104,17 @@ export default function ContactUpload() {
         organization: '',
       };
 
-      // Extract FN (Full Name)
       const fnMatch = vcard.match(/FN[;:]?(.*?)(?:\r?\n|$)/i);
       if (fnMatch) {
         contact.name = fnMatch[1].trim();
       }
 
-      // Extract N (Name components)
       const nMatch = vcard.match(/N[;:]?(.*?)(?:\r?\n|$)/i);
       if (nMatch && !contact.name) {
         const nameParts = nMatch[1].split(';').map(p => p.trim());
         contact.name = nameParts.filter(p => p).join(' ');
       }
 
-      // Extract EMAIL
       const emailMatch = vcard.match(/EMAIL[;:]?(.*?)(?:\r?\n|$)/gi);
       if (emailMatch) {
         const emailLine = emailMatch[0];
@@ -104,7 +124,6 @@ export default function ContactUpload() {
         }
       }
 
-      // Extract TEL
       const telMatch = vcard.match(/TEL[;:]?(.*?)(?:\r?\n|$)/gi);
       if (telMatch) {
         const telLine = telMatch[0];
@@ -114,13 +133,11 @@ export default function ContactUpload() {
         }
       }
 
-      // Extract ORG
       const orgMatch = vcard.match(/ORG[;:]?(.*?)(?:\r?\n|$)/i);
       if (orgMatch) {
         contact.organization = orgMatch[1].trim();
       }
 
-      // Only add if at least name or email is present
       if (contact.name || contact.email) {
         contacts.push(contact);
       }
@@ -135,6 +152,7 @@ export default function ContactUpload() {
 
     setError('');
     setIsLoading(true);
+    setUploadSuccess(false);
 
     try {
       const text = await file.text();
@@ -157,8 +175,15 @@ export default function ContactUpload() {
         addContacts(parsedContacts);
         setUploadSuccess(true);
         setError('');
-        // Reset success message after 3 seconds
-        setTimeout(() => setUploadSuccess(false), 3000);
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        // Close modal after 2 seconds on success
+        setTimeout(() => {
+          setUploadSuccess(false);
+          onClose();
+        }, 2000);
       }
     } catch (err) {
       setError('Error reading file. Please make sure the file is valid.');
@@ -186,60 +211,94 @@ export default function ContactUpload() {
     event.preventDefault();
   };
 
+  const handleClose = () => {
+    setError('');
+    setUploadSuccess(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <div className="w-full max-w-6xl mx-auto p-6 space-y-6">
-      <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm">
-        <h2 className="text-2xl font-semibold mb-4 text-zinc-900 dark:text-zinc-50">
-          Upload Contacts
-        </h2>
-        
-        <div
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg p-8 text-center hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors"
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,.vcf"
-            onChange={handleFileUpload}
-            className="hidden"
-            id="contact-file-input"
-          />
-          <label
-            htmlFor="contact-file-input"
-            className="cursor-pointer flex flex-col items-center gap-4"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={handleClose}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      
+      {/* Modal */}
+      <div
+        className="relative bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-800">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+            Upload Contacts
+          </h2>
+          <button
+            onClick={handleClose}
+            className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+            aria-label="Close modal"
           >
-            {isLoading ? (
-              <Loader2 className="w-12 h-12 text-zinc-400 dark:text-zinc-600 animate-spin" />
-            ) : (
-              <Upload className="w-12 h-12 text-zinc-400 dark:text-zinc-600" />
-            )}
-            <div className="space-y-2">
-              <p className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-                {isLoading ? 'Processing...' : 'Drop your file here or click to browse'}
-              </p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                Supports CSV and VCF formats
-              </p>
-            </div>
-          </label>
+            <X className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+          </button>
         </div>
 
-        {error && (
-          <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+        {/* Content */}
+        <div className="p-6">
+          <div
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg p-8 text-center hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors"
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.vcf"
+              onChange={handleFileUpload}
+              className="hidden"
+              id="contact-file-input-modal"
+            />
+            <label
+              htmlFor="contact-file-input-modal"
+              className="cursor-pointer flex flex-col items-center gap-4"
+            >
+              {isLoading ? (
+                <Loader2 className="w-12 h-12 text-zinc-400 dark:text-zinc-600 animate-spin" />
+              ) : (
+                <Upload className="w-12 h-12 text-zinc-400 dark:text-zinc-600" />
+              )}
+              <div className="space-y-2">
+                <p className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
+                  {isLoading ? 'Processing...' : 'Drop your file here or click to browse'}
+                </p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  Supports CSV and VCF formats
+                </p>
+              </div>
+            </label>
           </div>
-        )}
 
-        {uploadSuccess && (
-          <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-            <p className="text-sm text-green-800 dark:text-green-200">
-              Contacts uploaded successfully! Check the list below.
-            </p>
-          </div>
-        )}
+          {error && (
+            <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            </div>
+          )}
+
+          {uploadSuccess && (
+            <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+              <p className="text-sm text-green-800 dark:text-green-200">
+                Contacts uploaded successfully!
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
