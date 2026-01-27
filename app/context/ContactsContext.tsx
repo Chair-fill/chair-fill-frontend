@@ -27,30 +27,47 @@ interface ContactsContextType {
 const ContactsContext = createContext<ContactsContextType | undefined>(undefined);
 
 export function ContactsProvider({ children }: { children: ReactNode }) {
-  const [contacts, setContacts] = useState<Contact[]>([...sampleContacts]);
-
-  // Load contacts from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem('chairfill-contacts');
-    if (stored) {
-      try {
-        setContacts(JSON.parse(stored));
-      } catch (error) {
-        console.error('Error loading contacts from localStorage:', error);
+  // Initialize state - check localStorage first, fallback to sample contacts
+  const [contacts, setContacts] = useState<Contact[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chairfill-contacts');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          // Only use stored contacts if they exist and have items
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        } catch (error) {
+          console.error('Error loading contacts from localStorage:', error);
+        }
       }
     }
-  }, []);
+    // Return sample contacts if localStorage is empty or invalid
+    return [...sampleContacts];
+  });
 
   // Save contacts to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('chairfill-contacts', JSON.stringify(contacts));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('chairfill-contacts', JSON.stringify(contacts));
+    }
   }, [contacts]);
 
   const addContacts = (newContacts: Omit<Contact, 'id'>[]) => {
-    const contactsWithIds = newContacts.map((contact) => ({
-      ...contact,
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    }));
+    const contactsWithIds: Contact[] = newContacts.map((contact): Contact => {
+      const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const newContact: Contact = {
+        id,
+        name: contact.name ?? '',
+        email: contact.email ?? '',
+        phone: contact.phone ?? '',
+      };
+      if (contact.organization) {
+        newContact.organization = contact.organization;
+      }
+      return newContact;
+    });
     setContacts((prev) => [...prev, ...contactsWithIds]);
   };
 
