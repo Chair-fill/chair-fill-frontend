@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Upload, Loader2, CheckCircle2, X } from 'lucide-react';
-import { useContacts } from '../context/ContactsContext';
+import { useContacts } from '@/app/providers/ContactsProvider';
+import { parseCSV, parseVCF } from '@/lib/utils/contact-parser';
+import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
 
 interface ContactUploadModalProps {
   isOpen: boolean;
@@ -16,135 +18,8 @@ export default function ContactUploadModal({ isOpen, onClose }: ContactUploadMod
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  interface ParsedContact {
-    name: string;
-    email: string;
-    phone: string;
-    organization?: string;
-    [key: string]: string | undefined;
-  }
-
-  // Close modal on Escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
-
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
-
-  const parseCSV = (text: string): ParsedContact[] => {
-    const lines = text.split('\n').filter(line => line.trim());
-    if (lines.length === 0) return [];
-
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-    const contacts: ParsedContact[] = [];
-
-    const nameIndex = headers.findIndex(h => 
-      h.includes('name') || h.includes('full name') || h.includes('contact')
-    );
-    const emailIndex = headers.findIndex(h => 
-      h.includes('email') || h.includes('e-mail')
-    );
-    const phoneIndex = headers.findIndex(h => 
-      h.includes('phone') || h.includes('mobile') || h.includes('tel')
-    );
-    const orgIndex = headers.findIndex(h => 
-      h.includes('organization') || h.includes('company') || h.includes('org')
-    );
-
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim());
-      const contact: ParsedContact = {
-        name: nameIndex >= 0 ? values[nameIndex] || '' : '',
-        email: emailIndex >= 0 ? values[emailIndex] || '' : '',
-        phone: phoneIndex >= 0 ? values[phoneIndex] || '' : '',
-        organization: orgIndex >= 0 ? values[orgIndex] || '' : '',
-      };
-
-      headers.forEach((header, index) => {
-        if (!['name', 'email', 'phone', 'organization', 'company', 'org'].some(h => header.includes(h))) {
-          contact[header] = values[index] || '';
-        }
-      });
-
-      if (contact.name || contact.email) {
-        contacts.push(contact);
-      }
-    }
-
-    return contacts;
-  };
-
-  const parseVCF = (text: string): ParsedContact[] => {
-    const contacts: ParsedContact[] = [];
-    const vcards = text.split(/BEGIN:VCARD/i);
-    
-    for (const vcard of vcards) {
-      if (!vcard.trim()) continue;
-
-      const contact: ParsedContact = {
-        name: '',
-        email: '',
-        phone: '',
-        organization: '',
-      };
-
-      const fnMatch = vcard.match(/FN[;:]?(.*?)(?:\r?\n|$)/i);
-      if (fnMatch) {
-        contact.name = fnMatch[1].trim();
-      }
-
-      const nMatch = vcard.match(/N[;:]?(.*?)(?:\r?\n|$)/i);
-      if (nMatch && !contact.name) {
-        const nameParts = nMatch[1].split(';').map(p => p.trim());
-        contact.name = nameParts.filter(p => p).join(' ');
-      }
-
-      const emailMatch = vcard.match(/EMAIL[;:]?(.*?)(?:\r?\n|$)/gi);
-      if (emailMatch) {
-        const emailLine = emailMatch[0];
-        const emailValue = emailLine.split(/[;:]/).pop()?.trim();
-        if (emailValue) {
-          contact.email = emailValue;
-        }
-      }
-
-      const telMatch = vcard.match(/TEL[;:]?(.*?)(?:\r?\n|$)/gi);
-      if (telMatch) {
-        const telLine = telMatch[0];
-        const telValue = telLine.split(/[;:]/).pop()?.trim();
-        if (telValue) {
-          contact.phone = telValue.replace(/[^\d+()-]/g, '');
-        }
-      }
-
-      const orgMatch = vcard.match(/ORG[;:]?(.*?)(?:\r?\n|$)/i);
-      if (orgMatch) {
-        contact.organization = orgMatch[1].trim();
-      }
-
-      if (contact.name || contact.email) {
-        contacts.push(contact);
-      }
-    }
-
-    return contacts;
-  };
+  useModalKeyboard(isOpen, onClose);
+  useModalScrollLock(isOpen);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -156,7 +31,7 @@ export default function ContactUploadModal({ isOpen, onClose }: ContactUploadMod
 
     try {
       const text = await file.text();
-      let parsedContacts: ParsedContact[] = [];
+      let parsedContacts;
 
       if (file.name.endsWith('.csv')) {
         parsedContacts = parseCSV(text);
@@ -175,11 +50,9 @@ export default function ContactUploadModal({ isOpen, onClose }: ContactUploadMod
         addContacts(parsedContacts);
         setUploadSuccess(true);
         setError('');
-        // Reset file input
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
-        // Close modal after 2 seconds on success
         setTimeout(() => {
           setUploadSuccess(false);
           onClose();
@@ -227,15 +100,12 @@ export default function ContactUploadModal({ isOpen, onClose }: ContactUploadMod
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={handleClose}
     >
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
       
-      {/* Modal */}
       <div
         className="relative bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-800">
           <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
             Upload Contacts
@@ -249,7 +119,6 @@ export default function ContactUploadModal({ isOpen, onClose }: ContactUploadMod
           </button>
         </div>
 
-        {/* Content */}
         <div className="p-6">
           <div
             onDrop={handleDrop}

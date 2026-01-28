@@ -1,21 +1,11 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-export interface Contact {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  organization?: string;
-  [key: string]: string | undefined;
-}
-
-
-const sampleContacts:Contact[] = [
-  {id:"1", email: "", name: "Mahmud Suberu", phone: "+2349034780718"}
-]
-
+import type { Contact } from '@/lib/types/contact';
+import { SAMPLE_CONTACTS } from '@/lib/constants/contacts';
+import { storage } from '@/lib/utils/storage';
+import { migrateContacts } from '@/lib/utils/contact-migration';
+import { generateContactId } from '@/lib/utils/id-generator';
 
 interface ContactsContextType {
   contacts: Contact[];
@@ -29,42 +19,29 @@ const ContactsContext = createContext<ContactsContextType | undefined>(undefined
 export function ContactsProvider({ children }: { children: ReactNode }) {
   // Initialize state - check localStorage first, fallback to sample contacts
   const [contacts, setContacts] = useState<Contact[]>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('chairfill-contacts');
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          // Only use stored contacts if they exist and have items
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
-          }
-        } catch (error) {
-          console.error('Error loading contacts from localStorage:', error);
-        }
-      }
+    const stored = storage.contacts.get();
+    if (stored && stored.length > 0) {
+      return migrateContacts(stored);
     }
-    // Return sample contacts if localStorage is empty or invalid
-    return [...sampleContacts];
+    return [...SAMPLE_CONTACTS];
   });
 
   // Save contacts to localStorage whenever they change
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('chairfill-contacts', JSON.stringify(contacts));
-    }
+    storage.contacts.set(contacts);
   }, [contacts]);
 
   const addContacts = (newContacts: Omit<Contact, 'id'>[]) => {
     const contactsWithIds: Contact[] = newContacts.map((contact): Contact => {
-      const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const id = generateContactId();
       const newContact: Contact = {
         id,
         name: contact.name ?? '',
         email: contact.email ?? '',
         phone: contact.phone ?? '',
       };
-      if (contact.organization) {
-        newContact.organization = contact.organization;
+      if (contact.address) {
+        newContact.address = contact.address;
       }
       return newContact;
     });
@@ -77,7 +54,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
 
   const clearAllContacts = () => {
     setContacts([]);
-    localStorage.removeItem('chairfill-contacts');
+    storage.contacts.remove();
   };
 
   return (

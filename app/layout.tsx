@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import Header from "./components/Header";
-import { ContactsProvider } from "./context/ContactsContext";
+import Header from "@/app/components/layout/Header";
+import Providers from "@/app/providers/Providers";
 
 const satoshi = localFont({
   src: [
@@ -53,10 +53,10 @@ export default function RootLayout({
         className="font-sans antialiased"
         style={{ fontFamily: 'var(--font-satoshi), system-ui, -apple-system, sans-serif' }}
       >
-        <ContactsProvider>
+        <Providers>
           <Header />
           {children}
-        </ContactsProvider>
+        </Providers>
       </body>
     </html>
   );
