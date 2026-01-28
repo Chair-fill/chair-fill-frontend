@@ -9,6 +9,7 @@ import { generateContactId } from '@/lib/utils/id-generator';
 
 interface ContactsContextType {
   contacts: Contact[];
+  isLoaded: boolean;
   addContacts: (newContacts: Omit<Contact, 'id'>[]) => void;
   removeContact: (id: string) => void;
   clearAllContacts: () => void;
@@ -17,19 +18,29 @@ interface ContactsContextType {
 const ContactsContext = createContext<ContactsContextType | undefined>(undefined);
 
 export function ContactsProvider({ children }: { children: ReactNode }) {
-  // Initialize state - check localStorage first, fallback to sample contacts
-  const [contacts, setContacts] = useState<Contact[]>(() => {
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load contacts from localStorage on mount (client-only)
+  useEffect(() => {
     const stored = storage.contacts.get();
     if (stored && stored.length > 0) {
-      return migrateContacts(stored);
+      setContacts(migrateContacts(stored));
+    } else {
+      setContacts([...SAMPLE_CONTACTS]);
     }
-    return [...SAMPLE_CONTACTS];
-  });
+    setIsLoaded(true);
+  }, []);
 
-  // Save contacts to localStorage whenever they change
+  // Save contacts to localStorage whenever they change (after initial load)
   useEffect(() => {
-    storage.contacts.set(contacts);
-  }, [contacts]);
+    if (!isLoaded) return;
+    if (contacts.length === 0) {
+      storage.contacts.remove();
+    } else {
+      storage.contacts.set(contacts);
+    }
+  }, [contacts, isLoaded]);
 
   const addContacts = (newContacts: Omit<Contact, 'id'>[]) => {
     const contactsWithIds: Contact[] = newContacts.map((contact): Contact => {
@@ -59,7 +70,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
 
   return (
     <ContactsContext.Provider
-      value={{ contacts, addContacts, removeContact, clearAllContacts }}
+      value={{ contacts, isLoaded, addContacts, removeContact, clearAllContacts }}
     >
       {children}
     </ContactsContext.Provider>

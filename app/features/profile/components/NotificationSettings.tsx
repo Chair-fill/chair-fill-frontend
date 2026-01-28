@@ -69,11 +69,11 @@ export default function NotificationSettings() {
         {toggleItems.map(({ key, icon: Icon, title, description }) => (
           <div
             key={key}
-            className="flex items-center justify-between p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg"
+            className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 border border-zinc-200 dark:border-zinc-800 rounded-lg"
           >
-            <div className="flex items-start gap-3">
-              <Icon className="w-5 h-5 text-zinc-500 dark:text-zinc-400 mt-0.5" />
-              <div>
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <Icon className="w-5 h-5 text-zinc-500 dark:text-zinc-400 mt-0.5 shrink-0" />
+              <div className="min-w-0">
                 <p className="font-medium text-zinc-900 dark:text-zinc-50">{title}</p>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">{description}</p>
               </div>
@@ -81,11 +81,13 @@ export default function NotificationSettings() {
             <button
               type="button"
               onClick={() => handleToggle(key)}
-              className={`relative w-12 h-6 rounded-full transition-colors ${
+              className={`relative w-12 h-6 rounded-full transition-colors shrink-0 self-end sm:self-center min-h-[24px] touch-manipulation ${
                 prefs[key]
-                  ? 'bg-zinc-900 dark:bg-zinc-50'
+                  ? 'bg-green-600 dark:bg-green-400'
                   : 'bg-zinc-300 dark:bg-zinc-700'
               }`}
+              aria-label={`Toggle ${title}`}
+              aria-pressed={prefs[key]}
             >
               <span
                 className={`absolute top-1 w-4 h-4 rounded-full bg-white dark:bg-zinc-900 transition-transform ${
@@ -108,7 +110,7 @@ export default function NotificationSettings() {
         <button
           onClick={handleSave}
           disabled={isLoading}
-          className="px-6 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="w-full sm:w-auto px-6 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isLoading ? (
             <>

@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import Header from "@/app/components/layout/Header";
 import Providers from "@/app/providers/Providers";
+import RequireAuth from "@/app/components/auth/RequireAuth";
 
 const satoshi = localFont({
   src: [
@@ -55,7 +56,7 @@ export default function RootLayout({
       >
         <Providers>
           <Header />
-          {children}
+          <RequireAuth>{children}</RequireAuth>
         </Providers>
       </body>
     </html>

@@ -5,8 +5,8 @@ export const STORAGE_KEY_USER = "chairfill-user";
 export const DEFAULT_USER: UserProfile = {
   id: "user-1",
   name: "McArthur Terell",
-  email: "mcarthurterell@gmail.com",
-  phone: "+13184611055",
+  email: "mcarthurterell@example.com",
+  phone: "",
   address: "",
   avatar: "",
   createdAt: new Date().toISOString(),
@@ -15,4 +15,6 @@ export const DEFAULT_USER: UserProfile = {
     sms: false,
     marketing: false,
   },
+  paymentMethod: null,
+  billingInfo: null,
 };

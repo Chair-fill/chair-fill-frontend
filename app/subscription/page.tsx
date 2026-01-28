@@ -14,7 +14,7 @@ import {
   Building2,
   Sparkles,
 } from "lucide-react";
-import PaymentModal from "@/app/features/subscription/components/PaymentModal";
+import SubscriptionPaymentModal from "@/app/features/subscription/components/SubscriptionPaymentModal";
 
 export default function SubscriptionPage() {
   const { subscription, plans, subscribe, cancelSubscription, updateSubscription, toggleAutoRenew, isLoading } = useSubscription();
@@ -325,9 +325,9 @@ export default function SubscriptionPage() {
         </div>
       </main>
 
-      {/* Payment Modal */}
+      {/* Payment Modal - loading / success / failure */}
       {planToPurchase && (
-        <PaymentModal
+        <SubscriptionPaymentModal
           isOpen={showPaymentModal}
           onClose={() => {
             setShowPaymentModal(false);

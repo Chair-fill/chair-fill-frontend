@@ -2,18 +2,25 @@
 
 import { useState } from 'react';
 import { useContacts } from '@/app/providers/ContactsProvider';
-import { User, Mail, Phone, MapPin, Trash2, Users, Plus, Send, Loader2 } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Trash2, Users, Plus, Upload, Send, Loader2 } from 'lucide-react';
 import ContactUploadModal from "@/app/features/contacts/components/ContactUploadModal";
+import AddContactModal from "@/app/features/contacts/components/AddContactModal";
 import { api } from "@/lib/api-client";
+import { isDemoMode } from "@/lib/demo";
 
 export default function ContactsList() {
-  const { contacts, removeContact, clearAllContacts } = useContacts();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { contacts, isLoaded, removeContact, clearAllContacts } = useContacts();
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
   const [loadingContactId, setLoadingContactId] = useState<string | null>(null);
 
   const handleOutreach = async (contact: { id: string; name: string; email: string; phone: string }) => {
     setLoadingContactId(contact.id);
     try {
+      if (isDemoMode()) {
+        await new Promise((r) => setTimeout(r, 800));
+        return;
+      }
       await api.post("/outreach", {
         contactId: contact.id,
         name: contact.name,
@@ -27,6 +34,17 @@ export default function ContactsList() {
     }
   };
 
+  if (!isLoaded) {
+    return (
+      <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-12 shadow-sm flex items-center justify-center min-h-[320px]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-zinc-400 dark:text-zinc-500 animate-spin" />
+          <p className="text-zinc-600 dark:text-zinc-400">Loading contacts...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (contacts.length === 0) {
     return (
       <>
@@ -37,18 +55,28 @@ export default function ContactsList() {
               No contacts yet
             </h3>
             <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-              Upload a CSV or VCF file to add contacts to your list
+              Add a contact with the form or upload a CSV/VCF file to add many at once
             </p>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors font-medium"
-            >
-              <Plus className="w-5 h-5" />
-              Add Contacts
-            </button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                onClick={() => setIsAddContactModalOpen(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors font-medium"
+              >
+                <Plus className="w-5 h-5" />
+                Add contact
+              </button>
+              <button
+                onClick={() => setIsUploadModalOpen(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 border-2 border-zinc-300 dark:border-zinc-600 text-zinc-900 dark:text-zinc-50 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors font-medium"
+              >
+                <Upload className="w-5 h-5" />
+                Upload contacts (CSV/VCF)
+              </button>
+            </div>
           </div>
         </div>
-        <ContactUploadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+        <AddContactModal isOpen={isAddContactModalOpen} onClose={() => setIsAddContactModalOpen(false)} />
+        <ContactUploadModal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} />
       </>
     );
   }
@@ -65,11 +93,18 @@ export default function ContactsList() {
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => setIsAddContactModalOpen(true)}
               className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-zinc-900 dark:bg-zinc-50 dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span className="sm:inline">Add Contacts</span>
+              <span className="sm:inline">Add contact</span>
+            </button>
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            >
+              <Upload className="w-4 h-4" />
+              <span className="sm:inline">Upload contacts</span>
             </button>
             <button
               onClick={clearAllContacts}
@@ -242,7 +277,8 @@ export default function ContactsList() {
           </table>
         </div>
       </div>
-      <ContactUploadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <AddContactModal isOpen={isAddContactModalOpen} onClose={() => setIsAddContactModalOpen(false)} />
+      <ContactUploadModal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} />
     </>
   );
 }

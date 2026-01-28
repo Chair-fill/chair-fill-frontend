@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useUser } from '@/app/providers/UserProvider';
-import { User, Mail, Phone, Home ,Building2, Loader2, CheckCircle2 } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Loader2, CheckCircle2 } from 'lucide-react';
 
 export default function ProfileForm() {
   const { user, updateProfile, isLoading } = useUser();
@@ -115,13 +115,13 @@ export default function ProfileForm() {
             Address
           </label>
           <div className="relative">
-            <Home className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
+            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
             <input
               type="text"
-              name="company"
+              name="address"
               value={formData.address}
               onChange={handleChange}
-              placeholder="123 Main St, Apt 4."
+              placeholder="123 Main St, City, State"
               className="w-full pl-10 pr-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
             />
           </div>
@@ -145,7 +145,7 @@ export default function ProfileForm() {
         <button
           type="submit"
           disabled={isLoading}
-          className="px-6 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="px-6 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
         >
           {isLoading ? (
             <>
