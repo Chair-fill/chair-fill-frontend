@@ -12,8 +12,14 @@ export default function Header() {
   const pathname = usePathname();
   const { user, logout } = useUser();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showDemoBadge, setShowDemoBadge] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const isPublic = isPublicRoute(pathname);
+
+  // Only show demo badge after mount to avoid hydration mismatch (isDemoMode uses localStorage)
+  useEffect(() => {
+    setShowDemoBadge(isDemoMode());
+  }, []);
 
   const isActive = (path: string) => {
     return pathname === path;
@@ -52,7 +58,7 @@ export default function Header() {
             <span className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
               chairfill
             </span>
-            {typeof window !== 'undefined' && isDemoMode() && (
+            {showDemoBadge && (
               <span className="rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 text-xs font-medium px-2 py-0.5">
                 Demo
               </span>

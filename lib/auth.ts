@@ -34,7 +34,7 @@ export function removeToken(): void {
 }
 
 /** Routes that do not require authentication */
-export const PUBLIC_ROUTES = ["/login", "/signup"] as const;
+export const PUBLIC_ROUTES = ["/login", "/signup", "/forgot-password"] as const;
 
 /** Routes that require authentication (all others except public) */
 export function isPublicRoute(pathname: string): boolean {

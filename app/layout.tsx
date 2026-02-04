@@ -53,6 +53,7 @@ export default function RootLayout({
       <body
         className="font-sans antialiased"
         style={{ fontFamily: 'var(--font-satoshi), system-ui, -apple-system, sans-serif' }}
+        suppressHydrationWarning
       >
         <Providers>
           <Header />

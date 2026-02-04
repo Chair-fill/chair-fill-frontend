@@ -8,6 +8,7 @@ export interface User {
   phone?: string;
   address?: string;
   createdAt: string;
+  imessageContact?: string | null;
 }
 
 export interface UserProfile extends User {
@@ -27,6 +28,7 @@ export interface UpdateProfileRequest {
   email?: string;
   phone?: string;
   address?: string;
+  imessageContact?: string | null;
 }
 
 export interface UpdatePaymentRequest {
@@ -35,9 +37,8 @@ export interface UpdatePaymentRequest {
 }
 
 export interface ChangePasswordRequest {
-  currentPassword: string;
+  oldPassword: string;
   newPassword: string;
-  confirmPassword: string;
 }
 
 export interface LoginRequest {
@@ -49,6 +50,14 @@ export interface SignupRequest {
   name: string;
   email: string;
   password: string;
+  /** Optional: backend also accepts firstname, lastname, username, phoneNumber, middlename, referral_code */
+  firstname?: string;
+  lastname?: string;
+  username?: string;
+  phoneNumber?: string;
+  middlename?: string;
+  referral_code?: string;
+  imessageContact?: "email" | "phone";
 }
 
 export interface AuthResponse {

@@ -47,7 +47,7 @@ export default function SubscriptionPaymentModal({
         }, 1500);
         return;
       }
-      if (!user) return;
+      if (!user || plan.price == null) return;
       await api.post('/payment', {
         planId: plan.id,
         amount: plan.price,
@@ -117,7 +117,7 @@ export default function SubscriptionPaymentModal({
             </div>
           )}
 
-          {hasPaymentDetails && state === 'confirm' && (
+          {hasPaymentDetails && state === 'confirm' && plan.price != null && (
             <div className="space-y-4">
               <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-lg p-4">
                 <div className="flex justify-between items-center">

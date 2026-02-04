@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { Shield, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
+import { useUser } from '@/app/providers/UserProvider';
+import { getApiErrorMessage } from '@/lib/api-client';
 
 export default function SecuritySettings() {
+  const { updatePassword, isLoading: userLoading } = useUser();
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
@@ -42,17 +44,16 @@ export default function SecuritySettings() {
       return;
     }
 
-    setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await updatePassword({
+        oldPassword: formData.currentPassword,
+        newPassword: formData.newPassword,
+      });
       setSuccess(true);
       setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => setSuccess(false), 3000);
-    } catch {
-      setError('Failed to change password');
-    } finally {
-      setIsLoading(false);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
     }
   };
 
@@ -154,10 +155,10 @@ export default function SecuritySettings() {
         <div className="flex justify-end pt-2">
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={userLoading}
             className="px-6 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {isLoading ? (
+            {userLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Updating...

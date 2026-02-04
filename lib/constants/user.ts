@@ -17,4 +17,5 @@ export const DEFAULT_USER: UserProfile = {
   },
   paymentMethod: null,
   billingInfo: null,
+  imessageContact: "",
 };

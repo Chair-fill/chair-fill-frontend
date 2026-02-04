@@ -19,10 +19,10 @@ export default function RequireAuth({ children }: RequireAuthProps) {
   const router = useRouter();
   const { user, isAuthLoading } = useUser();
 
+  const publicRoute = isPublicRoute(pathname);
+
   useEffect(() => {
     if (isAuthLoading) return;
-
-    const publicRoute = isPublicRoute(pathname);
 
     if (publicRoute) {
       if (user) {
@@ -40,18 +40,21 @@ export default function RequireAuth({ children }: RequireAuthProps) {
       const loginUrl = pathname === '/' ? '/login' : `/login?redirect=${encodeURIComponent(pathname)}`;
       router.replace(loginUrl);
     }
-  }, [user, isAuthLoading, pathname, router]);
+  }, [user, isAuthLoading, pathname, router, publicRoute]);
 
-  if (isAuthLoading) {
-    return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 text-zinc-400 dark:text-zinc-500 animate-spin" />
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Loading...</p>
-        </div>
+  const loadingEl = (
+    <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="w-10 h-10 text-zinc-400 dark:text-zinc-500 animate-spin" />
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">Loading...</p>
       </div>
-    );
-  }
+    </div>
+  );
+
+  if (isAuthLoading) return loadingEl;
+
+  // Don't show protected content (including root page) to logged-out users – show loading until redirect
+  if (!user && !publicRoute) return loadingEl;
 
   return <>{children}</>;
 }

@@ -108,7 +108,8 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (plan.price == null) return;
     if (!validateForm()) {
       return;
     }
@@ -201,7 +202,9 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
                   <div className="text-right">
                     <p className="text-sm text-zinc-600 dark:text-zinc-400">Amount</p>
                     <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-                      ${plan.price.toFixed(2)}/{plan.pricePeriod}
+                      {plan.price != null
+                        ? `$${plan.price.toFixed(2)}/${plan.pricePeriod}`
+                        : 'Custom / Contact us'}
                     </p>
                   </div>
                 </div>
@@ -419,7 +422,7 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
                     ) : (
                       <>
                         <Lock className="w-5 h-5" />
-                        Pay ${plan.price.toFixed(2)}
+                        {plan.price != null ? `Pay $${plan.price.toFixed(2)}` : 'Submit'}
                       </>
                     )}
                   </button>

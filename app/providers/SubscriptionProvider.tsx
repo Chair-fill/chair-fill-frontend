@@ -21,20 +21,15 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const VALID_PLANS: SubscriptionPlan[] = ['independent', 'professional', 'shop-owner'];
+
   // Load subscription from localStorage on mount
   useEffect(() => {
     const stored = storage.subscription.get();
-    if (stored) {
+    if (stored && VALID_PLANS.includes(stored.plan as SubscriptionPlan)) {
       setSubscription(stored);
     } else {
-      // Default to free plan if no subscription exists
-      const defaultSubscription: Subscription = {
-        plan: 'free',
-        status: 'active',
-        startDate: new Date().toISOString(),
-        autoRenew: false,
-      };
-      setSubscription(defaultSubscription);
+      setSubscription(null);
     }
   }, []);
 

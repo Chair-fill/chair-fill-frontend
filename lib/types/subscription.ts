@@ -1,4 +1,4 @@
-export type SubscriptionPlan = 'free' | 'basic' | 'pro' | 'enterprise';
+export type SubscriptionPlan = 'independent' | 'professional' | 'shop-owner';
 
 export type SubscriptionStatus = 'active' | 'cancelled' | 'expired' | 'trial';
 
@@ -10,12 +10,24 @@ export interface Subscription {
   autoRenew: boolean;
 }
 
+/** 'Most Popular' | 'Coming Soon' */
+export type PlanBadge = 'Most Popular' | 'Coming Soon';
+
 export interface PlanDetails {
   id: SubscriptionPlan;
   name: string;
-  price: number;
+  /** Tagline above the plan name */
+  tagline?: string;
+  /** Subtitle below price */
+  subtitle?: string;
+  badge?: PlanBadge;
+  /** Monthly price; null = custom / contact us */
+  price: number | null;
   pricePeriod: 'month' | 'year';
+  pricePeriodLabel?: string;
   features: string[];
+  /** If true, show "Contact us" and do not open payment modal */
+  comingSoon?: boolean;
   maxContacts?: number;
   maxOutreach?: number;
 }

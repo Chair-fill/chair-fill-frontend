@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useUser } from '@/app/providers/UserProvider';
-import { User, Mail, Phone, MapPin, Loader2, CheckCircle2 } from 'lucide-react';
+import { getApiErrorMessage } from '@/lib/api-client';
+import { User, Mail, Phone, MapPin, Loader2, CheckCircle2, MessageCircle } from 'lucide-react';
 
 export default function ProfileForm() {
   const { user, updateProfile, isLoading } = useUser();
@@ -11,6 +12,7 @@ export default function ProfileForm() {
     email: '',
     phone: '',
     address: '',
+    imessageContact: '' as '' | 'email' | 'phone',
   });
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -22,11 +24,12 @@ export default function ProfileForm() {
         email: user.email || '',
         phone: user.phone || '',
         address: user.address || '',
+        imessageContact: (user.imessageContact === 'email' || user.imessageContact === 'phone') ? user.imessageContact : '',
       });
     }
   }, [user]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     setError('');
@@ -51,8 +54,8 @@ export default function ProfileForm() {
       await updateProfile(formData);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    } catch {
-      setError('Failed to update profile');
+    } catch (err) {
+      setError(getApiErrorMessage(err));
     }
   };
 
@@ -78,16 +81,16 @@ export default function ProfileForm() {
 
         <div>
           <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Email Address
+            Address
           </label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
+            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
             <input
-              type="email"
-              name="email"
-              value={formData.email}
+              type="text"
+              name="address"
+              value={formData.address}
               onChange={handleChange}
-              placeholder="john@example.com"
+              placeholder="123 Main St, City, State"
               className="w-full pl-10 pr-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
             />
           </div>
@@ -112,19 +115,42 @@ export default function ProfileForm() {
 
         <div>
           <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Address
+            Email Address
           </label>
           <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
+            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
             <input
-              type="text"
-              name="address"
-              value={formData.address}
+              type="email"
+              name="email"
+              value={formData.email}
               onChange={handleChange}
-              placeholder="123 Main St, City, State"
+              placeholder="john@example.com"
               className="w-full pl-10 pr-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
             />
           </div>
+        </div>
+
+        <div>
+          <label htmlFor="imessageContact" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            iMessage contact
+          </label>
+          <div className="relative">
+            <MessageCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400 pointer-events-none" />
+            <select
+              id="imessageContact"
+              name="imessageContact"
+              value={formData.imessageContact}
+              onChange={handleChange}
+              className="w-full pl-10 pr-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50 appearance-none"
+            >
+              <option value="">Select...</option>
+              <option value="email">Email</option>
+              <option value="phone">Phone number</option>
+            </select>
+          </div>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            Which contact info do you use for iMessage?
+          </p>
         </div>
       </div>
 

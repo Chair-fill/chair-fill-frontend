@@ -1,20 +1,40 @@
-import axios, { type InternalAxiosRequestConfig } from "axios";
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { getToken, removeToken } from "@/lib/auth";
 
-/**
- * Backend API base URL. Set via NEXT_PUBLIC_API_URL in .env.local
- */
-const API_BASE_URL =
-  (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) || "";
+const API_PREFIX = "/api/v1";
 
 /**
- * Axios instance for backend API calls (outreach, payment, CRUD).
- * Uses NEXT_PUBLIC_API_URL as baseURL when set.
+ * Backend API base URL (NestJS). Set via NEXT_PUBLIC_API_URL in .env.local
+ * (e.g. http://localhost:3001). We always append /api/v1 if missing.
+ * When unset, uses same-origin + /api/v1 so requests go to /api/v1/...
  */
+function getApiBaseUrl(): string {
+  const raw =
+    (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) || "";
+  const base = raw.replace(/\/+$/, "");
+  if (!base) return API_PREFIX;
+  return base.endsWith(API_PREFIX) ? base : `${base}${API_PREFIX}`;
+}
+
+const API_BASE_URL = getApiBaseUrl();
+
 export const api = axios.create({
-  baseURL: API_BASE_URL.replace(/\/$/, "") || undefined,
+  baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },
 });
+
+/**
+ * Extract user-facing error message from NestJS API error.
+ * Handles ValidationPipe message (string or string[]) and standard message.
+ */
+export function getApiErrorMessage(error: unknown): string {
+  const err = error as AxiosError<{ message?: string | string[] }>;
+  const msg = err.response?.data?.message;
+  if (Array.isArray(msg)) return msg[0] ?? "Something went wrong.";
+  if (typeof msg === "string") return msg;
+  if (err.message) return err.message;
+  return "Something went wrong. Please try again.";
+}
 
 /** Called when the API returns 401 Unauthorized (e.g. token expired) */
 let onUnauthorized: (() => void) | null = null;

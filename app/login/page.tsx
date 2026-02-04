@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Loader2 } from 'lucide-react';
 import { useUser } from '@/app/providers/UserProvider';
+import { getApiErrorMessage } from '@/lib/api-client';
 
 const DEFAULT_REDIRECT = '/contacts';
 const isDemoAvailable = process.env.NEXT_PUBLIC_FF_DEMO_MODE === 'true';
@@ -49,10 +50,7 @@ export default function LoginPage() {
       router.push(redirectTo.startsWith('/') ? redirectTo : DEFAULT_REDIRECT);
       router.refresh();
     } catch (err) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        (err instanceof Error ? err.message : 'Login failed. Please try again.');
-      setError(msg);
+      setError(getApiErrorMessage(err));
     }
   };
 
@@ -97,9 +95,17 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Password
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
                 <input
