@@ -7,7 +7,7 @@ import { Mail, Lock, Loader2, ArrowLeft } from 'lucide-react';
 import { api, getApiErrorMessage } from '@/lib/api-client';
 import { API } from '@/lib/constants/api';
 
-type Step = 'request' | 'verify';
+type Step = 'request' | 'otp' | 'password';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -37,11 +37,33 @@ export default function ForgotPasswordPage() {
       const nextToken = (data as { token?: string })?.token ?? (data as { data?: { token?: string } })?.data?.token;
       if (nextToken) {
         setToken(nextToken);
-        setStep('verify');
+        setStep('otp');
       } else {
         setError('Check your email or phone for the verification code.');
-        setStep('verify');
+        setStep('otp');
       }
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!otp.trim()) {
+      setError('Enter the verification code');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await api.post(API.AUTH.FORGOT_PASSWORD_OTP_VERIFY, {
+        field: field.trim(),
+        otp: otp.trim(),
+        token,
+      });
+      setStep('password');
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
@@ -52,10 +74,6 @@ export default function ForgotPasswordPage() {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!otp.trim()) {
-      setError('Enter the verification code');
-      return;
-    }
     if (newPassword.length < 8) {
       setError('New password must be at least 8 characters');
       return;
@@ -66,11 +84,6 @@ export default function ForgotPasswordPage() {
     }
     setIsLoading(true);
     try {
-      await api.post(API.AUTH.FORGOT_PASSWORD_OTP_VERIFY, {
-        field: field.trim(),
-        otp: otp.trim(),
-        token,
-      });
       await api.post(API.AUTH.FORGOT_PASSWORD_UPDATE, {
         field: field.trim(),
         otp: otp.trim(),
@@ -102,9 +115,12 @@ export default function ForgotPasswordPage() {
             Reset password
           </h1>
           <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-            {step === 'request'
+            {false && step === 'request'
               ? 'Enter your email or phone and we’ll send you a verification code.'
-              : 'Enter the code we sent and your new password.'}
+              : null}
+            {step === 'request' && "Enter your email or phone and we'll send you a verification code."}
+            {step === 'otp' && 'Enter the code we sent to your email or phone.'}
+            {step === 'password' && 'Enter your new password below.'}
           </p>
         </div>
 
@@ -147,13 +163,16 @@ export default function ForgotPasswordPage() {
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send verification code'}
               </button>
             </form>
-          ) : (
-            <form onSubmit={handleResetPassword} className="space-y-5">
+          ) : step === 'otp' ? (
+            <form onSubmit={handleVerifyOtp} className="space-y-5">
               {error && (
                 <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                   <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
                 </div>
               )}
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Code sent to <span className="font-medium text-zinc-900 dark:text-zinc-50">{field}</span>
+              </p>
               <div>
                 <label htmlFor="otp" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                   Verification code
@@ -170,6 +189,30 @@ export default function ForgotPasswordPage() {
                   className="w-full px-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
                 />
               </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStep('request')}
+                  className="flex-1 py-2.5 px-4 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 font-medium"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex-1 py-2.5 px-4 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleResetPassword} className="space-y-5">
+              {error && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                </div>
+              )}
               <div>
                 <label htmlFor="newPassword" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                   New password
@@ -207,7 +250,7 @@ export default function ForgotPasswordPage() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setStep('request')}
+                  onClick={() => setStep('otp')}
                   className="flex-1 py-2.5 px-4 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 font-medium"
                 >
                   Back
