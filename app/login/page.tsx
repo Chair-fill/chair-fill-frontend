@@ -14,6 +14,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || DEFAULT_REDIRECT;
+  const registered = searchParams.get('registered') === '1';
   const { login, loginWithDemo, isLoading } = useUser();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -67,6 +68,11 @@ export default function LoginPage() {
         </div>
 
         <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm p-6 sm:p-8">
+          {registered && (
+            <div className="mb-5 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+              <p className="text-sm text-emerald-700 dark:text-emerald-300">Account created successfully. Please sign in.</p>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">

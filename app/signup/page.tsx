@@ -12,7 +12,7 @@ type Step = 'email' | 'otp' | 'details';
 
 export default function SignupPage() {
   const router = useRouter();
-  const { signup, isLoading } = useUser();
+  const { signup, logout, isLoading } = useUser();
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [verifyToken, setVerifyToken] = useState('');
@@ -106,7 +106,8 @@ export default function SignupPage() {
         password,
         phoneNumber: phoneTrimmed,
       });
-      router.push('/contacts');
+      logout();
+      router.push('/login?registered=1');
       router.refresh();
     } catch (err) {
       setError(getApiErrorMessage(err));
