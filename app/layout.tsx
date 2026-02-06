@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import Header from "@/app/components/layout/Header";
+import ConditionalHeader from "@/app/components/layout/ConditionalHeader";
 import Providers from "@/app/providers/Providers";
 import RequireAuth from "@/app/components/auth/RequireAuth";
 
@@ -56,7 +56,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <Providers>
-          <Header />
+          <ConditionalHeader />
           <RequireAuth>{children}</RequireAuth>
         </Providers>
       </body>
