@@ -130,6 +130,7 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 
   if (isAuthLoading) return loadingEl;
   if (user && isProgressLoading) return loadingEl;
+  if (user && progress === null) return loadingEl; // Don't show barber-account until /progress/me has loaded
   if (user && waitingSecondRefetch) return loadingEl;
   if (!user && !publicRoute) return loadingEl;
 
