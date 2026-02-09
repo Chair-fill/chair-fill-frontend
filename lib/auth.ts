@@ -36,6 +36,23 @@ export function removeToken(): void {
 /** Routes that do not require authentication */
 export const PUBLIC_ROUTES = ["/login", "/signup", "/forgot-password"] as const;
 
+/** Onboarding steps (require auth; access app only after completing all). */
+export const ONBOARDING_ROUTES = [
+  "/onboarding/barber-account",
+  "/onboarding/choose-plan",
+  "/onboarding/checkout",
+] as const;
+
+export const ONBOARDING_BARBER_ACCOUNT = "/onboarding/barber-account";
+export const ONBOARDING_CHOOSE_PLAN = "/onboarding/choose-plan";
+export const ONBOARDING_CHECKOUT = "/onboarding/checkout";
+
+export function isOnboardingRoute(pathname: string): boolean {
+  return ONBOARDING_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + "/")
+  );
+}
+
 /** Routes that require authentication (all others except public) */
 export function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));

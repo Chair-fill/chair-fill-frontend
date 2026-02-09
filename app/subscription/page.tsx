@@ -13,6 +13,9 @@ import {
   Crown,
   Building2,
 } from "lucide-react";
+import { api } from "@/lib/api-client";
+import { API } from "@/lib/constants/api";
+import { isDemoMode } from "@/lib/demo";
 import SubscriptionPaymentModal from "@/app/features/subscription/components/SubscriptionPaymentModal";
 
 export default function SubscriptionPage() {
@@ -21,12 +24,14 @@ export default function SubscriptionPage() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [planToPurchase, setPlanToPurchase] = useState<PlanDetails | null>(null);
+  const [redirectingPlanId, setRedirectingPlanId] = useState<string | null>(null);
+  const [redirectError, setRedirectError] = useState<string | null>(null);
 
   const currentPlan = subscription ? plans.find(p => p.id === subscription.plan) : null;
   const isActive = subscription?.status === 'active';
   const isCancelled = subscription?.status === 'cancelled';
 
-  const handlePlanSelect = (planId: string) => {
+  const handlePlanSelect = async (planId: string) => {
     const plan = plans.find(p => p.id === planId);
     if (!plan) return;
 
@@ -36,8 +41,30 @@ export default function SubscriptionPage() {
 
     if (plan.comingSoon) return;
 
-    setPlanToPurchase(plan);
-    setShowPaymentModal(true);
+    if (isDemoMode()) {
+      setPlanToPurchase(plan);
+      setShowPaymentModal(true);
+      return;
+    }
+
+    // Redirect to Stripe Checkout (backend creates session, returns URL)
+    setSelectedPlan(planId);
+    setRedirectingPlanId(planId);
+    setRedirectError(null);
+    try {
+      const { data } = await api.get<{ url?: string }>(
+        `${API.PAYMENT.CHECKOUT_SESSION}?planId=${encodeURIComponent(planId)}`
+      );
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+      throw new Error('No checkout URL returned');
+    } catch {
+      setRedirectError('Unable to start checkout. Please try again.');
+      setRedirectingPlanId(null);
+      setSelectedPlan(null);
+    }
   };
 
   const handleSubscribe = async (planId: string) => {
@@ -213,7 +240,7 @@ export default function SubscriptionPage() {
               Compare plans
             </h2>
             <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-              Choose the plan that fits your business. You can change or cancel anytime.
+              Choose the plan that fits your business. You'll complete payment on Stripe.
             </p>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
@@ -318,10 +345,9 @@ export default function SubscriptionPage() {
                         type="button"
                         onClick={() => {
                           if (!isSelectable) return;
-                          setSelectedPlan(plan.id);
                           handlePlanSelect(plan.id);
                         }}
-                        disabled={isLoading || isCurrentPlan}
+                        disabled={isLoading || isCurrentPlan || redirectingPlanId !== null}
                         aria-disabled={isCurrentPlan || isComingSoon}
                         className={`w-full py-3 px-4 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-900 ${
                           isCurrentPlan
@@ -331,9 +357,14 @@ export default function SubscriptionPage() {
                             : isPopular
                             ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
                             : 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 focus:ring-zinc-900 dark:focus:ring-zinc-50'
-                        } ${(isLoading || isCurrentPlan) ? 'cursor-not-allowed' : ''}`}
+                        } ${(isLoading || isCurrentPlan || redirectingPlanId) ? 'cursor-not-allowed' : ''}`}
                       >
-                        {isLoading && selectedPlan === plan.id ? (
+                        {redirectingPlanId === plan.id ? (
+                          <span className="inline-flex items-center justify-center gap-2">
+                            <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+                            Redirecting to Stripe…
+                          </span>
+                        ) : isLoading && selectedPlan === plan.id ? (
                           <span className="inline-flex items-center justify-center gap-2">
                             <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
                             Processing…
@@ -348,6 +379,12 @@ export default function SubscriptionPage() {
               })}
             </div>
           </section>
+
+          {redirectError && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm text-red-600 dark:text-red-400">{redirectError}</p>
+            </div>
+          )}
 
           {/* Additional Info */}
           <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm">

@@ -15,7 +15,5 @@ export const DEFAULT_USER: UserProfile = {
     sms: false,
     marketing: false,
   },
-  paymentMethod: null,
-  billingInfo: null,
   imessageContact: "",
 };

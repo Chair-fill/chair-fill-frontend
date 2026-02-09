@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { X, CreditCard, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { PlanDetails } from '@/lib/types/subscription';
-import { useUser } from '@/app/providers/UserProvider';
 import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
 import { api } from '@/lib/api-client';
 import { isDemoMode } from '@/lib/demo';
@@ -16,6 +14,8 @@ interface SubscriptionPaymentModalProps {
   onClose: () => void;
   plan: PlanDetails;
   onSuccess: () => void;
+  /** Kept for backward compatibility; payment is always via Stripe now. */
+  onboardingMode?: boolean;
 }
 
 export default function SubscriptionPaymentModal({
@@ -24,17 +24,14 @@ export default function SubscriptionPaymentModal({
   plan,
   onSuccess,
 }: SubscriptionPaymentModalProps) {
-  const { user } = useUser();
   const [state, setState] = useState<ModalState>('confirm');
   const [errorMessage, setErrorMessage] = useState('');
 
   useModalKeyboard(isOpen, onClose);
   useModalScrollLock(isOpen);
 
-  const hasPaymentDetails = user?.paymentMethod && user?.billingInfo;
-
   const handlePay = async () => {
-    if (!hasPaymentDetails && !isDemoMode()) return;
+    if (plan.price == null) return;
     setState('loading');
     setErrorMessage('');
     try {
@@ -47,18 +44,26 @@ export default function SubscriptionPaymentModal({
         }, 1500);
         return;
       }
-      if (!user || plan.price == null) return;
-      await api.post('/payment', {
-        planId: plan.id,
-        amount: plan.price,
-        paymentMethod: user.paymentMethod,
-        billingInfo: user.billingInfo,
-      });
-      setState('success');
-      setTimeout(() => {
-        onSuccess();
-        onClose();
-      }, 1500);
+      // Payment is handled by Stripe: redirect to Checkout or create session
+      const checkoutUrl =
+        typeof process.env.NEXT_PUBLIC_STRIPE_CHECKOUT_URL === 'string'
+          ? process.env.NEXT_PUBLIC_STRIPE_CHECKOUT_URL
+          : null;
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+        return;
+      }
+      try {
+        const { data } = await api.get<{ url?: string }>(`/payment/checkout-session?planId=${plan.id}`);
+        if (data?.url) {
+          window.location.href = data.url;
+          return;
+        }
+      } catch {
+        // Backend may not have checkout-session yet
+      }
+      setState('failure');
+      setErrorMessage('Checkout is not configured. Please try again later.');
     } catch (err) {
       setState('failure');
       const msg =
@@ -101,23 +106,7 @@ export default function SubscriptionPaymentModal({
         </div>
 
         <div className="p-6">
-          {!hasPaymentDetails && state === 'confirm' && (
-            <div className="text-center space-y-4">
-              <CreditCard className="w-12 h-12 text-zinc-400 mx-auto" />
-              <p className="text-zinc-600 dark:text-zinc-400">
-                Add your payment and billing details in Account Settings before subscribing.
-              </p>
-              <Link
-                href="/profile"
-                onClick={handleClose}
-                className="inline-block px-6 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium"
-              >
-                Go to Account Settings
-              </Link>
-            </div>
-          )}
-
-          {hasPaymentDetails && state === 'confirm' && plan.price != null && (
+          {state === 'confirm' && plan.price != null && (
             <div className="space-y-4">
               <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-lg p-4">
                 <div className="flex justify-between items-center">
@@ -132,7 +121,9 @@ export default function SubscriptionPaymentModal({
                 </div>
               </div>
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Your saved card will be charged. You can update payment details in Account Settings.
+                {isDemoMode()
+                  ? 'Demo mode: click below to simulate a successful payment.'
+                  : 'Payment is handled securely by Stripe. You’ll be redirected to complete payment.'}
               </p>
               <div className="flex gap-3 pt-2">
                 <button
@@ -148,7 +139,7 @@ export default function SubscriptionPaymentModal({
                   className="flex-1 px-4 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium flex items-center justify-center gap-2"
                 >
                   <CreditCard className="w-4 h-4" />
-                  Pay ${plan.price.toFixed(2)}
+                  {isDemoMode() ? 'Complete payment (demo)' : 'Continue to Stripe'}
                 </button>
               </div>
             </div>

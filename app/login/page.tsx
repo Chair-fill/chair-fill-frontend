@@ -3,26 +3,76 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Mail, Lock, Loader2 } from 'lucide-react';
+import { Mail, Lock, Loader2, ArrowLeft } from 'lucide-react';
 import { useUser } from '@/app/providers/UserProvider';
-import { getApiErrorMessage } from '@/lib/api-client';
+import { api, getApiErrorMessage } from '@/lib/api-client';
+import { API } from '@/lib/constants/api';
+import { clearAllPersistentData } from '@/lib/clear-persistent-data';
+import AuthLayout from '@/app/components/ui/AuthLayout';
+import AuthCard from '@/app/components/ui/AuthCard';
+import FormError from '@/app/components/ui/FormError';
+import FormSuccess from '@/app/components/ui/FormSuccess';
+import {
+  FORM_LABEL,
+  INPUT_LEFT_ICON,
+  INPUT_ICON_LEFT,
+  INPUT_PLAIN,
+  BTN_PRIMARY,
+  BTN_SECONDARY,
+  BTN_PRIMARY_FLEX,
+  AUTH_SUBTITLE,
+  AUTH_FOOTER_TEXT,
+  AUTH_FOOTER_LINK,
+} from '@/lib/constants/ui';
 
 const DEFAULT_REDIRECT = '/contacts';
+const ONBOARDING_BARBER_ACCOUNT = '/onboarding/barber-account';
+const ONBOARDING_CHOOSE_PLAN = '/onboarding/choose-plan';
 const isDemoAvailable = process.env.NEXT_PUBLIC_FF_DEMO_MODE === 'true';
+
+type ProgressPayload = { is_technician?: boolean; has_subscribed?: boolean };
+
+/** Call progress/me and return redirect path. Uses is_technician and has_subscribed. */
+async function getRedirectAfterLogin(fallback: string): Promise<string> {
+  try {
+    const { data } = await api.get<ProgressPayload | { data?: ProgressPayload }>(API.PROGRESS.ME);
+    const raw = data && typeof data === 'object' ? data : null;
+    const prog: ProgressPayload | undefined =
+      raw && 'data' in raw && raw.data != null ? raw.data : (raw as ProgressPayload | undefined);
+    const isTechnician = prog && typeof prog === 'object' && prog.is_technician === true;
+    const hasSubscribed = prog && typeof prog === 'object' && prog.has_subscribed === true;
+    if (!isTechnician) return ONBOARDING_BARBER_ACCOUNT;
+    if (!hasSubscribed) return ONBOARDING_CHOOSE_PLAN;
+    return fallback;
+  } catch {
+    return ONBOARDING_BARBER_ACCOUNT;
+  }
+}
+
+type Step = 'credentials' | 'otp';
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || DEFAULT_REDIRECT;
   const registered = searchParams.get('registered') === '1';
-  const { login, loginWithDemo, isLoading } = useUser();
+  const { signinVerify, signinWithOtp, loginWithDemo, logout, isLoading } = useUser();
+  const [step, setStep] = useState<Step>('credentials');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [verifyToken, setVerifyToken] = useState('');
+  const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [demoLoading, setDemoLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const hasAutoDemo = useRef(false);
-  // Auto-start demo when visiting /login?demo=1 (once per mount)
+
+  useEffect(() => {
+    clearAllPersistentData();
+    logout();
+  }, [logout]);
+
   useEffect(() => {
     if (hasAutoDemo.current || searchParams.get('demo') !== '1') return;
     hasAutoDemo.current = true;
@@ -39,7 +89,7 @@ export default function LoginPage() {
     setDemoLoading(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCredentialsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (!email.trim() || !password) {
@@ -47,45 +97,85 @@ export default function LoginPage() {
       return;
     }
     try {
-      await login({ email: email.trim(), password });
-      router.push(redirectTo.startsWith('/') ? redirectTo : DEFAULT_REDIRECT);
-      router.refresh();
+      const result = await signinVerify(email.trim(), password);
+      if (result.needsOtp && result.verifyToken) {
+        setVerifyToken(result.verifyToken);
+        setStep('otp');
+      } else {
+        setIsRedirecting(true);
+        try {
+          const fallback = redirectTo.startsWith('/') ? redirectTo : DEFAULT_REDIRECT;
+          const dest = await getRedirectAfterLogin(fallback);
+          router.push(dest);
+          router.refresh();
+        } finally {
+          setIsRedirecting(false);
+        }
+      }
     } catch (err) {
       setError(getApiErrorMessage(err));
     }
   };
 
-  return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-            Sign in to chairfill
-          </h1>
-          <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-            Enter your email and password to continue
-          </p>
-        </div>
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!otp.trim()) {
+      setError('Please enter the code from your email.');
+      return;
+    }
+    try {
+      await signinWithOtp(email.trim(), verifyToken, otp.trim());
+      setIsRedirecting(true);
+      try {
+        const fallback = redirectTo.startsWith('/') ? redirectTo : DEFAULT_REDIRECT;
+        const dest = await getRedirectAfterLogin(fallback);
+        router.push(dest);
+        router.refresh();
+      } finally {
+        setIsRedirecting(false);
+      }
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  };
 
-        <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm p-6 sm:p-8">
-          {registered && (
-            <div className="mb-5 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
-              <p className="text-sm text-emerald-700 dark:text-emerald-300">Account created successfully. Please sign in.</p>
-            </div>
-          )}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-              </div>
-            )}
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-black flex flex-col items-center justify-center">
+        <Loader2 className="w-12 h-12 text-zinc-400 dark:text-zinc-500 animate-spin" />
+        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">Signing you in...</p>
+      </div>
+    );
+  }
+
+  return (
+    <AuthLayout>
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+          Sign in to chairfill
+        </h1>
+        <p className={AUTH_SUBTITLE}>
+          {step === 'credentials' ? 'Enter your email and password to continue' : 'Enter the code we sent to your email'}
+        </p>
+      </div>
+
+      <AuthCard>
+        {registered && (
+          <div className="mb-5">
+            <FormSuccess message="Account created successfully. Please sign in." />
+          </div>
+        )}
+        {step === 'credentials' && (
+          <form onSubmit={handleCredentialsSubmit} className="space-y-5">
+            {error && <FormError message={error} />}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <label htmlFor="email" className={FORM_LABEL}>
                 Email address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+                <Mail className={INPUT_ICON_LEFT} />
                 <input
                   id="email"
                   name="email"
@@ -95,7 +185,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={e => { setEmail(e.target.value); setError(''); }}
                   placeholder="you@example.com"
-                  className="w-full pl-10 pr-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
+                  className={INPUT_LEFT_ICON}
                 />
               </div>
             </div>
@@ -113,7 +203,7 @@ export default function LoginPage() {
                 </Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+                <Lock className={INPUT_ICON_LEFT} />
                 <input
                   id="password"
                   name="password"
@@ -123,7 +213,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={e => { setPassword(e.target.value); setError(''); }}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
+                  className={INPUT_LEFT_ICON}
                 />
               </div>
             </div>
@@ -131,7 +221,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 px-4 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className={BTN_PRIMARY}
             >
               {isLoading ? (
                 <>
@@ -158,7 +248,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={handleTryDemo}
                   disabled={demoLoading || isLoading}
-                  className="w-full py-2.5 px-4 border-2 border-zinc-300 dark:border-zinc-600 text-zinc-900 dark:text-zinc-50 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-2.5 px-4 border-2 border-zinc-300 dark:border-zinc-600 text-zinc-900 dark:text-zinc-50 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
                 >
                   {demoLoading ? (
                     <>
@@ -172,15 +262,50 @@ export default function LoginPage() {
               </>
             )}
           </form>
+        )}
 
-          <p className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            Don&apos;t have an account?{' '}
-            <Link href="/signup" className="font-medium text-zinc-900 dark:text-zinc-50 hover:underline">
-              Sign up
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
+        {step === 'otp' && (
+          <form onSubmit={handleOtpSubmit} className="space-y-5">
+            {error && <FormError message={error} />}
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Code sent to <span className="font-medium text-zinc-900 dark:text-zinc-50">{email}</span>
+            </p>
+            <div>
+              <label htmlFor="otp" className={FORM_LABEL}>Verification code</label>
+              <input
+                id="otp"
+                name="otp"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={otp}
+                onChange={e => { setOtp(e.target.value); setError(''); }}
+                placeholder="123456"
+                className={INPUT_PLAIN}
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setStep('credentials'); setError(''); setOtp(''); }}
+                className={`flex-1 ${BTN_SECONDARY}`}
+              >
+                <ArrowLeft className="w-4 h-4" /> Back
+              </button>
+              <button type="submit" disabled={isLoading} className={BTN_PRIMARY_FLEX}>
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        <p className={AUTH_FOOTER_TEXT}>
+          Don&apos;t have an account?{' '}
+          <Link href="/signup" className={AUTH_FOOTER_LINK}>
+            Sign up
+          </Link>
+        </p>
+      </AuthCard>
+    </AuthLayout>
   );
 }

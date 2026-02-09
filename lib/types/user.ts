@@ -1,5 +1,3 @@
-import type { PaymentMethod, BillingInfo } from "@/lib/types/subscription";
-
 export interface User {
   id: string;
   name: string;
@@ -8,13 +6,12 @@ export interface User {
   phone?: string;
   address?: string;
   createdAt: string;
+  role?: string;
   imessageContact?: string | null;
 }
 
 export interface UserProfile extends User {
   notifications: NotificationPreferences;
-  paymentMethod?: PaymentMethod | null;
-  billingInfo?: BillingInfo | null;
 }
 
 export interface NotificationPreferences {
@@ -29,11 +26,6 @@ export interface UpdateProfileRequest {
   phone?: string;
   address?: string;
   imessageContact?: string | null;
-}
-
-export interface UpdatePaymentRequest {
-  paymentMethod: PaymentMethod;
-  billingInfo: BillingInfo;
 }
 
 export interface ChangePasswordRequest {

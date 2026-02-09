@@ -4,8 +4,23 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
-import { api, getApiErrorMessage } from '@/lib/api-client';
+import { api, getApiErrorMessage, getResponseToken } from '@/lib/api-client';
 import { API } from '@/lib/constants/api';
+import AuthLayout from '@/app/components/ui/AuthLayout';
+import AuthCard from '@/app/components/ui/AuthCard';
+import FormError from '@/app/components/ui/FormError';
+import {
+  FORM_LABEL,
+  INPUT_LEFT_ICON,
+  INPUT_LEFT_RIGHT_ICON,
+  INPUT_PLAIN,
+  INPUT_ICON_LEFT,
+  INPUT_ICON_RIGHT,
+  BTN_PRIMARY,
+  BTN_PRIMARY_FLEX,
+  BTN_SECONDARY,
+  AUTH_SUBTITLE,
+} from '@/lib/constants/ui';
 
 type Step = 'request' | 'otp' | 'password';
 
@@ -26,22 +41,23 @@ export default function ForgotPasswordPage() {
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!field.trim()) {
-      setError('Enter your email or phone number');
+    const emailTrimmed = field.trim().toLowerCase();
+    if (!emailTrimmed || !emailTrimmed.includes('@')) {
+      setError('Please enter your email address.');
       return;
     }
     setIsLoading(true);
     try {
-      const { data } = await api.post<{ token?: string }>(API.AUTH.FORGOT_PASSWORD_VERIFY, {
-        field: field.trim(),
-        strategy: 1,
+      const { data } = await api.post(API.AUTH.FORGOT_PASSWORD_VERIFY, {
+        field: emailTrimmed,
+        strategy: 'otp',
       });
-      const nextToken = (data as { token?: string })?.token ?? (data as { data?: { token?: string } })?.data?.token;
+      const nextToken = getResponseToken(data);
       if (nextToken) {
         setToken(nextToken);
         setStep('otp');
       } else {
-        setError('Check your email or phone for the verification code.');
+        setError('Check your email for the verification code.');
         setStep('otp');
       }
     } catch (err) {
@@ -102,8 +118,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md">
+    <AuthLayout>
         <Link
           href="/login"
           className="inline-flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 mb-6"
@@ -117,16 +132,13 @@ export default function ForgotPasswordPage() {
             Reset password
           </h1>
           <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-            {false && step === 'request'
-              ? 'Enter your email or phone and we’ll send you a verification code.'
-              : null}
-            {step === 'request' && "Enter your email or phone and we'll send you a verification code."}
-            {step === 'otp' && 'Enter the code we sent to your email or phone.'}
+            {step === 'request' && "Enter your email and we'll send you a verification code."}
+            {step === 'otp' && 'Enter the code we sent to your email.'}
             {step === 'password' && 'Enter your new password below.'}
           </p>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm p-6 sm:p-8">
+      <AuthCard>
           {success ? (
             <div className="text-center py-4">
               <p className="text-green-600 dark:text-green-400 font-medium">Password reset successfully.</p>
@@ -134,160 +146,66 @@ export default function ForgotPasswordPage() {
             </div>
           ) : step === 'request' ? (
             <form onSubmit={handleRequestOtp} className="space-y-5">
-              {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                </div>
-              )}
+              {error && <FormError message={error} />}
               <div>
-                <label htmlFor="field" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Email or phone number
-                </label>
+                <label htmlFor="field" className={FORM_LABEL}>Email address</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
-                  <input
-                    id="field"
-                    name="field"
-                    type="text"
-                    autoComplete="username"
-                    value={field}
-                    onChange={e => { setField(e.target.value); setError(''); }}
-                    placeholder="you@example.com or +1234567890"
-                    className="w-full pl-10 pr-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
-                  />
+                  <Mail className={INPUT_ICON_LEFT} />
+                  <input id="field" name="field" type="email" autoComplete="email" required value={field} onChange={e => { setField(e.target.value); setError(''); }} placeholder="you@example.com" className={INPUT_LEFT_ICON} />
                 </div>
               </div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-2.5 px-4 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
+              <button type="submit" disabled={isLoading} className={BTN_PRIMARY}>
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send verification code'}
               </button>
             </form>
           ) : step === 'otp' ? (
             <form onSubmit={handleVerifyOtp} className="space-y-5">
-              {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                </div>
-              )}
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Code sent to <span className="font-medium text-zinc-900 dark:text-zinc-50">{field}</span>
-              </p>
+              {error && <FormError message={error} />}
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">Code sent to <span className="font-medium text-zinc-900 dark:text-zinc-50">{field}</span></p>
               <div>
-                <label htmlFor="otp" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Verification code
-                </label>
-                <input
-                  id="otp"
-                  name="otp"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  value={otp}
-                  onChange={e => { setOtp(e.target.value); setError(''); }}
-                  placeholder="123456"
-                  className="w-full px-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
-                />
+                <label htmlFor="otp" className={FORM_LABEL}>Verification code</label>
+                <input id="otp" name="otp" type="text" inputMode="numeric" autoComplete="one-time-code" value={otp} onChange={e => { setOtp(e.target.value); setError(''); }} placeholder="123456" className={INPUT_PLAIN} />
               </div>
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setStep('request')}
-                  className="flex-1 py-2.5 px-4 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 font-medium"
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex-1 py-2.5 px-4 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
+                <button type="button" onClick={() => setStep('request')} className={`flex-1 ${BTN_SECONDARY}`}>Back</button>
+                <button type="submit" disabled={isLoading} className={BTN_PRIMARY_FLEX}>
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify'}
                 </button>
               </div>
             </form>
           ) : (
             <form onSubmit={handleResetPassword} className="space-y-5">
-              {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                </div>
-              )}
+              {error && <FormError message={error} />}
               <div>
-                <label htmlFor="newPassword" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  New password
-                </label>
+                <label htmlFor="newPassword" className={FORM_LABEL}>New password</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
-                  <input
-                    id="newPassword"
-                    name="newPassword"
-                    type={showNewPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    value={newPassword}
-                    onChange={e => { setNewPassword(e.target.value); setError(''); }}
-                    placeholder="••••••••"
-                    className="w-full pl-10 pr-10 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(p => !p)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-                    aria-label={showNewPassword ? 'Hide password' : 'Show password'}
-                  >
+                  <Lock className={INPUT_ICON_LEFT} />
+                  <input id="newPassword" name="newPassword" type={showNewPassword ? 'text' : 'password'} autoComplete="new-password" value={newPassword} onChange={e => { setNewPassword(e.target.value); setError(''); }} placeholder="••••••••" className={INPUT_LEFT_RIGHT_ICON} />
+                  <button type="button" onClick={() => setShowNewPassword(p => !p)} className={INPUT_ICON_RIGHT} aria-label={showNewPassword ? 'Hide password' : 'Show password'}>
                     {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">At least 8 characters</p>
               </div>
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Confirm new password
-                </label>
+                <label htmlFor="confirmPassword" className={FORM_LABEL}>Confirm new password</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    value={confirmPassword}
-                    onChange={e => { setConfirmPassword(e.target.value); setError(''); }}
-                    placeholder="••••••••"
-                    className="w-full pl-10 pr-10 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(p => !p)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                  >
+                  <Lock className={INPUT_ICON_LEFT} />
+                  <input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} autoComplete="new-password" value={confirmPassword} onChange={e => { setConfirmPassword(e.target.value); setError(''); }} placeholder="••••••••" className={INPUT_LEFT_RIGHT_ICON} />
+                  <button type="button" onClick={() => setShowConfirmPassword(p => !p)} className={INPUT_ICON_RIGHT} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
                     {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setStep('otp')}
-                  className="flex-1 py-2.5 px-4 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 font-medium"
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex-1 py-2.5 px-4 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
+                <button type="button" onClick={() => setStep('otp')} className={`flex-1 ${BTN_SECONDARY}`}>Back</button>
+                <button type="submit" disabled={isLoading} className={BTN_PRIMARY_FLEX}>
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Reset password'}
                 </button>
               </div>
             </form>
           )}
-        </div>
-      </div>
-    </div>
+      </AuthCard>
+    </AuthLayout>
   );
 }

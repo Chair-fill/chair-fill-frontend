@@ -2,14 +2,13 @@
 
 import { useState, useRef } from 'react';
 import { useUser } from '@/app/providers/UserProvider';
-import { User, Settings, Shield, Bell, CreditCard, Camera, Trash2, Loader2 } from 'lucide-react';
+import { User, Settings, Shield, Bell, Camera, Trash2, Loader2 } from 'lucide-react';
 import { getApiErrorMessage } from '@/lib/api-client';
 import ProfileForm from '@/app/features/profile/components/ProfileForm';
 import NotificationSettings from '@/app/features/profile/components/NotificationSettings';
 import SecuritySettings from '@/app/features/profile/components/SecuritySettings';
-import BillingSettings from '@/app/features/profile/components/BillingSettings';
 
-type Tab = 'profile' | 'notifications' | 'billing' | 'security';
+type Tab = 'profile' | 'notifications' | 'security';
 
 export default function ProfilePage() {
   const { user, uploadProfilePicture, removeProfilePicture, isLoading } = useUser();
@@ -48,7 +47,6 @@ export default function ProfilePage() {
   const tabs = [
     { id: 'profile' as const, label: 'Profile', icon: User },
     { id: 'notifications' as const, label: 'Notifications', icon: Bell },
-    { id: 'billing' as const, label: 'Payment & Billing', icon: CreditCard },
     { id: 'security' as const, label: 'Security', icon: Shield },
   ];
 
@@ -179,7 +177,6 @@ export default function ProfilePage() {
             <div className="p-4 sm:p-6">
               {activeTab === 'profile' && <ProfileForm />}
               {activeTab === 'notifications' && <NotificationSettings />}
-              {activeTab === 'billing' && <BillingSettings />}
               {activeTab === 'security' && <SecuritySettings />}
             </div>
           </div>

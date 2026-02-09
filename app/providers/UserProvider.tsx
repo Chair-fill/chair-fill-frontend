@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import type { UserProfile, UpdateProfileRequest, UpdatePaymentRequest, NotificationPreferences, LoginRequest, SignupRequest } from '@/lib/types/user';
+import type { UserProfile, UpdateProfileRequest, NotificationPreferences, SignupRequest } from '@/lib/types/user';
 import { STORAGE_KEY_USER, DEFAULT_USER } from '@/lib/constants/user';
 import { getToken, removeToken, setToken } from '@/lib/auth';
 import { api, setUnauthorizedHandler, getApiErrorMessage } from '@/lib/api-client';
@@ -9,18 +9,35 @@ import { API } from '@/lib/constants/api';
 import { isDemoMode, setDemoMode } from '@/lib/demo';
 import type { ChangePasswordRequest } from '@/lib/types/user';
 
+/** Step 1 of sign-in: verify password, returns verifyToken if OTP needed */
+export interface SigninVerifyResult {
+  needsOtp: boolean;
+  verifyToken?: string;
+}
+
+/** Location payload for PUT /user/location (address, city, state, country) */
+export interface SetLocationRequest {
+  address: string;
+  city?: string;
+  state?: string;
+  country?: string;
+}
+
 interface UserContextType {
   user: UserProfile | null;
   isLoading: boolean;
   isAuthLoading: boolean;
-  login: (credentials: LoginRequest) => Promise<void>;
+  /** Step 1: Verify credentials; returns { needsOtp, verifyToken } or completes if backend returns user+token directly */
+  signinVerify: (email: string, password: string) => Promise<SigninVerifyResult>;
+  /** Step 2: Complete sign-in with OTP */
+  signinWithOtp: (email: string, verifyToken: string, otp: string) => Promise<void>;
   signup: (data: SignupRequest) => Promise<void>;
   loginWithDemo: () => void;
   updateProfile: (data: UpdateProfileRequest) => Promise<void>;
+  setLocation: (data: SetLocationRequest) => Promise<void>;
   updatePassword: (data: ChangePasswordRequest) => Promise<void>;
   uploadProfilePicture: (file: File) => Promise<string | void>;
   removeProfilePicture: () => Promise<void>;
-  updatePaymentDetails: (data: UpdatePaymentRequest) => Promise<void>;
   updateNotifications: (prefs: NotificationPreferences) => Promise<void>;
   logout: () => void;
 }
@@ -42,20 +59,19 @@ function mapBackendUserToProfile(backend: Record<string, unknown> | UserProfile)
   const name = [first, last].filter(Boolean).join(' ') || (b.username as string) || (b.email as string) || 'User';
   const imessage = (b.imessageContact as string) ?? (b.imessage_contact as string) ?? null;
   return {
-    id: String(b.id ?? ''),
+    id: String(b.id ?? b.user_id ?? ''),
     name,
     email: String(b.email ?? ''),
     phone: String(b.phone_number ?? b.phone ?? ''),
     address: String(b.address ?? ''),
     avatar: b.avatar != null ? String(b.avatar) : undefined,
     createdAt: String(b.createdAt ?? b.created_at ?? new Date().toISOString()),
+    role: b.role != null ? String(b.role) : undefined,
     notifications: (b.notifications as UserProfile['notifications']) ?? {
       email: true,
       sms: false,
       marketing: false,
     },
-    paymentMethod: (b.paymentMethod as UserProfile['paymentMethod']) ?? null,
-    billingInfo: (b.billingInfo as UserProfile['billingInfo']) ?? null,
     imessageContact: imessage ?? null,
   };
 }
@@ -165,19 +181,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updatePaymentDetails = async (data: UpdatePaymentRequest) => {
+  const setLocation = async (data: SetLocationRequest) => {
+    if (isDemoMode()) {
+      if (user) setUser({ ...user, address: data.address });
+      return;
+    }
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      if (user) {
-        setUser({
-          ...user,
-          paymentMethod: data.paymentMethod,
-          billingInfo: data.billingInfo,
-        });
-      }
+      await api.put(API.USER.LOCATION, {
+        address: data.address,
+        ...(data.city && { city: data.city }),
+        ...(data.state && { state: data.state }),
+        ...(data.country && { country: data.country }),
+      });
+      if (user) setUser({ ...user, address: data.address });
     } catch (error) {
-      console.error('Error updating payment details:', error);
+      console.error('Error setting location:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -260,23 +279,49 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (credentials: LoginRequest) => {
+  const signinVerify = async (email: string, password: string): Promise<SigninVerifyResult> => {
     if (isDemoMode()) {
-      setUser({ ...DEFAULT_USER, email: credentials.email, name: credentials.email.split('@')[0] || 'Demo User' });
-      return;
+      setUser({ ...DEFAULT_USER, email, name: email.split('@')[0] || 'Demo User' });
+      return { needsOtp: false };
     }
     setIsLoading(true);
     try {
       const { data } = await api.post<{ user?: UserProfile; token?: string }>(API.AUTH.SIGNIN, {
-        field: credentials.email,
-        password: credentials.password,
+        field: email,
+        password,
       });
-      const profile = data.user ?? data;
+      const profile = (data as { user?: UserProfile }).user ?? data;
+      const token = (data as { token?: string }).token;
+      if (profile && typeof profile === 'object' && token) {
+        setToken(token);
+        setUser(mapBackendUserToProfile(profile as UserProfile));
+        return { needsOtp: false };
+      }
+      if (token) return { needsOtp: true, verifyToken: token };
+      return { needsOtp: true, verifyToken: '' };
+    } catch (error) {
+      console.error('Signin verify error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const signinWithOtp = async (email: string, verifyToken: string, otp: string) => {
+    if (isDemoMode()) return;
+    setIsLoading(true);
+    try {
+      const { data } = await api.post<{ user?: UserProfile; token?: string }>(API.AUTH.SIGNIN, {
+        field: email,
+        token: verifyToken,
+        otp,
+      });
+      const profile = (data as { user?: UserProfile }).user ?? data;
       const token = (data as { token?: string }).token;
       if (token) setToken(token);
       if (profile && typeof profile === 'object') setUser(mapBackendUserToProfile(profile as UserProfile));
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Signin OTP error:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -330,14 +375,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAuthLoading,
-        login,
+        signinVerify,
+        signinWithOtp,
         signup,
         loginWithDemo,
         updateProfile,
+        setLocation,
         updatePassword,
         uploadProfilePicture,
         removeProfilePicture,
-        updatePaymentDetails,
         updateNotifications,
         logout,
       }}

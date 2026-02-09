@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X, User, Mail, Phone, MapPin, Loader2 } from 'lucide-react';
 import { useContacts } from '@/app/providers/ContactsProvider';
 import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
+import FormError from '@/app/components/ui/FormError';
 
 interface AddContactModalProps {
   isOpen: boolean;
@@ -86,11 +87,7 @@ export default function AddContactModal({ isOpen, onClose }: AddContactModalProp
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-            </div>
-          )}
+          {error && <FormError message={error} />}
 
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">

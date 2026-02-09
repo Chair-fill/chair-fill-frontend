@@ -15,6 +15,8 @@ export type PlanBadge = 'Most Popular' | 'Coming Soon';
 
 export interface PlanDetails {
   id: SubscriptionPlan;
+  /** Stripe price ID - from plans/list API */
+  price_id?: string;
   name: string;
   /** Tagline above the plan name */
   tagline?: string;

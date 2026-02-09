@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useUser } from '@/app/providers/UserProvider';
 import { getApiErrorMessage } from '@/lib/api-client';
 import { User, Mail, Phone, MapPin, Loader2, CheckCircle2, MessageCircle } from 'lucide-react';
+import FormError from '@/app/components/ui/FormError';
+import { FORM_LABEL, INPUT_LEFT_ICON, INPUT_ICON_LEFT, FORM_SUCCESS_BOX, FORM_SUCCESS_TEXT, BTN_PRIMARY_INLINE } from '@/lib/constants/ui';
 
 export default function ProfileForm() {
   const { user, updateProfile, isLoading } = useUser();
@@ -63,69 +65,69 @@ export default function ProfileForm() {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <label className={FORM_LABEL}>
             Full Name
           </label>
           <div className="relative">
-            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
+            <User className={INPUT_ICON_LEFT} />
             <input
               type="text"
               name="name"
               value={formData.name}
               onChange={handleChange}
               placeholder="John Doe"
-              className="w-full pl-10 pr-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
+              className={INPUT_LEFT_ICON}
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <label className={FORM_LABEL}>
             Work address
           </label>
           <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
+            <MapPin className={INPUT_ICON_LEFT} />
             <input
               type="text"
               name="address"
               value={formData.address}
               onChange={handleChange}
               placeholder="123 Main St, City, State, ZIP"
-              className="w-full pl-10 pr-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
+              className={INPUT_LEFT_ICON}
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <label className={FORM_LABEL}>
             Phone Number
           </label>
           <div className="relative">
-            <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
+            <Phone className={INPUT_ICON_LEFT} />
             <input
               type="tel"
               name="phone"
               value={formData.phone}
               onChange={handleChange}
               placeholder="+1 (555) 123-4567"
-              className="w-full pl-10 pr-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
+              className={INPUT_LEFT_ICON}
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <label className={FORM_LABEL}>
             Email Address
           </label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
+            <Mail className={INPUT_ICON_LEFT} />
             <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
               placeholder="john@example.com"
-              className="w-full pl-10 pr-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
+              className={INPUT_LEFT_ICON}
             />
           </div>
         </div>
@@ -155,9 +157,7 @@ export default function ProfileForm() {
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-        </div>
+        <FormError message={error} />
       )}
 
       {success && (
@@ -171,7 +171,7 @@ export default function ProfileForm() {
         <button
           type="submit"
           disabled={isLoading}
-          className="px-6 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
+          className={BTN_PRIMARY_INLINE}
         >
           {isLoading ? (
             <>

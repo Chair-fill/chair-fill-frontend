@@ -24,10 +24,23 @@ export const api = axios.create({
 });
 
 /**
+ * Extract token from API response (signup verify, forgot-password verify).
+ * Handles { token }, { data: { token } }, etc.
+ */
+export function getResponseToken(data: unknown): string | undefined {
+  if (!data || typeof data !== 'object') return undefined;
+  const d = data as Record<string, unknown>;
+  if (typeof d.token === 'string') return d.token;
+  const inner = d.data as Record<string, unknown> | undefined;
+  return typeof inner?.token === 'string' ? inner.token : undefined;
+}
+
+/**
  * Extract user-facing error message from NestJS API error.
  * Handles ValidationPipe message (string or string[]) and standard message.
  */
 export function getApiErrorMessage(error: unknown): string {
+  if (error == null) return "Something went wrong. Please try again.";
   const err = error as AxiosError<{ message?: string | string[] }>;
   const msg = err.response?.data?.message;
   if (Array.isArray(msg)) return msg[0] ?? "Something went wrong.";
