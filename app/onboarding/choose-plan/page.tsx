@@ -20,10 +20,12 @@ import { SUBSCRIPTION_PLANS } from '@/lib/constants/subscription';
 import { isDemoMode } from '@/lib/demo';
 import { ONBOARDING_BARBER_ACCOUNT } from '@/lib/auth';
 
-/** Plan shape from GET plans/list?provider=stripe */
+/** Plan shape from GET plans/list?provider=stripe - use data.price_id, not stripe_price.id */
 interface ApiPlan {
   id: string;
   price_id?: string;
+  data?: { price_id?: string };
+  stripe_price?: { id?: string };
   [key: string]: unknown;
 }
 
@@ -87,13 +89,16 @@ export default function OnboardingChoosePlanPage() {
         if (cancelled) return;
         const merged: PlanDetails[] = SUBSCRIPTION_PLANS.map((p) => {
           const apiPlan = apiPlans.find((a) => {
-            const apiId = String(a.id).toUpperCase();
-            const staticId = API_PLAN_TO_STATIC[apiId] ?? p.id;
+            const apiKey = String(a.name || a.id).toUpperCase();
+            const staticId = API_PLAN_TO_STATIC[apiKey] ?? p.id;
             return staticId === p.id;
           });
+          const priceId = apiPlan
+            ? (apiPlan.data?.price_id ?? apiPlan.price_id)
+            : p.price_id;
           return {
             ...p,
-            price_id: apiPlan?.price_id ?? p.price_id,
+            price_id: priceId ?? p.price_id,
           };
         });
         setPlans(merged);
