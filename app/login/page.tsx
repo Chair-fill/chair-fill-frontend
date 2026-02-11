@@ -7,7 +7,6 @@ import { Mail, Lock, Loader2, ArrowLeft } from 'lucide-react';
 import { useUser } from '@/app/providers/UserProvider';
 import { api, getApiErrorMessage } from '@/lib/api-client';
 import { API } from '@/lib/constants/api';
-import { clearAllPersistentData } from '@/lib/clear-persistent-data';
 import AuthLayout from '@/app/components/ui/AuthLayout';
 import AuthCard from '@/app/components/ui/AuthCard';
 import FormError from '@/app/components/ui/FormError';
@@ -56,7 +55,7 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || DEFAULT_REDIRECT;
   const registered = searchParams.get('registered') === '1';
-  const { signinVerify, signinWithOtp, loginWithDemo, logout, isLoading } = useUser();
+  const { signinVerify, signinWithOtp, loginWithDemo, logout, clearSessionForNewLogin, isLoading } = useUser();
   const [step, setStep] = useState<Step>('credentials');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -68,10 +67,10 @@ export default function LoginPage() {
 
   const hasAutoDemo = useRef(false);
 
+  // Clear any existing session when showing login so the next user (or re-login) never uses the previous user's token or identity.
   useEffect(() => {
-    clearAllPersistentData();
-    logout();
-  }, [logout]);
+    clearSessionForNewLogin();
+  }, [clearSessionForNewLogin]);
 
   useEffect(() => {
     if (hasAutoDemo.current || searchParams.get('demo') !== '1') return;

@@ -1,9 +1,10 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import type { UserProfile, UpdateProfileRequest, NotificationPreferences, SignupRequest } from '@/lib/types/user';
 import { STORAGE_KEY_USER, DEFAULT_USER } from '@/lib/constants/user';
 import { getToken, removeToken, setToken } from '@/lib/auth';
+import { clearAllPersistentData, clearSessionOnly } from '@/lib/clear-persistent-data';
 import { api, setUnauthorizedHandler, getApiErrorMessage } from '@/lib/api-client';
 import { API } from '@/lib/constants/api';
 import { isDemoMode, setDemoMode } from '@/lib/demo';
@@ -40,6 +41,8 @@ interface UserContextType {
   removeProfilePicture: () => Promise<void>;
   updateNotifications: (prefs: NotificationPreferences) => Promise<void>;
   logout: () => void;
+  /** Clear token + user only (storage + state). Call when showing login so the next user never uses the previous user's token. */
+  clearSessionForNewLogin: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -80,13 +83,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  /** Prevents 401 from other in-flight requests (e.g. technician/me) from clearing user before initial restore completes */
+  const restoreCompletedRef = useRef(false);
 
   const logout = useCallback(() => {
-    removeToken();
+    clearAllPersistentData();
     setDemoMode(false);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(STORAGE_KEY_USER);
-    }
+    setUser(null);
+  }, []);
+
+  const clearSessionForNewLogin = useCallback(() => {
+    clearSessionOnly();
+    setDemoMode(false);
     setUser(null);
   }, []);
 
@@ -95,9 +103,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setUser(DEFAULT_USER);
   }, []);
 
-  // Register 401 handler so API client can clear session when token is invalid
+  // Register 401 handler so API client can clear session when token is invalid.
+  // Only clear user after initial restore has completed, so a 401 from a parallel request (e.g. technician/me) doesn't log the user out on reload.
   useEffect(() => {
-    setUnauthorizedHandler(() => setUser(null));
+    setUnauthorizedHandler(() => {
+      if (restoreCompletedRef.current) setUser(null);
+    });
   }, []);
 
   // Restore session on mount: if demo mode and no token, set user from storage or DEFAULT_USER; else if token, fetch /auth/me
@@ -114,6 +125,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       } catch {
         setUser(DEFAULT_USER);
       }
+      restoreCompletedRef.current = true;
       setIsAuthLoading(false);
       return;
     }
@@ -124,8 +136,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
       } catch {
         // ignore
       }
+      restoreCompletedRef.current = true;
       setIsAuthLoading(false);
       return;
+    }
+    // Restore cached user immediately so RequireAuth doesn't redirect while /auth/me is in flight
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_USER);
+      if (stored) setUser(JSON.parse(stored) as UserProfile);
+    } catch {
+      // ignore
     }
     api
       .get<{ user?: UserProfile } | UserProfile>(API.USER.CURRENT)
@@ -139,7 +159,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
         removeToken();
         setUser(null);
       })
-      .finally(() => setIsAuthLoading(false));
+      .finally(() => {
+        restoreCompletedRef.current = true;
+        setIsAuthLoading(false);
+      });
   }, []);
 
   // Save user to localStorage whenever it changes
@@ -386,6 +409,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         removeProfilePicture,
         updateNotifications,
         logout,
+        clearSessionForNewLogin,
       }}
     >
       {children}

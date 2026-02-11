@@ -1,15 +1,19 @@
 'use client';
 
+import QueryProvider from "@/app/providers/QueryProvider";
 import { ContactsProvider } from "@/app/providers/ContactsProvider";
 import { ProgressProvider } from "@/app/providers/ProgressProvider";
 import { SubscriptionProvider } from "@/app/providers/SubscriptionProvider";
 import { TechnicianProvider } from "@/app/providers/TechnicianProvider";
 import { UserProvider } from "@/app/providers/UserProvider";
+import SubscriptionPrefetcher from "@/app/components/SubscriptionPrefetcher";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
+    <QueryProvider>
     <UserProvider>
       <TechnicianProvider>
+        <SubscriptionPrefetcher />
         <ProgressProvider>
           <ContactsProvider>
             <SubscriptionProvider>
@@ -19,5 +23,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         </ProgressProvider>
       </TechnicianProvider>
     </UserProvider>
+    </QueryProvider>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSubscription } from "@/app/providers/SubscriptionProvider";
 import type { SubscriptionPlan, PlanDetails } from "@/lib/types/subscription";
 import {
@@ -12,77 +13,174 @@ import {
   Zap,
   Crown,
   Building2,
+  AlertCircle,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
+import { getApiErrorMessage } from "@/lib/api-client";
 import { API } from "@/lib/constants/api";
 import { isDemoMode } from "@/lib/demo";
+import { useTechnician } from "@/app/providers/TechnicianProvider";
+import { fetchCurrentSubscription, SUBSCRIPTION_QUERY_KEY } from "@/lib/api/subscription";
+import { SUBSCRIPTION_PLANS } from "@/lib/constants/subscription";
 import SubscriptionPaymentModal from "@/app/features/subscription/components/SubscriptionPaymentModal";
 
+/** Plan shape from GET plans/list?provider=stripe - use data.price_id */
+interface ApiPlan {
+  id: string;
+  name?: string;
+  price_id?: string;
+  data?: { price_id?: string };
+  [key: string]: unknown;
+}
+
+const API_PLAN_TO_STATIC: Record<string, string> = {
+  INDEPENDENT: 'independent',
+  PROFESSIONAL: 'professional',
+  SHOP_OWNER: 'shop-owner',
+};
+
 export default function SubscriptionPage() {
-  const { subscription, plans, subscribe, cancelSubscription, updateSubscription, toggleAutoRenew, isLoading } = useSubscription();
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const { technician, isTechnicianLoading } = useTechnician();
+  const technicianId = technician?.id ?? technician?.technician_id;
+  const queryClient = useQueryClient();
+
+  const subscriptionQuery = useQuery({
+    queryKey: [...SUBSCRIPTION_QUERY_KEY, technicianId ?? ''],
+    queryFn: () => fetchCurrentSubscription(technicianId!),
+    enabled: !!technicianId && !isDemoMode(),
+  });
+
+  const {
+    subscription: subscriptionFromProvider,
+    subscribe,
+    cancelSubscription,
+    updateSubscription,
+    toggleAutoRenew,
+    isLoading: providerLoading,
+    subscriptionError: providerError,
+  } = useSubscription();
+
+  const displaySubscription = isDemoMode()
+    ? subscriptionFromProvider
+    : (subscriptionQuery.data ?? subscriptionFromProvider);
+
+  const [displayPlans, setDisplayPlans] = useState<PlanDetails[]>(SUBSCRIPTION_PLANS);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(!isDemoMode());
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [planToPurchase, setPlanToPurchase] = useState<PlanDetails | null>(null);
-  const [redirectingPlanId, setRedirectingPlanId] = useState<string | null>(null);
-  const [redirectError, setRedirectError] = useState<string | null>(null);
+  const [subscribingPlanId, setSubscribingPlanId] = useState<string | null>(null);
+  const [subscribeError, setSubscribeError] = useState<string | null>(null);
 
-  const currentPlan = subscription ? plans.find(p => p.id === subscription.plan) : null;
-  const isActive = subscription?.status === 'active';
-  const isCancelled = subscription?.status === 'cancelled';
+  const currentPlan = displaySubscription ? displayPlans.find(p => p.id === displaySubscription.plan) : null;
+  const isActive = displaySubscription?.status === 'active';
+  const isCancelled = displaySubscription?.status === 'cancelled';
+  const isLoading = providerLoading || subscriptionQuery.isLoading;
+  const subscriptionError = subscriptionQuery.error ? 'Could not load subscription.' : providerError;
+  const refetchSubscription = () => subscriptionQuery.refetch();
 
-  const handlePlanSelect = async (planId: string) => {
-    const plan = plans.find(p => p.id === planId);
-    if (!plan) return;
+  // Keep loading until we have technician and subscription data (or error), so the active subscription is always fetched before showing the page
+  const isPageLoading =
+    isTechnicianLoading ||
+    (!isDemoMode() && (!technicianId || subscriptionQuery.isPending));
 
-    if (subscription && subscription.plan === planId) {
-      return; // Already on this plan
-    }
-
-    if (plan.comingSoon) return;
-
+  // Fetch plans with price_id from API (same as /onboarding/choose-plan)
+  useEffect(() => {
     if (isDemoMode()) {
-      setPlanToPurchase(plan);
-      setShowPaymentModal(true);
+      setDisplayPlans(SUBSCRIPTION_PLANS);
+      setIsLoadingPlans(false);
+      return;
+    }
+    let cancelled = false;
+    async function fetchPlans() {
+      setIsLoadingPlans(true);
+      try {
+        const { data } = await api.get<ApiPlan[] | { data?: ApiPlan[] }>(
+          `${API.PLANS.LIST}?provider=stripe`
+        );
+        const raw = Array.isArray(data) ? data : (data as { data?: ApiPlan[] })?.data;
+        const apiPlans: ApiPlan[] = Array.isArray(raw) ? raw : [];
+        if (cancelled) return;
+        const merged: PlanDetails[] = SUBSCRIPTION_PLANS.map((p) => {
+          const apiPlan = apiPlans.find((a) => {
+            const apiKey = String(a.name || a.id).toUpperCase();
+            const staticId = API_PLAN_TO_STATIC[apiKey] ?? p.id;
+            return staticId === p.id;
+          });
+          const priceId = apiPlan
+            ? (apiPlan.data?.price_id ?? apiPlan.price_id)
+            : p.price_id;
+          return { ...p, price_id: priceId ?? p.price_id };
+        });
+        setDisplayPlans(merged);
+      } catch {
+        if (!cancelled) setDisplayPlans(SUBSCRIPTION_PLANS);
+      } finally {
+        if (!cancelled) setIsLoadingPlans(false);
+      }
+    }
+    fetchPlans();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handlePlanClick = async (plan: PlanDetails) => {
+    if (plan.comingSoon) return;
+    if (displaySubscription && displaySubscription.plan === plan.id) return;
+
+    if (!plan.price_id) {
+      setSubscribeError('This plan is not available for subscription yet.');
+      return;
+    }
+    if (!technicianId) {
+      setSubscribeError('Technician profile not found. Please complete onboarding first.');
       return;
     }
 
-    // Redirect to Stripe Checkout (backend creates session, returns URL)
-    setSelectedPlan(planId);
-    setRedirectingPlanId(planId);
-    setRedirectError(null);
+    setSubscribeError(null);
+    setSubscribingPlanId(plan.id);
     try {
-      const { data } = await api.get<{ url?: string }>(
-        `${API.PAYMENT.CHECKOUT_SESSION}?planId=${encodeURIComponent(planId)}`
-      );
-      if (data?.url) {
-        window.location.href = data.url;
+      if (isDemoMode()) {
+        setPlanToPurchase(plan);
+        setShowPaymentModal(true);
+        setSubscribingPlanId(null);
         return;
       }
-      throw new Error('No checkout URL returned');
-    } catch {
-      setRedirectError('Unable to start checkout. Please try again.');
-      setRedirectingPlanId(null);
-      setSelectedPlan(null);
-    }
-  };
-
-  const handleSubscribe = async (planId: string) => {
-    try {
-      if (subscription && subscription.status === 'active') {
-        await updateSubscription(planId as SubscriptionPlan);
-      } else {
-        await subscribe(planId as SubscriptionPlan);
+      const { data } = await api.post<{
+        url?: string;
+        data?: { url?: string; checkoutSession?: { url?: string } };
+      }>(API.SUBSCRIPTION.SUBSCRIBE, {
+        price_id: plan.price_id,
+        technician_id: technicianId,
+      });
+      const raw = data && typeof data === 'object' ? data : null;
+      const checkoutUrl =
+        (raw && typeof (raw as { url?: string }).url === 'string' ? (raw as { url: string }).url : null) ??
+        (raw && (raw as { data?: { url?: string } }).data?.url) ??
+        (raw && (raw as { data?: { checkoutSession?: { url?: string } } }).data?.checkoutSession?.url);
+      if (checkoutUrl && typeof checkoutUrl === 'string') {
+        window.location.href = checkoutUrl;
+        return;
       }
-      setSelectedPlan(null);
-    } catch (error) {
-      console.error('Subscription error:', error);
+      setSubscribeError('No checkout URL returned. Please try again or contact support.');
+    } catch (err) {
+      setSubscribeError(getApiErrorMessage(err));
+    } finally {
+      setSubscribingPlanId(null);
     }
   };
 
   const handlePaymentSuccess = async () => {
     if (planToPurchase) {
-      await handleSubscribe(planToPurchase.id);
+      try {
+        if (displaySubscription && displaySubscription.status === 'active') {
+          await updateSubscription(planToPurchase.id as SubscriptionPlan);
+        } else {
+          await subscribe(planToPurchase.id as SubscriptionPlan);
+        }
+        await queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_QUERY_KEY });
+      } catch (e) {
+        console.error('Subscription error:', e);
+      }
       setPlanToPurchase(null);
       setShowPaymentModal(false);
     }
@@ -91,6 +189,7 @@ export default function SubscriptionPage() {
   const handleCancel = async () => {
     try {
       await cancelSubscription();
+      await queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_QUERY_KEY });
       setShowCancelConfirm(false);
     } catch (error) {
       console.error('Cancellation error:', error);
@@ -118,10 +217,37 @@ export default function SubscriptionPage() {
     });
   };
 
+  if (isPageLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center py-8">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-zinc-500 dark:text-zinc-400" aria-hidden />
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Loading subscription…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black py-8">
       <main className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
+          {subscriptionError && (
+            <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <p className="text-sm font-medium">{subscriptionError}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => refetchSubscription()}
+                className="px-3 py-1.5 text-sm font-medium text-amber-800 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/40 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
           {/* Header */}
           <div className="mb-8 text-center">
             <div className="flex items-center justify-center gap-3 mb-2">
@@ -140,14 +266,14 @@ export default function SubscriptionPage() {
               Active subscription
             </h2>
 
-            {subscription ? (
+            {displaySubscription ? (
               <>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-3">
                       {currentPlan && getPlanIcon(currentPlan.id)}
                       <span className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-                        {currentPlan?.name ?? subscription.plan}
+                        {currentPlan?.name ?? displaySubscription.plan}
                       </span>
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                         isActive
@@ -156,23 +282,23 @@ export default function SubscriptionPage() {
                           ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                           : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                       }`}>
-                        {subscription.status.toUpperCase()}
+                        {displaySubscription.status.toUpperCase()}
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-600 dark:text-zinc-400">
                       <span className="flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
-                        Started: {formatDate(subscription.startDate)}
+                        Started: {formatDate(displaySubscription.startDate)}
                       </span>
-                      {subscription.endDate && (
+                      {displaySubscription.endDate && (
                         <span className="flex items-center gap-2">
                           <Calendar className="w-4 h-4" />
-                          Ends: {formatDate(subscription.endDate)}
+                          Ends: {formatDate(displaySubscription.endDate)}
                         </span>
                       )}
                       <span className="flex items-center gap-2">
-                        <RefreshCw className={`w-4 h-4 ${subscription.autoRenew ? 'text-green-600 dark:text-green-400' : ''}`} />
-                        Auto-renew: {subscription.autoRenew ? 'On' : 'Off'}
+                        <RefreshCw className={`w-4 h-4 ${displaySubscription.autoRenew ? 'text-green-600 dark:text-green-400' : ''}`} />
+                        Auto-renew: {displaySubscription.autoRenew ? 'On' : 'Off'}
                       </span>
                     </div>
                   </div>
@@ -189,7 +315,7 @@ export default function SubscriptionPage() {
                           {isLoading ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
-                            `Turn auto-renew ${subscription.autoRenew ? 'off' : 'on'}`
+                            `Turn auto-renew ${displaySubscription.autoRenew ? 'off' : 'on'}`
                           )}
                         </button>
                         {!showCancelConfirm ? (
@@ -220,9 +346,9 @@ export default function SubscriptionPage() {
                     </div>
                   )}
                 </div>
-                {isCancelled && subscription.endDate && (
+                {isCancelled && displaySubscription.endDate && (
                   <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
-                    Your subscription remains active until {formatDate(subscription.endDate)}. You can select a new plan below before then.
+                    Your subscription remains active until {formatDate(displaySubscription.endDate)}. You can select a new plan below before then.
                   </p>
                 )}
               </>
@@ -234,28 +360,33 @@ export default function SubscriptionPage() {
             )}
           </div>
 
-          {/* Available Plans – compare and choose */}
+          {/* Plan cards: only when no active subscription (e.g. cancelled or no subscription yet) */}
+          {(!displaySubscription || displaySubscription.status !== 'active') && (
           <section className="mb-8" aria-labelledby="plans-heading">
             <h2 id="plans-heading" className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
               Compare plans
             </h2>
             <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-              Choose the plan that fits your business. You'll complete payment on Stripe.
+              Choose the plan that fits your business. You will complete payment on Stripe.
             </p>
 
+            {isLoadingPlans ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-10 h-10 animate-spin text-zinc-500 dark:text-zinc-400" aria-hidden />
+              </div>
+            ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-              {plans.map((plan) => {
-                const isCurrentPlan = subscription?.plan === plan.id;
+              {displayPlans.map((plan) => {
+                const isCurrentPlan = displaySubscription?.plan === plan.id;
                 const isPopular = plan.badge === 'Most Popular';
                 const isComingSoon = plan.comingSoon ?? false;
-                const isSelectable = !isCurrentPlan && !isComingSoon;
+                const isSelectable = !isCurrentPlan && !isComingSoon && !!plan.price_id;
 
                 const getCtaLabel = () => {
                   if (isCurrentPlan) return 'Your plan';
                   if (isComingSoon) return 'Contact us';
-                  if (isLoading && selectedPlan === plan.id) return null;
                   const shortName = plan.name.replace(/^The\s+/, '');
-                  if (subscription?.status === 'active') return `Switch to ${shortName}`;
+                  if (displaySubscription?.status === 'active') return `Switch to ${shortName}`;
                   return `Get ${shortName}`;
                 };
 
@@ -345,9 +476,9 @@ export default function SubscriptionPage() {
                         type="button"
                         onClick={() => {
                           if (!isSelectable) return;
-                          handlePlanSelect(plan.id);
+                          handlePlanClick(plan);
                         }}
-                        disabled={isLoading || isCurrentPlan || redirectingPlanId !== null}
+                        disabled={isComingSoon || subscribingPlanId !== null}
                         aria-disabled={isCurrentPlan || isComingSoon}
                         className={`w-full py-3 px-4 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-900 ${
                           isCurrentPlan
@@ -357,17 +488,12 @@ export default function SubscriptionPage() {
                             : isPopular
                             ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
                             : 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 focus:ring-zinc-900 dark:focus:ring-zinc-50'
-                        } ${(isLoading || isCurrentPlan || redirectingPlanId) ? 'cursor-not-allowed' : ''}`}
+                        } ${(isCurrentPlan || isComingSoon || subscribingPlanId) ? 'cursor-not-allowed' : ''}`}
                       >
-                        {redirectingPlanId === plan.id ? (
+                        {subscribingPlanId === plan.id ? (
                           <span className="inline-flex items-center justify-center gap-2">
                             <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-                            Redirecting to Stripe…
-                          </span>
-                        ) : isLoading && selectedPlan === plan.id ? (
-                          <span className="inline-flex items-center justify-center gap-2">
-                            <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-                            Processing…
+                            Subscribing…
                           </span>
                         ) : (
                           getCtaLabel()
@@ -378,12 +504,12 @@ export default function SubscriptionPage() {
                 );
               })}
             </div>
-          </section>
+            )}
 
-          {redirectError && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-600 dark:text-red-400">{redirectError}</p>
-            </div>
+          {subscribeError && (
+            <p className="mt-4 text-sm text-red-600 dark:text-red-400 text-center">{subscribeError}</p>
+          )}
+          </section>
           )}
 
           {/* Additional Info */}
@@ -393,13 +519,13 @@ export default function SubscriptionPage() {
             </h3>
             <div className="space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
               <p>
-                • Upgrade or change your plan at any time. Changes take effect immediately.
+                • To change plan, cancel your current subscription first. Plan options will then appear so you can start a new subscription.
               </p>
               <p>
                 • Cancelled subscriptions remain active until the end of the current billing period.
               </p>
               <p>
-                • Toggle auto-renew on or off above.
+                • Use the buttons above to turn auto-renew on or off.
               </p>
             </div>
           </div>
@@ -413,7 +539,6 @@ export default function SubscriptionPage() {
           onClose={() => {
             setShowPaymentModal(false);
             setPlanToPurchase(null);
-            setSelectedPlan(null);
           }}
           plan={planToPurchase}
           onSuccess={handlePaymentSuccess}

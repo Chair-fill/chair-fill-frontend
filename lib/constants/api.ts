@@ -49,7 +49,11 @@ export const API = {
     LIST: '/plans/list',
   },
   SUBSCRIPTION: {
-    /** POST - Subscribe to a plan. Body: { price_id, technician_id } */
+    /** GET - Current subscription. Query: ?technician_id= or ?shop_id= (use one) */
+    CURRENT: '/subscription/current',
+    /** POST - Subscribe. Body: { price_id, user_id?, shop_id?, technician_id? } */
     SUBSCRIBE: '/subscription/subscribe',
+    /** POST - Cancel at period end. Body: { shop_id? } or { technician_id? } */
+    CANCEL: '/subscription/cancel',
   },
 } as const;
