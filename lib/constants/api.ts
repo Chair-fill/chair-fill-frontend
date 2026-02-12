@@ -56,4 +56,26 @@ export const API = {
     /** POST - Cancel at period end. Body: { shop_id? } or { technician_id? } */
     CANCEL: '/subscription/cancel',
   },
+  /** Contact endpoints (match Chair Fill API Postman: /contact, /contact/list, /contact/bulk/json, etc.) */
+  CONTACT: {
+    /** GET - List contacts (Postman: List Contacts). Optional: ?technician_id= */
+    LIST: '/contact/list',
+    /** POST - Create single contact (Postman: Create Contact). Body: first_name, last_name, email, phone_number_1, shop_id?, technician_id? */
+    CREATE: '/contact',
+    /** POST - Bulk upload via JSON (Postman: Bulk JSON). Body: { shop_id?, technician_id?, contacts: [{ first_name, last_name?, email?, phone_number_1? }] } */
+    BULK_JSON: '/contact/bulk/json',
+    /** POST - Bulk upload CSV (Postman: Bulk CSV). FormData: file, data (JSON string e.g. {"shop_id":"","technician_id":""}) */
+    BULK_CSV: '/contact/bulk/csv',
+    /** POST - Bulk upload VCF (Postman: Bulk VCF). FormData: file, data */
+    BULK_VCF: '/contact/bulk/vcf',
+    /** GET - Query contacts (Postman: Query Contact) */
+    QUERY: '/contact/query',
+    /** DELETE - Remove one contact (Postman: Delete Contact). Path: /contact/:id */
+    DELETE: (id: string) => `/contact/${encodeURIComponent(id)}`,
+  },
+  /** Outreach (Postman: Send Outreach). POST /outreach/send */
+  OUTREACH: {
+    /** POST - Send outreach. Body: { message, phone_number, send_to_all } */
+    SEND: '/outreach/send',
+  },
 } as const;

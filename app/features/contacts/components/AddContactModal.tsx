@@ -42,7 +42,7 @@ export default function AddContactModal({ isOpen, onClose }: AddContactModalProp
     }
     setIsSubmitting(true);
     try {
-      addContacts([{
+      await addContacts([{
         name: formData.name.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),

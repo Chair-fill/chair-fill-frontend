@@ -5,8 +5,10 @@ import { useContacts } from '@/app/providers/ContactsProvider';
 import { User, Mail, Phone, MapPin, Trash2, Users, Plus, Upload, Send, Loader2 } from 'lucide-react';
 import ContactUploadModal from "@/app/features/contacts/components/ContactUploadModal";
 import AddContactModal from "@/app/features/contacts/components/AddContactModal";
-import { api } from "@/lib/api-client";
+import { sendOutreach } from "@/lib/api/outreach";
 import { isDemoMode } from "@/lib/demo";
+
+const DEFAULT_OUTREACH_MESSAGE = 'Follow up on your appointment';
 
 export default function ContactsList() {
   const { contacts, isLoaded, removeContact, clearAllContacts } = useContacts();
@@ -21,11 +23,15 @@ export default function ContactsList() {
         await new Promise((r) => setTimeout(r, 800));
         return;
       }
-      await api.post("/outreach", {
-        contactId: contact.id,
-        name: contact.name,
-        email: contact.email,
-        phone: contact.phone,
+      const phone = contact.phone?.trim() || '';
+      if (!phone) {
+        console.warn('Contact has no phone number for outreach');
+        return;
+      }
+      await sendOutreach({
+        message: DEFAULT_OUTREACH_MESSAGE,
+        phone_number: phone,
+        send_to_all: false,
       });
     } catch (error) {
       console.error("Error sending outreach:", error);
@@ -36,9 +42,9 @@ export default function ContactsList() {
 
   if (!isLoaded) {
     return (
-      <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-12 shadow-sm flex items-center justify-center min-h-[320px]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-12 h-12 text-zinc-400 dark:text-zinc-500 animate-spin" />
+      <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-center min-h-[50vh]">
+        <div className="flex flex-col items-center gap-4 p-12">
+          <Loader2 className="w-12 h-12 text-zinc-400 dark:text-zinc-500 animate-spin" aria-hidden />
           <p className="text-zinc-600 dark:text-zinc-400">Loading contacts...</p>
         </div>
       </div>

@@ -1,40 +1,77 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import type { Contact } from '@/lib/types/contact';
 import { SAMPLE_CONTACTS } from '@/lib/constants/contacts';
 import { storage } from '@/lib/utils/storage';
 import { migrateContacts } from '@/lib/utils/contact-migration';
 import { generateContactId } from '@/lib/utils/id-generator';
+import { isDemoMode } from '@/lib/demo';
+import { useUser } from '@/app/providers/UserProvider';
+import { useTechnician } from '@/app/providers/TechnicianProvider';
+import {
+  fetchContacts,
+  createContact,
+  uploadContacts,
+  deleteContact,
+  clearContacts,
+} from '@/lib/api/contacts';
 
 interface ContactsContextType {
   contacts: Contact[];
   isLoaded: boolean;
-  addContacts: (newContacts: Omit<Contact, 'id'>[]) => void;
-  removeContact: (id: string) => void;
-  clearAllContacts: () => void;
+  addContacts: (newContacts: Omit<Contact, 'id'>[]) => Promise<void>;
+  removeContact: (id: string) => Promise<void>;
+  clearAllContacts: () => Promise<void>;
 }
 
 const ContactsContext = createContext<ContactsContextType | undefined>(undefined);
 
 export function ContactsProvider({ children }: { children: ReactNode }) {
+  const { user } = useUser();
+  const { technician } = useTechnician();
+  const technicianId = technician?.id ?? technician?.technician_id;
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load contacts from localStorage on mount (client-only)
+  // Refetch contacts when the logged-in user changes (different account) so we never show the previous user's contacts.
   useEffect(() => {
-    const stored = storage.contacts.get();
-    if (stored && stored.length > 0) {
-      setContacts(migrateContacts(stored));
-    } else {
-      setContacts([...SAMPLE_CONTACTS]);
+    if (isDemoMode()) {
+      const stored = storage.contacts.get();
+      if (stored && stored.length > 0) {
+        setContacts(migrateContacts(stored));
+      } else {
+        setContacts([...SAMPLE_CONTACTS]);
+      }
+      setIsLoaded(true);
+      return;
     }
-    setIsLoaded(true);
-  }, []);
+    if (!user) {
+      setContacts([]);
+      setIsLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    setContacts([]);
+    setIsLoaded(false);
+    fetchContacts()
+      .then((list) => {
+        if (!cancelled) setContacts(list);
+      })
+      .catch(() => {
+        if (!cancelled) setIsLoaded(true);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
-  // Save contacts to localStorage whenever they change (after initial load)
+  // Save to localStorage in demo mode whenever contacts change
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || !isDemoMode()) return;
     if (contacts.length === 0) {
       storage.contacts.remove();
     } else {
@@ -42,31 +79,73 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
     }
   }, [contacts, isLoaded]);
 
-  const addContacts = (newContacts: Omit<Contact, 'id'>[]) => {
-    const contactsWithIds: Contact[] = newContacts.map((contact): Contact => {
-      const id = generateContactId();
-      const newContact: Contact = {
-        id,
-        name: contact.name ?? '',
-        email: contact.email ?? '',
-        phone: contact.phone ?? '',
-      };
-      if (contact.address) {
-        newContact.address = contact.address;
+  const addContacts = useCallback(
+    async (newContacts: Omit<Contact, 'id'>[]) => {
+      if (isDemoMode()) {
+        const contactsWithIds: Contact[] = newContacts.map((contact): Contact => {
+          const id = generateContactId();
+          const newContact: Contact = {
+            id,
+            name: contact.name ?? '',
+            email: contact.email ?? '',
+            phone: contact.phone ?? '',
+          };
+          if (contact.address) newContact.address = contact.address;
+          return newContact;
+        });
+        setContacts((prev) => [...prev, ...contactsWithIds]);
+        return;
       }
-      return newContact;
-    });
-    setContacts((prev) => [...prev, ...contactsWithIds]);
-  };
+      if (newContacts.length === 1) {
+        const payload = {
+          name: newContacts[0].name ?? '',
+          email: newContacts[0].email ?? '',
+          phone: newContacts[0].phone ?? '',
+          ...(newContacts[0].address && { address: newContacts[0].address }),
+        };
+        const created = await createContact(payload, technicianId ?? undefined);
+        setContacts((prev) => [...prev, created]);
+        return;
+      }
+      if (technicianId == null) return;
+      const payload = newContacts.map((c) => ({
+        name: c.name ?? '',
+        email: c.email ?? '',
+        phone: c.phone ?? '',
+        ...(c.address && { address: c.address }),
+      }));
+      const created = await uploadContacts(payload, technicianId);
+      setContacts((prev) => [...prev, ...created]);
+    },
+    [technicianId]
+  );
 
-  const removeContact = (id: string) => {
-    setContacts((prev) => prev.filter((contact) => contact.id !== id));
-  };
+  const removeContact = useCallback(
+    async (id: string) => {
+      if (isDemoMode()) {
+        setContacts((prev) => prev.filter((contact) => contact.id !== id));
+        return;
+      }
+      try {
+        await deleteContact(id);
+        setContacts((prev) => prev.filter((contact) => contact.id !== id));
+      } catch (err) {
+        console.error('Failed to delete contact:', err);
+        throw err;
+      }
+    },
+    []
+  );
 
-  const clearAllContacts = () => {
+  const clearAllContacts = useCallback(async () => {
+    if (isDemoMode()) {
+      setContacts([]);
+      storage.contacts.remove();
+      return;
+    }
+    await clearContacts();
     setContacts([]);
-    storage.contacts.remove();
-  };
+  }, []);
 
   return (
     <ContactsContext.Provider

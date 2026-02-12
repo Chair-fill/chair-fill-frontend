@@ -79,7 +79,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       const prog = (raw?.data ?? data) as Progress | undefined;
       setProgress(prog && typeof prog === 'object' ? prog : null);
     } catch {
-      setProgress(null);
+      // On failure (e.g. 401), treat as not yet onboarded so user can reach barber-account instead of stuck on loading
+      setProgress({ is_technician: false, has_subscribed: false });
     } finally {
       setIsProgressLoading(false);
     }

@@ -47,7 +47,7 @@ export default function ContactUploadModal({ isOpen, onClose }: ContactUploadMod
         setError('No contacts found in the file. Please check the file format.');
         setUploadSuccess(false);
       } else {
-        addContacts(parsedContacts);
+        await addContacts(parsedContacts);
         setUploadSuccess(true);
         setError('');
         if (fileInputRef.current) {
@@ -59,9 +59,13 @@ export default function ContactUploadModal({ isOpen, onClose }: ContactUploadMod
         }, 2000);
       }
     } catch (err) {
-      setError('Error reading file. Please make sure the file is valid.');
+      setError(
+        err && typeof (err as { response?: { status?: number } }).response !== 'undefined'
+          ? 'Failed to upload contacts. Please try again.'
+          : 'Error reading file. Please make sure the file is valid.'
+      );
       setUploadSuccess(false);
-      console.error('File parsing error:', err);
+      console.error('Upload/parsing error:', err);
     } finally {
       setIsLoading(false);
     }

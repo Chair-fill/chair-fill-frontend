@@ -65,11 +65,22 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-// On 401, clear token and notify app to clear user/session
+// Paths where 401 means the token is invalid and we should log the user out.
+// Other 401s (e.g. /progress/me, /technician/me) may be endpoint-specific and must not clear session
+// or the user gets redirected back to login right after signing in.
+const SESSION_CRITICAL_PATHS = ['/user/current', '/auth/signin', '/auth/signup'];
+
+function isSessionCriticalRequest(config: InternalAxiosRequestConfig | undefined): boolean {
+  const url = config?.url ?? '';
+  return SESSION_CRITICAL_PATHS.some((p) => url.includes(p));
+}
+
+// On 401, only clear token and notify app when the failed request was for a session-critical endpoint.
+// This prevents redirect loops when e.g. /progress/me returns 401 right after login.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && isSessionCriticalRequest(error.config)) {
       removeToken();
       onUnauthorized?.();
     }
