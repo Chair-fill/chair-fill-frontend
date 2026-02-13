@@ -55,7 +55,7 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || DEFAULT_REDIRECT;
   const registered = searchParams.get('registered') === '1';
-  const { signinVerify, signinWithOtp, loginWithDemo, logout, clearSessionForNewLogin, isLoading } = useUser();
+  const { signinVerify, signinWithOtp, loginWithDemo, logout, isLoading } = useUser();
   const [step, setStep] = useState<Step>('credentials');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -67,10 +67,7 @@ export default function LoginPage() {
 
   const hasAutoDemo = useRef(false);
 
-  // Clear any existing session when showing login so the next user (or re-login) never uses the previous user's token or identity.
-  useEffect(() => {
-    clearSessionForNewLogin();
-  }, [clearSessionForNewLogin]);
+  // When JWT is available, RequireAuth redirects to app; we do not clear session on mount so that works.
 
   useEffect(() => {
     if (hasAutoDemo.current || searchParams.get('demo') !== '1') return;

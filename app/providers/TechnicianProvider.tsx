@@ -11,6 +11,7 @@ export interface Technician {
   id?: string;
   technician_id?: string;
   full_name?: string;
+  nick_name?: string;
   email?: string;
   phone_number?: string;
   address?: Record<string, unknown>;
@@ -31,11 +32,18 @@ export interface CreateTechnicianRequest {
   address: TechnicianAddress;
 }
 
+/** Payload for updating technician (e.g. PUT /technician/me) */
+export interface UpdateTechnicianRequest {
+  nick_name?: string;
+  address?: TechnicianAddress;
+}
+
 interface TechnicianContextType {
   technician: Technician | null;
   isTechnicianLoading: boolean;
   refetchTechnician: () => Promise<void>;
   createTechnician: (data: CreateTechnicianRequest) => Promise<void>;
+  updateTechnician: (data: UpdateTechnicianRequest) => Promise<void>;
 }
 
 const TechnicianContext = createContext<TechnicianContextType | undefined>(undefined);
@@ -96,6 +104,25 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
     await refetchTechnician();
   }, [refetchTechnician]);
 
+  const updateTechnician = useCallback(async (data: UpdateTechnicianRequest) => {
+    if (isDemoMode()) {
+      if (technician) {
+        setTechnician({
+          ...technician,
+          ...(data.nick_name !== undefined && { full_name: data.nick_name || technician.full_name }),
+          ...(data.address && { address: data.address }),
+        });
+      }
+      return;
+    }
+    const body: Record<string, unknown> = {};
+    if (data.nick_name !== undefined) body.nick_name = data.nick_name;
+    if (data.address) body.address = data.address;
+    if (Object.keys(body).length === 0) return;
+    await api.put(API.TECHNICIAN.ME, body);
+    await refetchTechnician();
+  }, [refetchTechnician, technician]);
+
   useEffect(() => {
     if (typeof window === 'undefined') {
       setIsTechnicianLoading(false);
@@ -122,6 +149,7 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
         isTechnicianLoading,
         refetchTechnician,
         createTechnician,
+        updateTechnician,
       }}
     >
       {children}

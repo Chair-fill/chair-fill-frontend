@@ -6,7 +6,7 @@ export const SUBSCRIPTION_PLANS: PlanDetails[] = [
     name: 'The Independent',
     tagline: 'The solo barber building their own book.',
     subtitle: 'Essential automation for one person.',
-    price: 97,
+    price: 147,
     pricePeriod: 'month',
     features: [
       'AI outreach via iMessage',

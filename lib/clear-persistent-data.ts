@@ -18,6 +18,7 @@ export function clearSessionOnly(): void {
   try {
     removeToken();
     localStorage.removeItem(STORAGE_KEY_USER);
+    storage.defaultOutreachMessage.remove();
   } catch (e) {
     console.error('Error clearing session', e);
   }
@@ -29,6 +30,7 @@ export function clearAllPersistentData(): void {
     removeToken();
     localStorage.removeItem(STORAGE_KEY_USER);
     storage.contacts.remove();
+    storage.defaultOutreachMessage.remove();
     localStorage.removeItem(STORAGE_KEYS.SUBSCRIPTION);
     for (const flag of Object.values(FeatureFlag)) {
       clearFeatureFlagOverride(flag as FeatureFlag);

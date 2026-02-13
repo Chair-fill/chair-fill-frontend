@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import type { UserProfile, UpdateProfileRequest, NotificationPreferences, SignupRequest } from '@/lib/types/user';
 import { STORAGE_KEY_USER, DEFAULT_USER } from '@/lib/constants/user';
+import { storage } from '@/lib/utils/storage';
 import { getToken, removeToken, setToken } from '@/lib/auth';
 import { clearAllPersistentData, clearSessionOnly } from '@/lib/clear-persistent-data';
 import { api, setUnauthorizedHandler, getApiErrorMessage } from '@/lib/api-client';
@@ -61,6 +62,7 @@ function mapBackendUserToProfile(backend: Record<string, unknown> | UserProfile)
   const last = (b.lastname as string) ?? '';
   const name = [first, last].filter(Boolean).join(' ') || (b.username as string) || (b.email as string) || 'User';
   const imessage = (b.imessageContact as string) ?? (b.imessage_contact as string) ?? null;
+  const defaultOutreach = (b.default_outreach_message ?? b.defaultOutreachMessage) as string | undefined;
   return {
     id: String(b.id ?? b.user_id ?? ''),
     name,
@@ -76,6 +78,7 @@ function mapBackendUserToProfile(backend: Record<string, unknown> | UserProfile)
       marketing: false,
     },
     imessageContact: imessage ?? null,
+    defaultOutreachMessage: defaultOutreach ?? null,
   };
 }
 
@@ -121,7 +124,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (isDemoMode() && !token) {
       try {
         const stored = localStorage.getItem(STORAGE_KEY_USER);
-        setUser(stored ? (JSON.parse(stored) as UserProfile) : DEFAULT_USER);
+        if (stored) {
+          const parsed = JSON.parse(stored) as UserProfile;
+          setUser({ ...parsed, defaultOutreachMessage: parsed.defaultOutreachMessage ?? storage.defaultOutreachMessage.get() ?? null });
+        } else {
+          setUser(DEFAULT_USER);
+        }
       } catch {
         setUser(DEFAULT_USER);
       }
@@ -132,7 +140,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!token) {
       try {
         const stored = localStorage.getItem(STORAGE_KEY_USER);
-        if (stored) setUser(JSON.parse(stored));
+        if (stored) {
+          const parsed = JSON.parse(stored) as UserProfile;
+          setUser({ ...parsed, defaultOutreachMessage: parsed.defaultOutreachMessage ?? storage.defaultOutreachMessage.get() ?? null });
+        }
       } catch {
         // ignore
       }
@@ -143,7 +154,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // Restore cached user immediately so RequireAuth doesn't redirect while /auth/me is in flight
     try {
       const stored = localStorage.getItem(STORAGE_KEY_USER);
-      if (stored) setUser(JSON.parse(stored) as UserProfile);
+      if (stored) {
+        const parsed = JSON.parse(stored) as UserProfile;
+        setUser({ ...parsed, defaultOutreachMessage: parsed.defaultOutreachMessage ?? storage.defaultOutreachMessage.get() ?? null });
+      }
     } catch {
       // ignore
     }
@@ -152,7 +166,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       .then(({ data }) => {
         const profile = (data && typeof data === 'object' && 'user' in data ? (data as { user?: UserProfile }).user : data) as UserProfile | undefined;
         if (profile && typeof profile === 'object' && profile.id) {
-          setUser(mapBackendUserToProfile(profile));
+          const mapped = mapBackendUserToProfile(profile);
+          setUser({ ...mapped, defaultOutreachMessage: mapped.defaultOutreachMessage ?? storage.defaultOutreachMessage.get() ?? null });
         }
       })
       .catch(() => {
@@ -177,14 +192,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = async (data: UpdateProfileRequest) => {
     if (isDemoMode()) {
-      if (user) setUser({ ...user, ...data });
+      if (user) {
+        const next: UserProfile = { ...user, ...data };
+        if (data.firstName !== undefined || data.lastName !== undefined) {
+          const first = (data.firstName ?? user.firstName ?? '').trim();
+          const last = (data.lastName ?? user.lastName ?? '').trim();
+          next.name = [first, last].filter(Boolean).join(' ') || user.name;
+          next.firstName = first || undefined;
+          next.lastName = last || undefined;
+        }
+        setUser(next);
+      }
       return;
+    }
+    if (data.defaultOutreachMessage != null) {
+      storage.defaultOutreachMessage.set(data.defaultOutreachMessage);
     }
     setIsLoading(true);
     try {
-      // Backend PUT /user/profile accepts optional username; map our fields
+      // Backend PUT /user/profile: firstname, lastname (or username for legacy), email, phone_number, etc.
       const body: Record<string, string> = {};
-      if (data.name != null) body.username = data.name;
+      if (data.firstName != null) body.firstname = data.firstName;
+      if (data.lastName != null) body.lastname = data.lastName;
+      if (data.name != null && data.firstName == null && data.lastName == null) body.username = data.name;
       if (data.email != null) body.email = data.email;
       if (data.phone != null) body.phone_number = data.phone;
       if (data.address != null) body.address = data.address;
@@ -195,7 +225,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (Object.keys(body).length > 0) {
         await api.put(API.USER.PROFILE, body);
       }
-      if (user) setUser({ ...user, ...data });
+      if (user) {
+        const next: UserProfile = { ...user, ...data };
+        if (data.firstName !== undefined || data.lastName !== undefined) {
+          const first = (data.firstName ?? user.firstName ?? '').trim();
+          const last = (data.lastName ?? user.lastName ?? '').trim();
+          next.name = [first, last].filter(Boolean).join(' ') || user.name;
+          next.firstName = first || undefined;
+          next.lastName = last || undefined;
+        }
+        setUser(next);
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
       throw error;
@@ -267,12 +307,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (user) setUser({ ...user, avatar: URL.createObjectURL(file) });
       return;
     }
-    setIsLoading(true);
     try {
       const formData = new FormData();
       formData.append('file', file);
       const { data } = await api.post<{ url?: string; avatar?: string }>(API.USER.PICTURE, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        transformRequest: [
+          (data, headers) => {
+            if (headers && data instanceof FormData) {
+              delete (headers as Record<string, unknown>)['Content-Type'];
+              delete (headers as Record<string, unknown>)['content-type'];
+            }
+            return data;
+          },
+        ],
       });
       const url = data?.url ?? data?.avatar;
       if (url && user) setUser({ ...user, avatar: url });
@@ -280,8 +327,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error uploading profile picture:', error);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -290,15 +335,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (user) setUser({ ...user, avatar: undefined });
       return;
     }
-    setIsLoading(true);
     try {
       await api.delete(API.USER.PICTURE_REMOVE);
       if (user) setUser({ ...user, avatar: undefined });
     } catch (error) {
       console.error('Error removing profile picture:', error);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -317,7 +359,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const token = (data as { token?: string }).token;
       if (profile && typeof profile === 'object' && token) {
         setToken(token);
-        setUser(mapBackendUserToProfile(profile as UserProfile));
+        const mapped = mapBackendUserToProfile(profile as UserProfile);
+        setUser({ ...mapped, defaultOutreachMessage: mapped.defaultOutreachMessage ?? storage.defaultOutreachMessage.get() ?? null });
         return { needsOtp: false };
       }
       if (token) return { needsOtp: true, verifyToken: token };
@@ -342,7 +385,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const profile = (data as { user?: UserProfile }).user ?? data;
       const token = (data as { token?: string }).token;
       if (token) setToken(token);
-      if (profile && typeof profile === 'object') setUser(mapBackendUserToProfile(profile as UserProfile));
+      if (profile && typeof profile === 'object') {
+        const mapped = mapBackendUserToProfile(profile as UserProfile);
+        setUser({ ...mapped, defaultOutreachMessage: mapped.defaultOutreachMessage ?? storage.defaultOutreachMessage.get() ?? null });
+      }
     } catch (error) {
       console.error('Signin OTP error:', error);
       throw error;
@@ -383,7 +429,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const profile = res?.user ?? res;
       const token = (res as { token?: string })?.token;
       if (token) setToken(token);
-      if (profile && typeof profile === 'object') setUser(mapBackendUserToProfile(profile as UserProfile));
+      if (profile && typeof profile === 'object') {
+        const mapped = mapBackendUserToProfile(profile as UserProfile);
+        setUser({ ...mapped, defaultOutreachMessage: mapped.defaultOutreachMessage ?? storage.defaultOutreachMessage.get() ?? null });
+      }
     } catch (error) {
       console.error('Signup error:', error);
       throw error;

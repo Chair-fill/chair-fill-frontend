@@ -17,6 +17,7 @@ export const API = {
     CURRENT: '/user/current',
     PROFILE: '/user/profile',
     LOCATION: '/user/location',
+    /** POST - Upload user profile picture. Body: multipart/form-data with `file` */
     PICTURE: '/user/picture',
     PICTURE_REMOVE: '/user/picture/remove',
   },

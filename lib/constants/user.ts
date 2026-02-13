@@ -2,6 +2,9 @@ import type { UserProfile } from "@/lib/types/user";
 
 export const STORAGE_KEY_USER = "chairfill-user";
 
+/** Default outreach message (localStorage until backend supports it). */
+export const STORAGE_KEY_DEFAULT_OUTREACH_MESSAGE = "chairfill-default-outreach-message";
+
 export const DEFAULT_USER: UserProfile = {
   id: "user-1",
   name: "McArthur Terell",
@@ -16,4 +19,5 @@ export const DEFAULT_USER: UserProfile = {
     marketing: false,
   },
   imessageContact: "",
+  defaultOutreachMessage: "",
 };

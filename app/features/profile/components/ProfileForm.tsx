@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useUser } from '@/app/providers/UserProvider';
 import { getApiErrorMessage } from '@/lib/api-client';
-import { User, Mail, Phone, MapPin, Loader2, CheckCircle2, MessageCircle } from 'lucide-react';
+import { User, Mail, Phone, Loader2, CheckCircle2 } from 'lucide-react';
 import FormError from '@/app/components/ui/FormError';
 import { FORM_LABEL, INPUT_LEFT_ICON, INPUT_ICON_LEFT, FORM_SUCCESS_BOX, FORM_SUCCESS_TEXT, BTN_PRIMARY_INLINE } from '@/lib/constants/ui';
 
@@ -13,8 +13,6 @@ export default function ProfileForm() {
     name: '',
     email: '',
     phone: '',
-    address: '',
-    imessageContact: '' as '' | 'email' | 'phone',
   });
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -25,13 +23,11 @@ export default function ProfileForm() {
         name: user.name || '',
         email: user.email || '',
         phone: user.phone || '',
-        address: user.address || '',
-        imessageContact: (user.imessageContact === 'email' || user.imessageContact === 'phone') ? user.imessageContact : '',
       });
     }
   }, [user]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     setError('');
@@ -43,8 +39,8 @@ export default function ProfileForm() {
     setError('');
     setSuccess(false);
 
-    if (!formData.name.trim()) {
-      setError('Name is required');
+    if (!formData.firstName.trim()) {
+      setError('First name is required');
       return;
     }
     if (!formData.email.trim() || !formData.email.includes('@')) {
@@ -66,38 +62,36 @@ export default function ProfileForm() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className={FORM_LABEL}>
-            Full Name
+            First name
           </label>
           <div className="relative">
             <User className={INPUT_ICON_LEFT} />
             <input
               type="text"
-              name="name"
-              value={formData.name}
+              name="firstName"
+              value={formData.firstName}
               onChange={handleChange}
-              placeholder="John Doe"
+              placeholder="John"
               className={INPUT_LEFT_ICON}
             />
           </div>
         </div>
-
         <div>
           <label className={FORM_LABEL}>
-            Work address
+            Last name
           </label>
           <div className="relative">
-            <MapPin className={INPUT_ICON_LEFT} />
+            <User className={INPUT_ICON_LEFT} />
             <input
               type="text"
-              name="address"
-              value={formData.address}
+              name="lastName"
+              value={formData.lastName}
               onChange={handleChange}
-              placeholder="123 Main St, City, State, ZIP"
+              placeholder="Doe"
               className={INPUT_LEFT_ICON}
             />
           </div>
         </div>
-
         <div>
           <label className={FORM_LABEL}>
             Phone Number
@@ -130,29 +124,6 @@ export default function ProfileForm() {
               className={INPUT_LEFT_ICON}
             />
           </div>
-        </div>
-
-        <div>
-          <label htmlFor="imessageContact" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            iMessage contact
-          </label>
-          <div className="relative">
-            <MessageCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400 pointer-events-none" />
-            <select
-              id="imessageContact"
-              name="imessageContact"
-              value={formData.imessageContact}
-              onChange={handleChange}
-              className="w-full pl-10 pr-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50 appearance-none"
-            >
-              <option value="">Select...</option>
-              <option value="email">Email</option>
-              <option value="phone">Phone number</option>
-            </select>
-          </div>
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            Which contact info do you use for iMessage?
-          </p>
         </div>
       </div>
 

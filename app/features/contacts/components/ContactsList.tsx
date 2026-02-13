@@ -2,54 +2,19 @@
 
 import { useState } from 'react';
 import { useContacts } from '@/app/providers/ContactsProvider';
-import { User, Mail, Phone, MapPin, Trash2, Users, Plus, Upload, Send, Loader2 } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Trash2, Users, Plus, Upload, Send, Loader2, ChevronDown } from 'lucide-react';
 import ContactUploadModal from "@/app/features/contacts/components/ContactUploadModal";
 import AddContactModal from "@/app/features/contacts/components/AddContactModal";
-import { sendOutreach } from "@/lib/api/outreach";
-import { isDemoMode } from "@/lib/demo";
-
-const DEFAULT_OUTREACH_MESSAGE = 'Follow up on your appointment';
+import OutreachModal, { type OutreachContact } from "@/app/features/contacts/components/OutreachModal";
 
 export default function ContactsList() {
-  const { contacts, isLoaded, removeContact, clearAllContacts } = useContacts();
+  const { contacts, isLoaded, hasMore, isLoadingMore, loadMore, removeContact, clearAllContacts } = useContacts();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
-  const [loadingContactId, setLoadingContactId] = useState<string | null>(null);
+  const [outreachContact, setOutreachContact] = useState<OutreachContact | null>(null);
 
-  const handleOutreach = async (contact: { id: string; name: string; email: string; phone: string }) => {
-    setLoadingContactId(contact.id);
-    try {
-      if (isDemoMode()) {
-        await new Promise((r) => setTimeout(r, 800));
-        return;
-      }
-      const phone = contact.phone?.trim() || '';
-      if (!phone) {
-        console.warn('Contact has no phone number for outreach');
-        return;
-      }
-      await sendOutreach({
-        message: DEFAULT_OUTREACH_MESSAGE,
-        phone_number: phone,
-        send_to_all: false,
-      });
-    } catch (error) {
-      console.error("Error sending outreach:", error);
-    } finally {
-      setLoadingContactId(null);
-    }
-  };
-
-  if (!isLoaded) {
-    return (
-      <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-center min-h-[50vh]">
-        <div className="flex flex-col items-center gap-4 p-12">
-          <Loader2 className="w-12 h-12 text-zinc-400 dark:text-zinc-500 animate-spin" aria-hidden />
-          <p className="text-zinc-600 dark:text-zinc-400">Loading contacts...</p>
-        </div>
-      </div>
-    );
-  }
+  // Page-level loading is handled by contacts page; we only render when isLoaded
+  if (!isLoaded) return null;
 
   if (contacts.length === 0) {
     return (
@@ -140,16 +105,11 @@ export default function ContactsList() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
-                    onClick={() => handleOutreach(contact)}
-                    disabled={loadingContactId === contact.id}
-                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setOutreachContact(contact)}
+                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                     title="Start outreach"
                   >
-                    {loadingContactId === contact.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
+                    <Send className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => removeContact(contact.id)}
@@ -257,16 +217,11 @@ export default function ContactsList() {
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleOutreach(contact)}
-                        disabled={loadingContactId === contact.id}
-                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => setOutreachContact(contact)}
+                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                         title="Start outreach"
                       >
-                        {loadingContactId === contact.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Send className="w-4 h-4" />
-                        )}
+                        <Send className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => removeContact(contact.id)}
@@ -282,9 +237,31 @@ export default function ContactsList() {
             </tbody>
           </table>
         </div>
+
+        {hasMore && (
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 border-t border-zinc-200 dark:border-zinc-700 pt-4">
+            <button
+              onClick={loadMore}
+              disabled={isLoadingMore}
+              className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoadingMore ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+              {isLoadingMore ? 'Loading...' : 'Load more'}
+            </button>
+          </div>
+        )}
       </div>
       <AddContactModal isOpen={isAddContactModalOpen} onClose={() => setIsAddContactModalOpen(false)} />
       <ContactUploadModal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} />
+      <OutreachModal
+        isOpen={!!outreachContact}
+        contact={outreachContact}
+        onClose={() => setOutreachContact(null)}
+      />
     </>
   );
 }

@@ -62,12 +62,81 @@ function nameToFirstLast(name: string): { first_name: string; last_name: string 
   };
 }
 
+/** Query params for GET /contact/list (user_id required; cursor-based pagination) */
+export interface ContactListParams {
+  user_id: string;
+  page_size?: number;
+  cursor?: string; // id of last element from previous fetch
+  phone_number?: string;
+  first_name?: string;
+  from?: string; // ISO date
+  to?: string;   // ISO date
+}
+
+/** Cursor-based list response from GET /contact/list */
+export interface ContactListResult {
+  contacts: Contact[];
+  page_size: number;
+  /** Id of last item returned; pass as cursor for next page. Omitted when no more pages. */
+  next_cursor?: string;
+}
+
+/** Raw API response for list (array or { data, page_size?, next_cursor? }) */
+interface ContactListApiResponse {
+  data?: ApiContact[];
+  page_size?: number;
+  next_cursor?: string;
+}
+
 /**
- * Fetch contacts from the backend (Postman: List Contacts).
- * GET /contact/list. JWT is attached by the api client request interceptor when present.
- * Optional technician_id for scoping.
+ * Fetch contacts from the backend with user_id and cursor-based pagination.
+ * GET /contact/list?user_id=...&page_size=20&cursor=id_of_last_element&...
  */
-export async function fetchContacts(technicianId?: string): Promise<Contact[]> {
+export async function fetchContactList(params: ContactListParams): Promise<ContactListResult> {
+  const {
+    user_id,
+    page_size = 50,
+    cursor,
+    phone_number,
+    first_name,
+    from,
+    to,
+  } = params;
+
+  const search = new URLSearchParams();
+  search.set('user_id', user_id);
+  search.set('page_size', String(page_size));
+  if (cursor != null && cursor !== '') search.set('cursor', cursor);
+  if (phone_number != null && phone_number !== '') search.set('phone_number', phone_number);
+  if (first_name != null && first_name !== '') search.set('first_name', first_name);
+  if (from != null && from !== '') search.set('from', from);
+  if (to != null && to !== '') search.set('to', to);
+
+  const url = `${API.CONTACT.LIST}?${search.toString()}`;
+  const { data } = await api.get<ApiContact[] | ContactListApiResponse>(url);
+  const raw = Array.isArray(data) ? { data } : (data as ContactListApiResponse);
+  const rawList: ApiContact[] = Array.isArray(raw.data) ? raw.data : [];
+  const size = raw.page_size ?? page_size;
+  const contacts = rawList.map(mapApiContactToContact).filter((c) => c.id);
+  const next_cursor =
+    raw.next_cursor ?? (contacts.length === size && contacts.length > 0 ? contacts[contacts.length - 1].id : undefined);
+
+  return {
+    contacts,
+    page_size: size,
+    next_cursor,
+  };
+}
+
+/**
+ * Fetch contacts (legacy / clear-all use). Uses user_id and first page only.
+ * Prefer fetchContactList for list UI with pagination.
+ */
+export async function fetchContacts(technicianId?: string, userId?: string): Promise<Contact[]> {
+  if (userId != null && userId !== '') {
+    const result = await fetchContactList({ user_id: userId, page_size: 50 });
+    return result.contacts;
+  }
   const url =
     technicianId != null && technicianId !== ''
       ? `${API.CONTACT.LIST}?technician_id=${encodeURIComponent(technicianId)}`
@@ -93,8 +162,10 @@ export async function createContact(
   };
   const email = (contact.email ?? '').trim();
   const phone = (contact.phone ?? '').trim();
+  const address = (contact.address ?? '').trim();
   if (email) body.email = email;
   if (phone) body.phone_number_1 = phone;
+  if (address) body.address = address;
   if (technicianId) body.technician_id = technicianId;
   try {
     const { data } = await api.post<ApiContact | { data?: ApiContact }>(API.CONTACT.CREATE, body);
@@ -173,10 +244,29 @@ export async function deleteContact(id: string): Promise<void> {
 }
 
 /**
- * Clear all contacts. Postman collection has no "clear all" endpoint,
- * so we fetch the list (JWT-scoped) and delete each contact.
+ * Fetch all contacts for a user by cursor-paging (for clear-all, etc.).
  */
-export async function clearContacts(): Promise<void> {
-  const list = await fetchContacts();
+export async function fetchAllContactsForUser(userId: string, pageSize = 50): Promise<Contact[]> {
+  const all: Contact[] = [];
+  let cursor: string | undefined;
+  let hasMore = true;
+  while (hasMore) {
+    const result = await fetchContactList({
+      user_id: userId,
+      page_size: pageSize,
+      cursor,
+    });
+    all.push(...result.contacts);
+    hasMore = !!result.next_cursor && result.contacts.length === pageSize;
+    cursor = result.next_cursor;
+  }
+  return all;
+}
+
+/**
+ * Clear all contacts for the given user. Fetches all pages then deletes each contact.
+ */
+export async function clearContacts(userId: string): Promise<void> {
+  const list = await fetchAllContactsForUser(userId);
   await Promise.all(list.map((c) => deleteContact(c.id)));
 }

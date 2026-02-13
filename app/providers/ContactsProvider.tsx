@@ -10,16 +10,32 @@ import { isDemoMode } from '@/lib/demo';
 import { useUser } from '@/app/providers/UserProvider';
 import { useTechnician } from '@/app/providers/TechnicianProvider';
 import {
-  fetchContacts,
+  fetchContactList,
   createContact,
   uploadContacts,
   deleteContact,
   clearContacts,
 } from '@/lib/api/contacts';
 
+const DEFAULT_PAGE_SIZE = 50;
+
+export interface ContactListFilters {
+  phone_number?: string;
+  first_name?: string;
+  from?: string;
+  to?: string;
+}
+
 interface ContactsContextType {
   contacts: Contact[];
   isLoaded: boolean;
+  hasMore: boolean;
+  isLoadingMore: boolean;
+  pageSize: number;
+  setPageSize: (size: number) => void;
+  loadMore: () => Promise<void>;
+  filters: ContactListFilters;
+  setFilters: (filters: ContactListFilters) => void;
   addContacts: (newContacts: Omit<Contact, 'id'>[]) => Promise<void>;
   removeContact: (id: string) => Promise<void>;
   clearAllContacts: () => Promise<void>;
@@ -33,8 +49,22 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
   const technicianId = technician?.id ?? technician?.technician_id;
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [pageSize, setPageSizeState] = useState(DEFAULT_PAGE_SIZE);
+  const [filters, setFiltersState] = useState<ContactListFilters>({});
 
-  // Refetch contacts when the logged-in user changes (different account) so we never show the previous user's contacts.
+  const setPageSize = useCallback((size: number) => {
+    setPageSizeState((prev) => (size >= 1 ? size : prev));
+    setNextCursor(undefined);
+  }, []);
+  const setFilters = useCallback((f: ContactListFilters) => {
+    setFiltersState(f);
+    setNextCursor(undefined);
+  }, []);
+
+  // Fetch first page when user, pageSize, or filters change: GET /contact/list?user_id=...&page_size=...&...
   useEffect(() => {
     if (isDemoMode()) {
       const stored = storage.contacts.get();
@@ -43,23 +73,37 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
       } else {
         setContacts([...SAMPLE_CONTACTS]);
       }
+      setHasMore(false);
       setIsLoaded(true);
       return;
     }
-    if (!user) {
+    if (!user?.id) {
       setContacts([]);
+      setHasMore(false);
+      setNextCursor(undefined);
       setIsLoaded(true);
       return;
     }
     let cancelled = false;
-    setContacts([]);
     setIsLoaded(false);
-    fetchContacts()
-      .then((list) => {
-        if (!cancelled) setContacts(list);
+    setNextCursor(undefined);
+    fetchContactList({
+      user_id: user.id,
+      page_size: pageSize,
+      ...(filters.phone_number != null && filters.phone_number !== '' && { phone_number: filters.phone_number }),
+      ...(filters.first_name != null && filters.first_name !== '' && { first_name: filters.first_name }),
+      ...(filters.from != null && filters.from !== '' && { from: filters.from }),
+      ...(filters.to != null && filters.to !== '' && { to: filters.to }),
+    })
+      .then((result) => {
+        if (!cancelled) {
+          setContacts(result.contacts);
+          setHasMore(!!result.next_cursor);
+          setNextCursor(result.next_cursor);
+        }
       })
       .catch(() => {
-        if (!cancelled) setIsLoaded(true);
+        if (!cancelled) setContacts([]);
       })
       .finally(() => {
         if (!cancelled) setIsLoaded(true);
@@ -67,7 +111,28 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [user?.id, pageSize, filters.phone_number, filters.first_name, filters.from, filters.to]);
+
+  const loadMore = useCallback(async () => {
+    if (isDemoMode() || !user?.id || !nextCursor || isLoadingMore) return;
+    setIsLoadingMore(true);
+    try {
+      const result = await fetchContactList({
+        user_id: user.id,
+        page_size: pageSize,
+        cursor: nextCursor,
+        ...(filters.phone_number != null && filters.phone_number !== '' && { phone_number: filters.phone_number }),
+        ...(filters.first_name != null && filters.first_name !== '' && { first_name: filters.first_name }),
+        ...(filters.from != null && filters.from !== '' && { from: filters.from }),
+        ...(filters.to != null && filters.to !== '' && { to: filters.to }),
+      });
+      setContacts((prev) => [...prev, ...result.contacts]);
+      setHasMore(!!result.next_cursor);
+      setNextCursor(result.next_cursor);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [user?.id, pageSize, nextCursor, isLoadingMore, filters.phone_number, filters.first_name, filters.from, filters.to]);
 
   // Save to localStorage in demo mode whenever contacts change
   useEffect(() => {
@@ -143,13 +208,28 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
       storage.contacts.remove();
       return;
     }
-    await clearContacts();
+    if (user?.id) await clearContacts(user.id);
     setContacts([]);
-  }, []);
+    setNextCursor(undefined);
+    setHasMore(false);
+  }, [user?.id]);
 
   return (
     <ContactsContext.Provider
-      value={{ contacts, isLoaded, addContacts, removeContact, clearAllContacts }}
+      value={{
+        contacts,
+        isLoaded,
+        hasMore,
+        isLoadingMore,
+        pageSize,
+        setPageSize,
+        loadMore,
+        filters,
+        setFilters,
+        addContacts,
+        removeContact,
+        clearAllContacts,
+      }}
     >
       {children}
     </ContactsContext.Provider>

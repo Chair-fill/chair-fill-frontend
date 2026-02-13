@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X, User, Mail, Phone, MapPin, Loader2 } from 'lucide-react';
 import { useContacts } from '@/app/providers/ContactsProvider';
 import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
+import { getApiErrorMessage } from '@/lib/api-client';
 import FormError from '@/app/components/ui/FormError';
 
 interface AddContactModalProps {
@@ -51,8 +52,7 @@ export default function AddContactModal({ isOpen, onClose }: AddContactModalProp
       setFormData(initialForm);
       onClose();
     } catch (err) {
-      setError('Failed to add contact.');
-      console.error(err);
+      setError(getApiErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }

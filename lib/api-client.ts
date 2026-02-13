@@ -56,11 +56,17 @@ export function setUnauthorizedHandler(handler: () => void): void {
   onUnauthorized = handler;
 }
 
-// Attach Bearer token to every request when present
+// Attach Bearer token; for FormData use multipart/form-data (do not send application/json)
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getToken();
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  if (config.data instanceof FormData && config.headers) {
+    const headers = config.headers as Record<string, unknown>;
+    delete headers['Content-Type'];
+    delete headers['content-type'];
+    // Browser will set Content-Type: multipart/form-data; boundary=...
   }
   return config;
 });

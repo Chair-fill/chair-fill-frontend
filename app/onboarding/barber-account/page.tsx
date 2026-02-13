@@ -9,6 +9,7 @@ import { getApiErrorMessage } from '@/lib/api-client';
 import AuthLayout from '@/app/components/ui/AuthLayout';
 import AuthCard from '@/app/components/ui/AuthCard';
 import FormError from '@/app/components/ui/FormError';
+import PageLoader from '@/app/components/ui/PageLoader';
 import { ONBOARDING_CHOOSE_PLAN } from '@/lib/auth';
 import { US_STATES } from '@/lib/constants/us-states';
 import {
@@ -78,12 +79,8 @@ export default function BarberAccountPage() {
   const loading = isTechnicianLoading || isSubmitting;
 
   // Wait for progress before showing content (avoids flash before redirect)
-  if (isProgressLoading) {
-    return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin text-zinc-500 dark:text-zinc-400" aria-hidden />
-      </div>
-    );
+  if (isProgressLoading || progress == null) {
+    return <PageLoader message="Loading…" />;
   }
 
   return (

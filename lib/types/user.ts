@@ -8,6 +8,8 @@ export interface User {
   createdAt: string;
   role?: string;
   imessageContact?: string | null;
+  /** Default message used when sending outreach to contacts (editable in profile). */
+  defaultOutreachMessage?: string | null;
 }
 
 export interface UserProfile extends User {
@@ -21,11 +23,15 @@ export interface NotificationPreferences {
 }
 
 export interface UpdateProfileRequest {
+  /** Deprecated: use firstName + lastName. Sent as username if provided. */
   name?: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   phone?: string;
   address?: string;
   imessageContact?: string | null;
+  defaultOutreachMessage?: string | null;
 }
 
 export interface ChangePasswordRequest {

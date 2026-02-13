@@ -2,17 +2,19 @@
 
 import { useState, useRef } from 'react';
 import { useUser } from '@/app/providers/UserProvider';
-import { User, Settings, Shield, Bell, Camera, Trash2, Loader2 } from 'lucide-react';
+import { User, Settings, Shield, Bell, Camera, Trash2, Loader2, Scissors } from 'lucide-react';
 import { getApiErrorMessage } from '@/lib/api-client';
+import PageLoader from '@/app/components/ui/PageLoader';
 import ProfileForm from '@/app/features/profile/components/ProfileForm';
+import TechnicianProfileForm from '@/app/features/profile/components/TechnicianProfileForm';
 import NotificationSettings from '@/app/features/profile/components/NotificationSettings';
 import SecuritySettings from '@/app/features/profile/components/SecuritySettings';
 
-type Tab = 'profile' | 'notifications' | 'security';
+type Tab = 'user' | 'technician' | 'notifications' | 'security';
 
 export default function ProfilePage() {
   const { user, uploadProfilePicture, removeProfilePicture, isLoading } = useUser();
-  const [activeTab, setActiveTab] = useState<Tab>('profile');
+  const [activeTab, setActiveTab] = useState<Tab>('user');
   const [pictureError, setPictureError] = useState('');
   const [pictureLoading, setPictureLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,7 +47,8 @@ export default function ProfilePage() {
   };
 
   const tabs = [
-    { id: 'profile' as const, label: 'Profile', icon: User },
+    { id: 'user' as const, label: 'User', icon: User },
+    { id: 'technician' as const, label: 'Technician', icon: Scissors },
     { id: 'notifications' as const, label: 'Notifications', icon: Bell },
     { id: 'security' as const, label: 'Security', icon: Shield },
   ];
@@ -58,6 +61,10 @@ export default function ProfilePage() {
       .toUpperCase()
       .slice(0, 2);
   };
+
+  if (isLoading || user == null) {
+    return <PageLoader message="Loading profile…" />;
+  }
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black py-8">
@@ -133,9 +140,6 @@ export default function ProfilePage() {
                 <h2 className="text-lg sm:text-xl font-semibold text-zinc-900 dark:text-zinc-50 truncate">
                   {user?.name || 'Loading...'}
                 </h2>
-                {user?.address && (
-                  <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-500 truncate">{user.address}</p>
-                )}
                 {user?.phone && (
                   <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 truncate">{user.phone}</p>
                 )}
@@ -175,7 +179,8 @@ export default function ProfilePage() {
             </div>
 
             <div className="p-4 sm:p-6">
-              {activeTab === 'profile' && <ProfileForm />}
+              {activeTab === 'user' && <ProfileForm />}
+              {activeTab === 'technician' && <TechnicianProfileForm />}
               {activeTab === 'notifications' && <NotificationSettings />}
               {activeTab === 'security' && <SecuritySettings />}
             </div>

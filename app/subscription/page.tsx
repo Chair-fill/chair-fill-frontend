@@ -23,6 +23,7 @@ import { useTechnician } from "@/app/providers/TechnicianProvider";
 import { fetchCurrentSubscription, SUBSCRIPTION_QUERY_KEY } from "@/lib/api/subscription";
 import { SUBSCRIPTION_PLANS } from "@/lib/constants/subscription";
 import SubscriptionPaymentModal from "@/app/features/subscription/components/SubscriptionPaymentModal";
+import PageLoader from "@/app/components/ui/PageLoader";
 
 /** Plan shape from GET plans/list?provider=stripe - use data.price_id */
 interface ApiPlan {
@@ -79,9 +80,10 @@ export default function SubscriptionPage() {
   const subscriptionError = subscriptionQuery.error ? 'Could not load subscription.' : providerError;
   const refetchSubscription = () => subscriptionQuery.refetch();
 
-  // Keep loading until we have technician and subscription data (or error), so the active subscription is always fetched before showing the page
+  // Keep loading until we have technician, subscription, and plans data (or error)
   const isPageLoading =
     isTechnicianLoading ||
+    isLoadingPlans ||
     (!isDemoMode() && (!technicianId || subscriptionQuery.isPending));
 
   // Fetch plans with price_id from API (same as /onboarding/choose-plan)
@@ -219,12 +221,7 @@ export default function SubscriptionPage() {
 
   if (isPageLoading) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center py-8">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 animate-spin text-zinc-500 dark:text-zinc-400" aria-hidden />
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Loading subscription…</p>
-        </div>
-      </div>
+      <PageLoader message="Loading subscription…" />
     );
   }
 

@@ -13,6 +13,7 @@ import {
 import { api } from '@/lib/api-client';
 import { API } from '@/lib/constants/api';
 import { getApiErrorMessage } from '@/lib/api-client';
+import PageLoader from '@/app/components/ui/PageLoader';
 import { useTechnician } from '@/app/providers/TechnicianProvider';
 import { useProgress } from '@/app/providers/ProgressProvider';
 import type { PlanDetails } from '@/lib/types/subscription';
@@ -168,22 +169,14 @@ export default function OnboardingChoosePlanPage() {
     }
   };
 
-  // Wait for progress before showing content (avoids flash before redirect)
-  if (!isDemoMode() && isProgressLoading) {
-    return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin text-zinc-500 dark:text-zinc-400" aria-hidden />
-      </div>
-    );
-  }
+  // Full-page loading until progress, technician (when needed), and plans are ready
+  const isPageLoading =
+    isLoadingPlans ||
+    (!isDemoMode() && (isProgressLoading || progress == null)) ||
+    (!isDemoMode() && progress?.is_technician === true && !technicianId && isTechnicianLoading);
 
-  // Wait for technician profile when backend says user is technician (e.g. after barber onboarding or refetch)
-  if (!isDemoMode() && progress?.is_technician === true && !technicianId && isTechnicianLoading) {
-    return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin text-zinc-500 dark:text-zinc-400" aria-hidden />
-      </div>
-    );
+  if (isPageLoading) {
+    return <PageLoader message="Loading…" />;
   }
 
   return (
