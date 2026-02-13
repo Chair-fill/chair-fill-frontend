@@ -17,7 +17,7 @@ import {
   clearContacts,
 } from '@/lib/api/contacts';
 
-const DEFAULT_PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 10;
 
 export interface ContactListFilters {
   phone_number?: string;
