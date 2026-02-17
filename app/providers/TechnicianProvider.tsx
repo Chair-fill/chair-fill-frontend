@@ -14,7 +14,7 @@ export interface Technician {
   nick_name?: string;
   email?: string;
   phone_number?: string;
-  address?: Record<string, unknown>;
+  address?: Record<string, unknown> | TechnicianAddress;
   [key: string]: unknown;
 }
 
