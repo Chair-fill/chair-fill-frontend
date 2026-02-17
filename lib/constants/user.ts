@@ -17,6 +17,7 @@ export const DEFAULT_USER: UserProfile = {
     email: true,
     sms: false,
     marketing: false,
+    allowAutomatedOutreachOnBulkUpload: false,
   },
   imessageContact: "",
   defaultOutreachMessage: "",
