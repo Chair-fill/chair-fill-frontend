@@ -6,7 +6,7 @@ import { STORAGE_KEY_USER, DEFAULT_USER } from '@/lib/constants/user';
 import { storage } from '@/lib/utils/storage';
 import { getToken, removeToken, setToken } from '@/lib/auth';
 import { clearAllPersistentData, clearSessionOnly } from '@/lib/clear-persistent-data';
-import { api, setUnauthorizedHandler, getApiErrorMessage } from '@/lib/api-client';
+import { api, setUnauthorizedHandler, getApiErrorMessage, getAvatarUrl } from '@/lib/api-client';
 import { API } from '@/lib/constants/api';
 import { isDemoMode, setDemoMode } from '@/lib/demo';
 import type { ChangePasswordRequest } from '@/lib/types/user';
@@ -40,6 +40,8 @@ interface UserContextType {
   updatePassword: (data: ChangePasswordRequest) => Promise<void>;
   uploadProfilePicture: (file: File) => Promise<string | void>;
   removeProfilePicture: () => Promise<void>;
+  /** Refetch user profile from GET /user/profile (e.g. to fill profile page). */
+  refetchProfile: () => Promise<void>;
   updateNotifications: (prefs: NotificationPreferences) => Promise<void>;
   logout: () => void;
   /** Clear token + user only (storage + state). Call when showing login so the next user never uses the previous user's token. */
@@ -63,20 +65,36 @@ function mapBackendUserToProfile(backend: Record<string, unknown> | UserProfile)
   const name = [first, last].filter(Boolean).join(' ') || (b.username as string) || (b.email as string) || 'User';
   const imessage = (b.imessageContact as string) ?? (b.imessage_contact as string) ?? null;
   const defaultOutreach = (b.default_outreach_message ?? b.defaultOutreachMessage) as string | undefined;
+  // Profile image path format: images/users/USER-<id>
+  const picturePath =
+    (b.picture as { path?: string } | undefined)?.path ??
+    (typeof b.picture === 'string' ? b.picture : undefined) ??
+    (b.data as { picture?: { path?: string } } | undefined)?.picture?.path ??
+    (b.picture_path as string) ??
+    (b.avatar_path as string);
+  const avatarUrl =
+    picturePath ? getAvatarUrl(picturePath, 'm') : b.avatar != null ? String(b.avatar) : undefined;
   return {
     id: String(b.id ?? b.user_id ?? ''),
     name,
+    firstName: first || undefined,
+    lastName: last || undefined,
     email: String(b.email ?? ''),
     phone: String(b.phone_number ?? b.phone ?? ''),
     address: String(b.address ?? ''),
-    avatar: b.avatar != null ? String(b.avatar) : undefined,
+    avatar: avatarUrl,
     createdAt: String(b.createdAt ?? b.created_at ?? new Date().toISOString()),
     role: b.role != null ? String(b.role) : undefined,
-    notifications: (b.notifications as UserProfile['notifications']) ?? {
-      email: true,
-      sms: false,
-      marketing: false,
-    },
+    notifications: (() => {
+      const def: UserProfile['notifications'] = {
+        email: true,
+        sms: false,
+        marketing: false,
+        allowAutomatedOutreachOnBulkUpload: false,
+      };
+      const n = b.notifications as Partial<UserProfile['notifications']> | undefined;
+      return n ? { ...def, ...n } : def;
+    })(),
     imessageContact: imessage ?? null,
     defaultOutreachMessage: defaultOutreach ?? null,
   };
@@ -310,7 +328,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const { data } = await api.post<{ url?: string; avatar?: string }>(API.USER.PICTURE, formData, {
+      await api.post<{ data?: { path?: string } }>(API.USER.PICTURE, formData, {
         transformRequest: [
           (data, headers) => {
             if (headers && data instanceof FormData) {
@@ -321,9 +339,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
           },
         ],
       });
-      const url = data?.url ?? data?.avatar;
-      if (url && user) setUser({ ...user, avatar: url });
-      return typeof url === 'string' ? url : undefined;
+      const { data: profileRes } = await api.get<Record<string, unknown> | { data?: Record<string, unknown>; user?: Record<string, unknown> }>(API.USER.PROFILE);
+      const raw = profileRes as { data?: Record<string, unknown>; user?: Record<string, unknown> } | Record<string, unknown> | undefined;
+      const profile =
+        raw && typeof raw === 'object'
+          ? (raw.data ?? raw.user ?? raw) as Record<string, unknown>
+          : undefined;
+      if (profile && typeof profile === 'object' && user) {
+        const updated = mapBackendUserToProfile(profile);
+        setUser({ ...user, ...updated, defaultOutreachMessage: user.defaultOutreachMessage ?? updated.defaultOutreachMessage });
+      }
+      return user?.avatar;
     } catch (error) {
       console.error('Error uploading profile picture:', error);
       throw error;
@@ -343,6 +369,27 @@ export function UserProvider({ children }: { children: ReactNode }) {
       throw error;
     }
   };
+
+  const refetchProfile = useCallback(async () => {
+    if (isDemoMode()) return;
+    try {
+      const { data: profileRes } = await api.get<Record<string, unknown> | { data?: Record<string, unknown>; user?: Record<string, unknown> }>(API.USER.PROFILE);
+      const raw = profileRes as { data?: Record<string, unknown>; user?: Record<string, unknown> } | Record<string, unknown> | undefined;
+      const profile =
+        raw && typeof raw === 'object'
+          ? (raw.data ?? raw.user ?? raw) as Record<string, unknown>
+          : undefined;
+      if (profile && typeof profile === 'object') {
+        const updated = mapBackendUserToProfile(profile);
+        setUser((prev) => ({
+          ...updated,
+          defaultOutreachMessage: prev?.defaultOutreachMessage ?? updated.defaultOutreachMessage ?? storage.defaultOutreachMessage.get() ?? null,
+        }));
+      }
+    } catch (error) {
+      console.error('Error refetching profile:', error);
+    }
+  }, []);
 
   const signinVerify = async (email: string, password: string): Promise<SigninVerifyResult> => {
     if (isDemoMode()) {
@@ -456,6 +503,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         updatePassword,
         uploadProfilePicture,
         removeProfilePicture,
+        refetchProfile,
         updateNotifications,
         logout,
         clearSessionForNewLogin,

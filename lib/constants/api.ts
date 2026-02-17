@@ -79,4 +79,8 @@ export const API = {
     /** POST - Send outreach. Body: { message, phone_number, send_to_all } */
     SEND: '/outreach/send',
   },
+  /** GET - Generate signed/served URL for an asset. Query: path, size (e.g. s, m) */
+  URL: {
+    GENERATE: '/url/generate',
+  },
 } as const;

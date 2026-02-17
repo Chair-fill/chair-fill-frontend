@@ -1,6 +1,10 @@
 export interface User {
   id: string;
   name: string;
+  /** First name (from backend firstname). Used for profile form. */
+  firstName?: string;
+  /** Last name (from backend lastname). Used for profile form. */
+  lastName?: string;
   email: string;
   avatar?: string;
   phone?: string;
@@ -20,6 +24,8 @@ export interface NotificationPreferences {
   email: boolean;
   sms: boolean;
   marketing: boolean;
+  /** Allow sending automated outreach when uploading contacts in bulk. */
+  allowAutomatedOutreachOnBulkUpload: boolean;
 }
 
 export interface UpdateProfileRequest {

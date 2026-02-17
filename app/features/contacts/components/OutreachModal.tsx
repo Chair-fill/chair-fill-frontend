@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Send, MessageSquare, Loader2 } from 'lucide-react';
+import { X, Radio, MessageSquare, Loader2 } from 'lucide-react';
 import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
 import { useUser } from '@/app/providers/UserProvider';
 import { sendOutreach } from '@/lib/api/outreach';
 import { isDemoMode } from '@/lib/demo';
 import FormError from '@/app/components/ui/FormError';
+import { formatDisplayName } from '@/lib/utils/format';
 
 const FALLBACK_OUTREACH_MESSAGE = 'Follow up on your appointment';
 
@@ -76,7 +77,7 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
       handleClose();
     } catch (err) {
       console.error('Outreach failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to send outreach.');
+      setError(err instanceof Error ? err.message : 'Failed to send broadcast.');
     } finally {
       setIsSending(false);
     }
@@ -84,7 +85,7 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
 
   const handleSendWithDefault = () => {
     if (userDefaultEmpty) {
-      setError('Please set a default outreach message in your profile first.');
+      setError('Please set a default broadcast message in your profile first.');
       return;
     }
     doSend(defaultMessage);
@@ -101,7 +102,7 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
 
   if (!isOpen) return null;
 
-  const contactName = contact?.name || 'Unnamed contact';
+  const contactName = formatDisplayName(contact?.name) || 'Unnamed contact';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -112,8 +113,8 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
       >
         <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800">
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            Outreach to {contactName}
+            <Radio className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            Broadcast to {contactName}
           </h2>
           <button
             type="button"
@@ -142,9 +143,9 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
                   {isSending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    <Send className="w-4 h-4" />
+                    <Radio className="w-4 h-4" />
                   )}
-                  Send with default message
+                  Broadcast with default message
                 </button>
                 <button
                   type="button"
@@ -159,7 +160,7 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
           ) : (
             <>
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Edit the message below to add context or tailor the outreach for this contact.
+                Edit the message below to add context or tailor the broadcast for this contact.
               </p>
               <div>
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
@@ -195,8 +196,8 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
                     </>
                   ) : (
                     <>
-                      <Send className="w-4 h-4" />
-                      Send outreach
+                      <Radio className="w-4 h-4" />
+                      Send broadcast
                     </>
                   )}
                 </button>

@@ -6,7 +6,9 @@ import { usePathname } from 'next/navigation';
 import { ContactRound, CreditCard, User, Settings, LogOut, ChevronDown, LogIn, UserPlus } from 'lucide-react';
 import { useUser } from '@/app/providers/UserProvider';
 import { isPublicRoute } from '@/lib/auth';
+import { formatDisplayName } from '@/lib/utils/format';
 import { isDemoMode } from '@/lib/demo';
+import AuthenticatedAvatar from '@/app/components/ui/AuthenticatedAvatar';
 
 export default function Header() {
   const pathname = usePathname();
@@ -99,19 +101,18 @@ export default function Header() {
                     onClick={() => setIsMenuOpen(!isMenuOpen)}
                     className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                   >
-                    {user.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt={user.name}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-50 flex items-center justify-center">
-                        <span className="text-xs font-semibold text-white dark:text-zinc-900">
-                          {getInitials(user.name)}
-                        </span>
-                      </div>
-                    )}
+                    <AuthenticatedAvatar
+                      src={user.avatar}
+                      alt={formatDisplayName(user.name)}
+                      className="w-8 h-8 rounded-full object-cover"
+                      fallback={
+                        <div className="w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-50 flex items-center justify-center">
+                          <span className="text-xs font-semibold text-white dark:text-zinc-900">
+                            {getInitials(user.name)}
+                          </span>
+                        </div>
+                      }
+                    />
                     <ChevronDown className={`w-4 h-4 text-zinc-600 dark:text-zinc-400 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} />
                   </button>
 
@@ -119,7 +120,7 @@ export default function Header() {
                     <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-lg py-1 z-50">
                       <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
                         <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 truncate">
-                          {user.name}
+                          {formatDisplayName(user.name)}
                         </p>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
                           {user.email}

@@ -24,6 +24,20 @@ export const api = axios.create({
 });
 
 /**
+ * Build avatar URL from profile picture path.
+ * Path format: images/users/USER-<id> (e.g. images/users/USER-01KH2GYGKXZGAHV2EWAFTQANXY).
+ * If the backend returns path without "images/" prefix (e.g. users/USER-...), it is normalized.
+ * Uses GET /url/generate?path=...&size=...
+ */
+export function getAvatarUrl(path: string, size = 'm'): string {
+  if (!path) return '';
+  const normalizedPath = path.startsWith('images/') ? path : `images/${path.replace(/^\//, '')}`;
+  const base = api.defaults.baseURL ?? API_BASE_URL;
+  const sep = base.endsWith('/') ? '' : '/';
+  return `${base}${sep}url/generate?path=${encodeURIComponent(normalizedPath)}&size=${encodeURIComponent(size)}`;
+}
+
+/**
  * Extract token from API response (signup verify, forgot-password verify).
  * Handles { token }, { data: { token } }, etc.
  */

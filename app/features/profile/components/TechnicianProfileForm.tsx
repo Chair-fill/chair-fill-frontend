@@ -94,7 +94,7 @@ export default function TechnicianProfileForm() {
     return (
       <form onSubmit={handleSubmit} className="space-y-6">
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Complete barber onboarding to set up your work address. You can still set outreach and iMessage preferences below.
+          Complete barber onboarding to set up your work address. You can still set blast and iMessage preferences below.
         </p>
         <div>
           <label htmlFor="technician-imessageContact" className={FORM_LABEL}>
@@ -118,7 +118,7 @@ export default function TechnicianProfileForm() {
         </div>
         <div>
           <label htmlFor="technician-defaultOutreachMessage" className={FORM_LABEL}>
-            Default outreach message
+            Default blast message
           </label>
           <div className="relative">
             <Send className="absolute left-3 top-3 w-5 h-5 text-zinc-400 pointer-events-none" />
@@ -133,7 +133,7 @@ export default function TechnicianProfileForm() {
             />
           </div>
           <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            This message is used when you send outreach to a contact. You can still customize it each time.
+            This message is used when you send a blast to a contact. You can still customize it each time.
           </p>
         </div>
         {error && <FormError message={error} />}
@@ -250,7 +250,7 @@ export default function TechnicianProfileForm() {
       </div>
       <div>
         <label htmlFor="technician-defaultOutreachMessage" className={FORM_LABEL}>
-          Default outreach message
+          Default blast message
         </label>
         <div className="relative">
           <Send className="absolute left-3 top-3 w-5 h-5 text-zinc-400 pointer-events-none" />
@@ -265,7 +265,7 @@ export default function TechnicianProfileForm() {
           />
         </div>
         <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          This message is used when you send outreach to a contact. You can still customize it each time.
+          This message is used when you send a blast to a contact. You can still customize it each time.
         </p>
       </div>
 

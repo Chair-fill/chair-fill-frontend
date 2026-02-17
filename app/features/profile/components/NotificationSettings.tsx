@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useUser } from '@/app/providers/UserProvider';
-import { Bell, Mail, MessageSquare, Megaphone, Loader2, CheckCircle2 } from 'lucide-react';
+import { Sliders, Mail, MessageSquare, Megaphone, Upload, Loader2, CheckCircle2 } from 'lucide-react';
 import type { NotificationPreferences } from '@/lib/types/user';
 
 export default function NotificationSettings() {
@@ -11,12 +11,18 @@ export default function NotificationSettings() {
     email: true,
     sms: false,
     marketing: false,
+    allowAutomatedOutreachOnBulkUpload: false,
   });
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     if (user?.notifications) {
-      setPrefs(user.notifications);
+      setPrefs({
+        email: user.notifications.email ?? true,
+        sms: user.notifications.sms ?? false,
+        marketing: user.notifications.marketing ?? false,
+        allowAutomatedOutreachOnBulkUpload: user.notifications.allowAutomatedOutreachOnBulkUpload ?? false,
+      });
     }
   }, [user]);
 
@@ -36,6 +42,12 @@ export default function NotificationSettings() {
   };
 
   const toggleItems = [
+    {
+      key: 'allowAutomatedOutreachOnBulkUpload' as const,
+      icon: Upload,
+      title: 'Allow automated outreach on bulk contacts upload',
+      description: 'When uploading contacts in bulk, optionally send your default outreach message to new contacts',
+    },
     {
       key: 'email' as const,
       icon: Mail,
@@ -59,9 +71,9 @@ export default function NotificationSettings() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-4">
-        <Bell className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+        <Sliders className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
         <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-          Notification Preferences
+          Preferences
         </h3>
       </div>
 

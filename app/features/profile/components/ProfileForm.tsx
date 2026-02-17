@@ -10,7 +10,8 @@ import { FORM_LABEL, INPUT_LEFT_ICON, INPUT_ICON_LEFT, FORM_SUCCESS_BOX, FORM_SU
 export default function ProfileForm() {
   const { user, updateProfile, isLoading } = useUser();
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
   });
@@ -19,8 +20,11 @@ export default function ProfileForm() {
 
   useEffect(() => {
     if (user) {
+      const first = user.firstName ?? (user.name ? user.name.split(/\s+/)[0] ?? '' : '');
+      const last = user.lastName ?? (user.name ? user.name.split(/\s+/).slice(1).join(' ') ?? '' : '');
       setFormData({
-        name: user.name || '',
+        firstName: first,
+        lastName: last,
         email: user.email || '',
         phone: user.phone || '',
       });

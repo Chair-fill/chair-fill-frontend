@@ -1,17 +1,55 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useContacts } from '@/app/providers/ContactsProvider';
-import { User, Mail, Phone, MapPin, Trash2, Users, Plus, Upload, Send, Loader2, ChevronDown } from 'lucide-react';
+import { User, Mail, Phone, Trash2, Users, Plus, Upload, Radio, Loader2, ChevronDown } from 'lucide-react';
 import ContactUploadModal from "@/app/features/contacts/components/ContactUploadModal";
 import AddContactModal from "@/app/features/contacts/components/AddContactModal";
-import OutreachModal, { type OutreachContact } from "@/app/features/contacts/components/OutreachModal";
+import OutreachMessageModal from "@/app/features/contacts/components/OutreachMessageModal";
+import FormError from '@/app/components/ui/FormError';
+import { formatDisplayName } from '@/lib/utils/format';
 
 export default function ContactsList() {
   const { contacts, isLoaded, hasMore, isLoadingMore, loadMore, removeContact, clearAllContacts } = useContacts();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
-  const [outreachContact, setOutreachContact] = useState<OutreachContact | null>(null);
+  const [selectedForOutreach, setSelectedForOutreach] = useState<Set<string>>(new Set());
+  const [outreachError, setOutreachError] = useState('');
+  const [isOutreachMessageOpen, setIsOutreachMessageOpen] = useState(false);
+
+  const contactsWithPhone = contacts.filter((c) => c.phone?.trim());
+  const selectedContactsWithPhone = contacts.filter(
+    (c) => selectedForOutreach.has(c.id) && c.phone?.trim()
+  );
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedForOutreach((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setOutreachError('');
+  }, []);
+
+  const selectAllWithPhone = useCallback(() => {
+    setSelectedForOutreach(new Set(contactsWithPhone.map((c) => c.id)));
+    setOutreachError('');
+  }, [contactsWithPhone]);
+
+  const clearOutreachSelection = useCallback(() => {
+    setSelectedForOutreach(new Set());
+    setOutreachError('');
+  }, []);
+
+  const openBulkOutreach = () => {
+    if (selectedContactsWithPhone.length === 0) {
+      setOutreachError('Select at least one contact with a phone number, then click Blast.');
+      return;
+    }
+    setOutreachError('');
+    setIsOutreachMessageOpen(true);
+  };
 
   // Page-level loading is handled by contacts page; we only render when isLoaded
   if (!isLoaded) return null;
@@ -78,6 +116,16 @@ export default function ContactsList() {
               <span className="sm:inline">Upload contacts</span>
             </button>
             <button
+              onClick={openBulkOutreach}
+              className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+            >
+              <Radio className="w-4 h-4" />
+              <span className="sm:inline">Blast</span>
+              {selectedContactsWithPhone.length > 0 && (
+                <span className="sm:inline">({selectedContactsWithPhone.length})</span>
+              )}
+            </button>
+            <button
               onClick={clearAllContacts}
               className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
             >
@@ -87,70 +135,99 @@ export default function ContactsList() {
           </div>
         </div>
 
+        {outreachError && (
+          <div className="mb-4">
+            <FormError message={outreachError} />
+          </div>
+        )}
+
+        {contactsWithPhone.length > 0 && (
+          <div className="flex items-center gap-2 mb-3 text-sm">
+            <span className="text-zinc-600 dark:text-zinc-400">Select contacts for broadcast:</span>
+            <button
+              type="button"
+              onClick={selectAllWithPhone}
+              className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Select all with phone ({contactsWithPhone.length})
+            </button>
+            <span className="text-zinc-400">|</span>
+            <button
+              type="button"
+              onClick={clearOutreachSelection}
+              className="font-medium text-zinc-600 dark:text-zinc-400 hover:underline"
+            >
+              Clear selection
+            </button>
+            {selectedContactsWithPhone.length > 0 && (
+              <span className="text-zinc-500">({selectedContactsWithPhone.length} selected)</span>
+            )}
+          </div>
+        )}
+
         {/* Mobile Card View */}
         <div className="block md:hidden space-y-4">
-          {contacts.map((contact) => (
-            <div
-              key={contact.id}
-              className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <User className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
-                    <h3 className="font-semibold text-zinc-900 dark:text-zinc-50">
-                      {contact.name || 'Unnamed Contact'}
-                    </h3>
+          {contacts.map((contact) => {
+            const hasPhone = Boolean(contact.phone?.trim());
+            const isSelected = selectedForOutreach.has(contact.id);
+            return (
+              <div
+                key={contact.id}
+                className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <input
+                      type="checkbox"
+                      id={`mobile-${contact.id}`}
+                      checked={isSelected}
+                      onChange={() => hasPhone && toggleSelect(contact.id)}
+                      disabled={!hasPhone}
+                      className="cursor-pointer h-4 w-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-zinc-600 dark:text-zinc-400 shrink-0" />
+                        <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 truncate">
+                          {formatDisplayName(contact.name) || 'Unnamed Contact'}
+                        </h3>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => setOutreachContact(contact)}
-                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                    title="Start outreach"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => removeContact(contact.id)}
-                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                    title="Delete contact"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                {contact.email && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="w-4 h-4 text-zinc-500 dark:text-zinc-500 shrink-0" />
-                    <a
-                      href={`mailto:${contact.email}`}
-                      className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 truncate"
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => removeContact(contact.id)}
+                      className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                      title="Delete contact"
                     >
-                      {contact.email}
-                    </a>
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
-                )}
-                {contact.phone && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="w-4 h-4 text-zinc-500 dark:text-zinc-500 shrink-0" />
-                    <span className="text-zinc-700 dark:text-zinc-300">
-                      {contact.phone}
-                    </span>
-                  </div>
-                )}
-                {contact.address && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="w-4 h-4 text-zinc-500 dark:text-zinc-500 shrink-0" />
-                    <span className="text-zinc-700 dark:text-zinc-300">
-                      {contact.address}
-                    </span>
-                  </div>
-                )}
+                </div>
+                <div className="space-y-2">
+                  {contact.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="w-4 h-4 text-zinc-500 dark:text-zinc-500 shrink-0" />
+                      <a
+                        href={`mailto:${contact.email}`}
+                        className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 truncate"
+                      >
+                        {contact.email}
+                      </a>
+                    </div>
+                  )}
+                  {contact.phone && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="w-4 h-4 text-zinc-500 dark:text-zinc-500 shrink-0" />
+                      <span className="text-zinc-700 dark:text-zinc-300">
+                        {contact.phone}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Desktop Table View */}
@@ -158,6 +235,9 @@ export default function ContactsList() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b border-zinc-200 dark:border-zinc-700">
+                <th className="w-10 py-3 px-4 font-semibold text-zinc-900 dark:text-zinc-50">
+                  <span className="sr-only">Select for broadcast</span>
+                </th>
                 <th className="text-left py-3 px-4 font-semibold text-zinc-900 dark:text-zinc-50">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4" />
@@ -177,24 +257,31 @@ export default function ContactsList() {
                   </div>
                 </th>
                 <th className="text-left py-3 px-4 font-semibold text-zinc-900 dark:text-zinc-50">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    Address
-                  </div>
-                </th>
-                <th className="text-left py-3 px-4 font-semibold text-zinc-900 dark:text-zinc-50">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody>
-              {contacts.map((contact) => (
+              {contacts.map((contact) => {
+                const hasPhone = Boolean(contact.phone?.trim());
+                const isSelected = selectedForOutreach.has(contact.id);
+                return (
                 <tr
                   key={contact.id}
                   className="border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
                 >
+                  <td className="py-3 px-4">
+                    <input
+                      type="checkbox"
+                      id={`table-${contact.id}`}
+                      checked={isSelected}
+                      onChange={() => hasPhone && toggleSelect(contact.id)}
+                      disabled={!hasPhone}
+                      className="cursor-pointer h-4 w-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 accent-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </td>
                   <td className="py-3 px-4 text-zinc-900 dark:text-zinc-50">
-                    {contact.name || '-'}
+                    {formatDisplayName(contact.name) || '-'}
                   </td>
                   <td className="py-3 px-4 text-zinc-700 dark:text-zinc-300">
                     {contact.email ? (
@@ -211,18 +298,8 @@ export default function ContactsList() {
                   <td className="py-3 px-4 text-zinc-700 dark:text-zinc-300">
                     {contact.phone || '-'}
                   </td>
-                  <td className="py-3 px-4 text-zinc-700 dark:text-zinc-300">
-                    {contact.address || '-'}
-                  </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setOutreachContact(contact)}
-                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                        title="Start outreach"
-                      >
-                        <Send className="w-4 h-4" />
-                      </button>
                       <button
                         onClick={() => removeContact(contact.id)}
                         className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
@@ -233,7 +310,8 @@ export default function ContactsList() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -257,10 +335,11 @@ export default function ContactsList() {
       </div>
       <AddContactModal isOpen={isAddContactModalOpen} onClose={() => setIsAddContactModalOpen(false)} />
       <ContactUploadModal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} />
-      <OutreachModal
-        isOpen={!!outreachContact}
-        contact={outreachContact}
-        onClose={() => setOutreachContact(null)}
+      <OutreachMessageModal
+        isOpen={isOutreachMessageOpen}
+        selectedContacts={selectedContactsWithPhone}
+        onClose={() => setIsOutreachMessageOpen(false)}
+        onSent={() => clearOutreachSelection()}
       />
     </>
   );

@@ -1,23 +1,33 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useUser } from '@/app/providers/UserProvider';
-import { User, Settings, Shield, Bell, Camera, Trash2, Loader2, Scissors } from 'lucide-react';
+import { useTechnician } from '@/app/providers/TechnicianProvider';
+import { User, Settings, Shield, Sliders, Camera, Trash2, Loader2, Scissors } from 'lucide-react';
 import { getApiErrorMessage } from '@/lib/api-client';
+import { formatDisplayName } from '@/lib/utils/format';
 import PageLoader from '@/app/components/ui/PageLoader';
+import AuthenticatedAvatar from '@/app/components/ui/AuthenticatedAvatar';
 import ProfileForm from '@/app/features/profile/components/ProfileForm';
 import TechnicianProfileForm from '@/app/features/profile/components/TechnicianProfileForm';
 import NotificationSettings from '@/app/features/profile/components/NotificationSettings';
 import SecuritySettings from '@/app/features/profile/components/SecuritySettings';
 
-type Tab = 'user' | 'technician' | 'notifications' | 'security';
+type Tab = 'user' | 'technician' | 'preferences' | 'security';
 
 export default function ProfilePage() {
-  const { user, uploadProfilePicture, removeProfilePicture, isLoading } = useUser();
+  const { user, uploadProfilePicture, removeProfilePicture, refetchProfile, isLoading } = useUser();
+  const { refetchTechnician } = useTechnician();
   const [activeTab, setActiveTab] = useState<Tab>('user');
   const [pictureError, setPictureError] = useState('');
   const [pictureLoading, setPictureLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load user profile and technician data so both User and Technician tabs are filled
+  useEffect(() => {
+    refetchProfile();
+    refetchTechnician();
+  }, [refetchProfile, refetchTechnician]);
 
   const handlePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -47,9 +57,9 @@ export default function ProfilePage() {
   };
 
   const tabs = [
-    { id: 'user' as const, label: 'User', icon: User },
-    { id: 'technician' as const, label: 'Technician', icon: Scissors },
-    { id: 'notifications' as const, label: 'Notifications', icon: Bell },
+    { id: 'user' as const, label: 'User info', icon: User },
+    { id: 'technician' as const, label: 'Barber info', icon: Scissors },
+    { id: 'preferences' as const, label: 'Preferences', icon: Sliders },
     { id: 'security' as const, label: 'Security', icon: Shield },
   ];
 
@@ -79,7 +89,7 @@ export default function ProfilePage() {
               </h1>
             </div>
             <p className="text-base sm:text-lg text-zinc-600 dark:text-zinc-400">
-              Manage your profile, notifications, and security settings
+              Manage your profile, preferences, and security settings
             </p>
           </div>
 
@@ -91,20 +101,19 @@ export default function ProfilePage() {
               </div>
             )}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-4">
-              <div className="relative shrink-0">
-                {user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-16 h-16 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-16 h-16 rounded-full bg-zinc-900 dark:bg-zinc-50 flex items-center justify-center">
-                    <span className="text-xl font-semibold text-white dark:text-zinc-900">
-                      {user ? getInitials(user.name) : '?'}
-                    </span>
-                  </div>
-                )}
+              <div className="flex items-center gap-3 shrink-0">
+                <AuthenticatedAvatar
+                  src={user?.avatar ?? null}
+                  alt={user?.name ?? 'Profile'}
+                  className="w-16 h-16 rounded-full object-cover"
+                  fallback={
+                    <div className="w-16 h-16 rounded-full bg-zinc-900 dark:bg-zinc-50 flex items-center justify-center">
+                      <span className="text-xl font-semibold text-white dark:text-zinc-900">
+                        {user ? getInitials(user.name) : '?'}
+                      </span>
+                    </div>
+                  }
+                />
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -113,12 +122,12 @@ export default function ProfilePage() {
                   onChange={handlePictureChange}
                   disabled={pictureLoading || isLoading}
                 />
-                <div className="flex gap-2 mt-2">
+                <div className="flex flex-col gap-2">
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={pictureLoading || isLoading}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {pictureLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                     {pictureLoading ? 'Uploading...' : 'Upload'}
@@ -128,7 +137,7 @@ export default function ProfilePage() {
                       type="button"
                       onClick={handleRemovePicture}
                       disabled={pictureLoading || isLoading}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Trash2 className="w-4 h-4" />
                       Remove
@@ -138,7 +147,7 @@ export default function ProfilePage() {
               </div>
               <div className="min-w-0">
                 <h2 className="text-lg sm:text-xl font-semibold text-zinc-900 dark:text-zinc-50 truncate">
-                  {user?.name || 'Loading...'}
+                  {formatDisplayName(user?.name) || 'Loading...'}
                 </h2>
                 {user?.phone && (
                   <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 truncate">{user.phone}</p>
@@ -181,7 +190,7 @@ export default function ProfilePage() {
             <div className="p-4 sm:p-6">
               {activeTab === 'user' && <ProfileForm />}
               {activeTab === 'technician' && <TechnicianProfileForm />}
-              {activeTab === 'notifications' && <NotificationSettings />}
+              {activeTab === 'preferences' && <NotificationSettings />}
               {activeTab === 'security' && <SecuritySettings />}
             </div>
           </div>
