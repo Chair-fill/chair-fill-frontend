@@ -65,6 +65,8 @@ export const API = {
     CREATE: '/contact',
     /** POST - Bulk upload via JSON (Postman: Bulk JSON). Body: { shop_id?, technician_id?, contacts: [{ first_name, last_name?, email?, phone_number_1? }] } */
     BULK_JSON: '/contact/bulk/json',
+    /** POST - Bulk upload file (CSV or VCF). FormData: file, data (JSON string e.g. {"technician_id":"TCH-..."}) */
+    BULK_FILE: '/contact/bulk/file',
     /** POST - Bulk upload CSV (Postman: Bulk CSV). FormData: file, data (JSON string e.g. {"shop_id":"","technician_id":""}) */
     BULK_CSV: '/contact/bulk/csv',
     /** POST - Bulk upload VCF (Postman: Bulk VCF). FormData: file, data */

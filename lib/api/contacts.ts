@@ -188,6 +188,20 @@ export async function createContact(
 }
 
 /**
+ * Upload contacts in bulk via file (CSV or VCF).
+ * POST /contact/bulk/file. FormData: file, data (JSON string {"technician_id":"TCH-..."}).
+ */
+export async function uploadContactsBulkFile(
+  file: File,
+  technicianId: string
+): Promise<void> {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('data', JSON.stringify({ technician_id: technicianId }));
+  await api.post(API.CONTACT.BULK_FILE, form);
+}
+
+/**
  * Upload contacts in bulk via JSON (Postman: Bulk JSON).
  * POST /contact/bulk/json. Body: { technician_id?, shop_id?, contacts: [{ first_name, last_name?, email?, phone_number_1? }] }.
  */

@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { Upload, Loader2, CheckCircle2, X } from 'lucide-react';
 import { useContacts } from '@/app/providers/ContactsProvider';
-import { parseCSV, parseVCF } from '@/lib/utils/contact-parser';
+import { getApiErrorMessage } from '@/lib/api-client';
 import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
 
 interface ContactUploadModalProps {
@@ -12,7 +12,7 @@ interface ContactUploadModalProps {
 }
 
 export default function ContactUploadModal({ isOpen, onClose }: ContactUploadModalProps) {
-  const { addContacts } = useContacts();
+  const { uploadBulkFile } = useContacts();
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -25,47 +25,30 @@ export default function ContactUploadModal({ isOpen, onClose }: ContactUploadMod
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (!file.name.endsWith('.csv') && !file.name.endsWith('.vcf')) {
+      setError('Unsupported file format. Please upload a CSV or VCF file.');
+      return;
+    }
+
     setError('');
     setIsLoading(true);
     setUploadSuccess(false);
 
     try {
-      const text = await file.text();
-      let parsedContacts;
-
-      if (file.name.endsWith('.csv')) {
-        parsedContacts = parseCSV(text);
-      } else if (file.name.endsWith('.vcf')) {
-        parsedContacts = parseVCF(text);
-      } else {
-        setError('Unsupported file format. Please upload a CSV or VCF file.');
-        setIsLoading(false);
-        return;
+      await uploadBulkFile(file);
+      setUploadSuccess(true);
+      setError('');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
-
-      if (parsedContacts.length === 0) {
-        setError('No contacts found in the file. Please check the file format.');
+      setTimeout(() => {
         setUploadSuccess(false);
-      } else {
-        await addContacts(parsedContacts);
-        setUploadSuccess(true);
-        setError('');
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-        setTimeout(() => {
-          setUploadSuccess(false);
-          onClose();
-        }, 2000);
-      }
+        onClose();
+      }, 2000);
     } catch (err) {
-      setError(
-        err && typeof (err as { response?: { status?: number } }).response !== 'undefined'
-          ? 'Failed to upload contacts. Please try again.'
-          : 'Error reading file. Please make sure the file is valid.'
-      );
+      setError(getApiErrorMessage(err));
       setUploadSuccess(false);
-      console.error('Upload/parsing error:', err);
+      console.error('Bulk upload error:', err);
     } finally {
       setIsLoading(false);
     }

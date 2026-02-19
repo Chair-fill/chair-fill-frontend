@@ -13,6 +13,7 @@ import {
   fetchContactList,
   createContact,
   uploadContacts,
+  uploadContactsBulkFile,
   deleteContact,
   clearContacts,
 } from '@/lib/api/contacts';
@@ -37,6 +38,8 @@ interface ContactsContextType {
   filters: ContactListFilters;
   setFilters: (filters: ContactListFilters) => void;
   addContacts: (newContacts: Omit<Contact, 'id'>[]) => Promise<void>;
+  uploadBulkFile: (file: File) => Promise<void>;
+  refetchContactList: () => Promise<void>;
   removeContact: (id: string) => Promise<void>;
   clearAllContacts: () => Promise<void>;
 }
@@ -144,6 +147,22 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
     }
   }, [contacts, isLoaded]);
 
+  const refetchContactList = useCallback(async () => {
+    if (isDemoMode() || !user?.id) return;
+    setNextCursor(undefined);
+    const result = await fetchContactList({
+      user_id: user.id,
+      page_size: pageSize,
+      ...(filters.phone_number != null && filters.phone_number !== '' && { phone_number: filters.phone_number }),
+      ...(filters.first_name != null && filters.first_name !== '' && { first_name: filters.first_name }),
+      ...(filters.from != null && filters.from !== '' && { from: filters.from }),
+      ...(filters.to != null && filters.to !== '' && { to: filters.to }),
+    });
+    setContacts(result.contacts);
+    setHasMore(!!result.next_cursor);
+    setNextCursor(result.next_cursor);
+  }, [user?.id, pageSize, filters.phone_number, filters.first_name, filters.from, filters.to]);
+
   const addContacts = useCallback(
     async (newContacts: Omit<Contact, 'id'>[]) => {
       if (isDemoMode()) {
@@ -183,6 +202,33 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
       setContacts((prev) => [...prev, ...created]);
     },
     [technicianId]
+  );
+
+  const uploadBulkFile = useCallback(
+    async (file: File) => {
+      if (isDemoMode()) {
+        const text = await file.text();
+        const { parseCSV, parseVCF } = await import('@/lib/utils/contact-parser');
+        const parsed =
+          file.name.endsWith('.csv') ? parseCSV(text) : file.name.endsWith('.vcf') ? parseVCF(text) : [];
+        if (parsed.length > 0) {
+          const contactsWithIds: Contact[] = parsed.map((c) => ({
+            id: generateContactId(),
+            name: c.name ?? '',
+            email: c.email ?? '',
+            phone: c.phone ?? '',
+          }));
+          setContacts((prev) => [...prev, ...contactsWithIds]);
+        }
+        return;
+      }
+      if (technicianId == null || technicianId === '') {
+        throw new Error('Barber profile is required to upload contacts. Complete Barber info in Account Settings.');
+      }
+      await uploadContactsBulkFile(file, technicianId);
+      await refetchContactList();
+    },
+    [technicianId, refetchContactList]
   );
 
   const removeContact = useCallback(
@@ -227,6 +273,8 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
         filters,
         setFilters,
         addContacts,
+        uploadBulkFile,
+        refetchContactList,
         removeContact,
         clearAllContacts,
       }}
