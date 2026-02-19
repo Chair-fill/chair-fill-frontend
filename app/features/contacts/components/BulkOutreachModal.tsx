@@ -44,7 +44,7 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
       setSelectedIds(new Set());
       setMode('default');
       setMessage(defaultMessage);
-      setError(userDefaultEmpty ? 'Set a default broadcast message in your profile (Technician tab) first.' : '');
+      setError(userDefaultEmpty ? 'Set a default blast message in your profile (Technician tab) first.' : '');
       setSentCount(0);
     }
   }, [isOpen, defaultMessage, userDefaultEmpty]);
@@ -118,7 +118,7 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
       handleClose();
     } catch (err) {
       console.error('Bulk outreach failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to send broadcast.');
+      setError(err instanceof Error ? err.message : 'Failed to send blast.');
     } finally {
       setIsSending(false);
     }
@@ -135,7 +135,7 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
   const handleSendCustom = () => {
     const text = message.trim();
     if (!text && userDefaultEmpty) {
-      setError('Enter a message or set a default broadcast message in your profile.');
+      setError('Enter a message or set a default blast message in your profile.');
       return;
     }
     doSendBulk(text || defaultMessage);
@@ -204,7 +204,7 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
                         checked={selectedIds.has(c.id)}
                         onChange={() => hasPhone && toggleOne(c.id)}
                         disabled={!hasPhone}
-                        className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="h-4 w-4 rounded border border-zinc-300 dark:border-zinc-600 bg-transparent appearance-none checked:bg-blue-600 checked:border-blue-600 text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                       <label
                         htmlFor={`bulk-${c.id}`}
@@ -263,7 +263,7 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
                   ) : (
                     <>
                       <Radio className="w-4 h-4" />
-                      Broadcast with default message
+                      Blast with default message
                     </>
                   )}
                 </button>
@@ -312,7 +312,7 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
                       ) : (
                         <>
                           <Radio className="w-4 h-4" />
-                          Broadcast to {selectedCount} contacts
+                          Blast to {selectedCount} contacts
                         </>
                       )}
                     </button>

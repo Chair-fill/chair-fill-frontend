@@ -14,7 +14,8 @@ interface AuthenticatedAvatarProps {
 
 /**
  * Renders an avatar image. Calls the api (with JWT) to get a signed URL, then uses that URL for the img.
- * Backend /url/generate returns { url: "https://...s3...signed..." }; the signed URL is used as img src.
+ * Does not fetch the S3 URL from the browser (avoids CORS). When src includes cache-bust param (_=), appends
+ * it as a fragment to the signed URL so the img src is unique and the browser may show the updated image.
  */
 export default function AuthenticatedAvatar({ src, alt, className, fallback }: AuthenticatedAvatarProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -33,7 +34,10 @@ export default function AuthenticatedAvatar({ src, alt, className, fallback }: A
       .then((res) => {
         const data = res.data;
         const url = typeof data?.url === 'string' ? data.url : (data as { data?: { url?: string } })?.data?.url;
-        if (url) setImageUrl(url);
+        if (!url) return;
+        // If parent passed cache-bust param (e.g. _=timestamp), append as fragment so img src is unique (avoids showing stale cache)
+        const cacheBust = src.includes('_=') ? src.split('_=')[1].split('&')[0] : null;
+        setImageUrl(cacheBust ? `${url}#${cacheBust}` : url);
       })
       .catch(() => {
         setError(true);

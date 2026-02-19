@@ -345,11 +345,23 @@ export function UserProvider({ children }: { children: ReactNode }) {
         raw && typeof raw === 'object'
           ? (raw.data ?? raw.user ?? raw) as Record<string, unknown>
           : undefined;
-      if (profile && typeof profile === 'object' && user) {
+      if (profile && typeof profile === 'object') {
         const updated = mapBackendUserToProfile(profile);
-        setUser({ ...user, ...updated, defaultOutreachMessage: user.defaultOutreachMessage ?? updated.defaultOutreachMessage });
+        // Force avatar URL to change so AuthenticatedAvatar refetches and shows the new image (path often unchanged after upload)
+        const avatarUrl = updated.avatar
+          ? `${updated.avatar}${updated.avatar.includes('?') ? '&' : '?'}_=${Date.now()}`
+          : undefined;
+        setUser((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            ...updated,
+            avatar: avatarUrl ?? updated.avatar,
+            defaultOutreachMessage: prev.defaultOutreachMessage ?? updated.defaultOutreachMessage,
+          };
+        });
       }
-      return user?.avatar;
+      return;
     } catch (error) {
       console.error('Error uploading profile picture:', error);
       throw error;

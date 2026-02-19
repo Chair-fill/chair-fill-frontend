@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useContacts } from '@/app/providers/ContactsProvider';
-import { User, Mail, Phone, Trash2, Users, Plus, Upload, Radio, Loader2, ChevronDown } from 'lucide-react';
+import { User, Mail, Phone, Trash2, Users, Plus, Upload, Radio, Loader2, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import ContactUploadModal from "@/app/features/contacts/components/ContactUploadModal";
 import AddContactModal from "@/app/features/contacts/components/AddContactModal";
 import OutreachMessageModal from "@/app/features/contacts/components/OutreachMessageModal";
@@ -10,12 +10,20 @@ import FormError from '@/app/components/ui/FormError';
 import { formatDisplayName } from '@/lib/utils/format';
 
 export default function ContactsList() {
-  const { contacts, isLoaded, hasMore, isLoadingMore, loadMore, removeContact, clearAllContacts } = useContacts();
+  const { contacts, isLoaded, hasMore, isLoadingMore, loadMore, pageSize, removeContact, clearAllContacts } = useContacts();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
   const [selectedForOutreach, setSelectedForOutreach] = useState<Set<string>>(new Set());
   const [outreachError, setOutreachError] = useState('');
   const [isOutreachMessageOpen, setIsOutreachMessageOpen] = useState(false);
+  const [desktopPageIndex, setDesktopPageIndex] = useState(0);
+
+  const pageCount = Math.max(1, Math.ceil(contacts.length / pageSize));
+  const clampedPageIndex = Math.max(0, Math.min(desktopPageIndex, pageCount - 1));
+  const desktopContacts = useMemo(
+    () => contacts.slice(clampedPageIndex * pageSize, (clampedPageIndex + 1) * pageSize),
+    [contacts, clampedPageIndex, pageSize]
+  );
 
   const contactsWithPhone = contacts.filter((c) => c.phone?.trim());
   const selectedContactsWithPhone = contacts.filter(
@@ -143,7 +151,7 @@ export default function ContactsList() {
 
         {contactsWithPhone.length > 0 && (
           <div className="flex items-center gap-2 mb-3 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Select contacts for broadcast:</span>
+            <span className="text-zinc-600 dark:text-zinc-400">Select contacts for blast:</span>
             <button
               type="button"
               onClick={selectAllWithPhone}
@@ -183,7 +191,7 @@ export default function ContactsList() {
                       checked={isSelected}
                       onChange={() => hasPhone && toggleSelect(contact.id)}
                       disabled={!hasPhone}
-                      className="cursor-pointer h-4 w-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="cursor-pointer h-4 w-4 rounded border border-zinc-300 dark:border-zinc-600 bg-transparent appearance-none checked:bg-blue-600 checked:border-blue-600 text-blue-600 focus:ring-blue-500 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -236,7 +244,7 @@ export default function ContactsList() {
             <thead>
               <tr className="border-b border-zinc-200 dark:border-zinc-700">
                 <th className="w-10 py-3 px-4 font-semibold text-zinc-900 dark:text-zinc-50">
-                  <span className="sr-only">Select for broadcast</span>
+                  <span className="sr-only">Select for blast</span>
                 </th>
                 <th className="text-left py-3 px-4 font-semibold text-zinc-900 dark:text-zinc-50">
                   <div className="flex items-center gap-2">
@@ -262,7 +270,7 @@ export default function ContactsList() {
               </tr>
             </thead>
             <tbody>
-              {contacts.map((contact) => {
+              {desktopContacts.map((contact) => {
                 const hasPhone = Boolean(contact.phone?.trim());
                 const isSelected = selectedForOutreach.has(contact.id);
                 return (
@@ -277,7 +285,7 @@ export default function ContactsList() {
                       checked={isSelected}
                       onChange={() => hasPhone && toggleSelect(contact.id)}
                       disabled={!hasPhone}
-                      className="cursor-pointer h-4 w-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 accent-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="cursor-pointer h-4 w-4 rounded border border-zinc-300 dark:border-zinc-600 bg-transparent appearance-none checked:bg-blue-600 checked:border-blue-600 text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </td>
                   <td className="py-3 px-4 text-zinc-900 dark:text-zinc-50">
@@ -316,8 +324,9 @@ export default function ContactsList() {
           </table>
         </div>
 
+        {/* Mobile: Load more */}
         {hasMore && (
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 border-t border-zinc-200 dark:border-zinc-700 pt-4">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 border-t border-zinc-200 dark:border-zinc-700 pt-4 md:hidden">
             <button
               onClick={loadMore}
               disabled={isLoadingMore}
@@ -332,6 +341,57 @@ export default function ContactsList() {
             </button>
           </div>
         )}
+
+        {/* Desktop: Previous | 1 2 3 4 5 | Next */}
+        <div className="mt-4 hidden md:flex flex-wrap items-center justify-center gap-1 border-t border-zinc-200 dark:border-zinc-700 pt-4">
+          <button
+            type="button"
+            onClick={() => setDesktopPageIndex((p) => Math.max(0, p - 1))}
+            disabled={clampedPageIndex === 0}
+            className="inline-flex items-center gap-1 px-2.5 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Previous page"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back
+          </button>
+          {Array.from({ length: pageCount }, (_, i) => i).map((i) => {
+            const pageNum = i + 1;
+            const isCurrent = i === clampedPageIndex;
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setDesktopPageIndex(i)}
+                className={`min-w-9 px-2.5 py-2 text-sm font-medium rounded-lg border ${
+                  isCurrent
+                    ? 'bg-blue-600 border-blue-600 text-white'
+                    : 'text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }`}
+                aria-label={`Page ${pageNum}`}
+                aria-current={isCurrent ? 'page' : undefined}
+              >
+                {pageNum}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={async () => {
+              if (clampedPageIndex < pageCount - 1) {
+                setDesktopPageIndex((p) => p + 1);
+              } else if (hasMore) {
+                await loadMore();
+                setDesktopPageIndex(pageCount);
+              }
+            }}
+            disabled={clampedPageIndex >= pageCount - 1 && !hasMore}
+            className="inline-flex items-center gap-1 px-2.5 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Next page"
+          >
+            Next
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
       <AddContactModal isOpen={isAddContactModalOpen} onClose={() => setIsAddContactModalOpen(false)} />
       <ContactUploadModal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} />

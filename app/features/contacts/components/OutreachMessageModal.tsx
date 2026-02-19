@@ -83,7 +83,7 @@ export default function OutreachMessageModal({
       handleClose();
     } catch (err) {
       console.error('Bulk outreach failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to send broadcast.');
+      setError(err instanceof Error ? err.message : 'Failed to send blast.');
     } finally {
       setIsSending(false);
     }
@@ -91,7 +91,7 @@ export default function OutreachMessageModal({
 
   const handleSendWithDefault = () => {
     if (userDefaultEmpty) {
-      setError('Set a default broadcast message in your profile (Technician tab) first.');
+      setError('Set a default blast message in your profile (Technician tab) first.');
       return;
     }
     doSendBulk(defaultMessage);
@@ -100,7 +100,7 @@ export default function OutreachMessageModal({
   const handleSendCustom = () => {
     const text = message.trim();
     if (!text && userDefaultEmpty) {
-      setError('Enter a message or set a default broadcast message in your profile.');
+      setError('Enter a message or set a default blast message in your profile.');
       return;
     }
     doSendBulk(text || defaultMessage);
@@ -118,7 +118,7 @@ export default function OutreachMessageModal({
         <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800">
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
             <Radio className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            Broadcast to {count} contact{count !== 1 ? 's' : ''}
+            Blast to {count} contact{count !== 1 ? 's' : ''}
           </h2>
           <button
             type="button"
@@ -141,7 +141,7 @@ export default function OutreachMessageModal({
           {toSend.length > 0 && (
             <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 p-3">
               <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-                Selected for broadcast ({toSend.length}):
+                Selected for blast ({toSend.length}):
               </p>
               <ul className="text-sm text-zinc-700 dark:text-zinc-300 max-h-32 overflow-y-auto space-y-1">
                 {toSend.map((c) => (
@@ -168,7 +168,7 @@ export default function OutreachMessageModal({
               ) : (
                 <>
                   <Radio className="w-4 h-4" />
-                  Broadcast with default message
+                  Blast with default message
                 </>
               )}
             </button>
@@ -208,7 +208,7 @@ export default function OutreachMessageModal({
                 ) : (
                   <>
                     <Radio className="w-4 h-4" />
-                    Broadcast to {count} contacts
+                    Blast to {count} contacts
                   </>
                 )}
               </button>
