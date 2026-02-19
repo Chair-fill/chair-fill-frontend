@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, User, Mail, Phone, MapPin, Loader2 } from 'lucide-react';
+import { X, User, Mail, Phone, Loader2 } from 'lucide-react';
 import { useContacts } from '@/app/providers/ContactsProvider';
 import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
 import { getApiErrorMessage } from '@/lib/api-client';
@@ -16,7 +16,6 @@ const initialForm = {
   name: '',
   email: '',
   phone: '',
-  address: '',
 };
 
 export default function AddContactModal({ isOpen, onClose }: AddContactModalProps) {
@@ -47,7 +46,6 @@ export default function AddContactModal({ isOpen, onClose }: AddContactModalProp
         name: formData.name.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),
-        address: formData.address.trim() || undefined,
       }]);
       setFormData(initialForm);
       onClose();
@@ -135,23 +133,6 @@ export default function AddContactModal({ isOpen, onClose }: AddContactModalProp
                 value={formData.phone}
                 onChange={handleChange}
                 placeholder="+1 (555) 123-4567"
-                className="w-full pl-9 pr-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-              Address <span className="text-zinc-400 font-normal">(optional)</span>
-            </label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-              <input
-                type="text"
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                placeholder="123 Main St, City"
                 className="w-full pl-9 pr-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
               />
             </div>

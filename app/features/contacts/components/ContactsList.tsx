@@ -265,7 +265,7 @@ export default function ContactsList() {
                   </div>
                 </th>
                 <th className="text-left py-3 px-4 font-semibold text-zinc-900 dark:text-zinc-50">
-                  Actions
+                  {' '}
                 </th>
               </tr>
             </thead>

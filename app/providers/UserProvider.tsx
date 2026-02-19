@@ -186,6 +186,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
         if (profile && typeof profile === 'object' && profile.id) {
           const mapped = mapBackendUserToProfile(profile);
           setUser({ ...mapped, defaultOutreachMessage: mapped.defaultOutreachMessage ?? storage.defaultOutreachMessage.get() ?? null });
+          // Refetch full profile (GET /user/profile) so avatar is available in header without visiting account settings
+          api
+            .get<Record<string, unknown> | { data?: Record<string, unknown>; user?: Record<string, unknown> }>(API.USER.PROFILE)
+            .then(({ data: profileRes }) => {
+              const raw = profileRes as { data?: Record<string, unknown>; user?: Record<string, unknown> } | Record<string, unknown> | undefined;
+              const fullProfile =
+                raw && typeof raw === 'object'
+                  ? (raw.data ?? raw.user ?? raw) as Record<string, unknown>
+                  : undefined;
+              if (fullProfile && typeof fullProfile === 'object') {
+                const updated = mapBackendUserToProfile(fullProfile);
+                setUser((prev) => ({
+                  ...updated,
+                  defaultOutreachMessage: prev?.defaultOutreachMessage ?? updated.defaultOutreachMessage ?? storage.defaultOutreachMessage.get() ?? null,
+                }));
+              }
+            })
+            .catch(() => { /* non-fatal: header may show initials until user visits profile */ });
         }
       })
       .catch(() => {
