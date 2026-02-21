@@ -45,7 +45,7 @@ export default function NotificationSettings() {
     {
       key: 'allowAutomatedOutreachOnBulkUpload' as const,
       icon: Upload,
-      title: 'Allow automated outreach on bulk contacts upload',
+      title: 'Allow automated outreach on contact(s) upload',
       description: 'When uploading contacts in bulk, optionally send your default outreach message to new contacts',
     },
     {

@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Radio, MessageSquare, Loader2, ChevronRight, Users } from 'lucide-react';
 import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
-import { useUser } from '@/app/providers/UserProvider';
 import { sendOutreach } from '@/lib/api/outreach';
 import { isDemoMode } from '@/lib/demo';
 import FormError from '@/app/components/ui/FormError';
@@ -44,10 +43,10 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
       setSelectedIds(new Set());
       setMode('default');
       setMessage(defaultMessage);
-      setError(userDefaultEmpty ? 'Set a default blast message in your profile (Technician tab) first.' : '');
+      setError('');
       setSentCount(0);
     }
-  }, [isOpen, defaultMessage, userDefaultEmpty]);
+  }, [isOpen, defaultMessage]);
 
   const selectedContacts = contactsWithPhone.filter((c) => selectedIds.has(c.id));
   const selectedCount = selectedContacts.length;
@@ -252,7 +251,7 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
                 <button
                   type="button"
                   onClick={handleSendWithDefault}
-                  disabled={isSending || userDefaultEmpty}
+                  disabled={isSending}
                   className="w-full px-4 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isSending ? (

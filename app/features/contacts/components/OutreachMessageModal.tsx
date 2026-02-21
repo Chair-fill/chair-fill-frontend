@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Radio, MessageSquare, Loader2, Users } from 'lucide-react';
+import { X, Radio, Loader2 } from 'lucide-react';
 import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
-import { useUser } from '@/app/providers/UserProvider';
 import { sendOutreach } from '@/lib/api/outreach';
 import { isDemoMode } from '@/lib/demo';
 import FormError from '@/app/components/ui/FormError';
@@ -25,34 +24,28 @@ export default function OutreachMessageModal({
   onClose,
   onSent,
 }: OutreachMessageModalProps) {
-  const { user } = useUser();
-  const userDefaultEmpty = !user?.defaultOutreachMessage?.trim();
-  const defaultMessage = (user?.defaultOutreachMessage?.trim() || FALLBACK_OUTREACH_MESSAGE);
+  const defaultMessage = FALLBACK_OUTREACH_MESSAGE;
 
   const toSend = selectedContacts.filter((c) => c.phone?.trim());
   const count = toSend.length;
 
-  const [mode, setMode] = useState<'default' | 'custom'>('default');
-  const [message, setMessage] = useState(defaultMessage);
   const [error, setError] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [sentCount, setSentCount] = useState(0);
+  const [message, setMessage] = useState('');
 
   useModalKeyboard(isOpen, onClose);
   useModalScrollLock(isOpen);
 
   useEffect(() => {
     if (isOpen) {
-      setMode('default');
-      setMessage(defaultMessage);
       setError('');
       setSentCount(0);
+      setMessage('');
     }
-  }, [isOpen, defaultMessage]);
+  }, [isOpen]);
 
   const handleClose = () => {
-    setMode('default');
-    setMessage(defaultMessage);
     setError('');
     setIsSending(false);
     onClose();
@@ -89,21 +82,8 @@ export default function OutreachMessageModal({
     }
   };
 
-  const handleSendWithDefault = () => {
-    if (userDefaultEmpty) {
-      setError('Set a default blast message in your profile (Technician tab) first.');
-      return;
-    }
-    doSendBulk(defaultMessage);
-  };
-
-  const handleSendCustom = () => {
-    const text = message.trim();
-    if (!text && userDefaultEmpty) {
-      setError('Enter a message or set a default blast message in your profile.');
-      return;
-    }
-    doSendBulk(text || defaultMessage);
+  const handleBlast = () => {
+    doSendBulk(message.trim() || defaultMessage);
   };
 
   if (!isOpen) return null;
@@ -133,11 +113,6 @@ export default function OutreachMessageModal({
         <div className="p-4 space-y-4">
           {error && <FormError message={error} />}
 
-          <p className="text-sm text-zinc-600 dark:text-zinc-400 flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            Choose how to send the message.
-          </p>
-
           {toSend.length > 0 && (
             <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 p-3">
               <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">
@@ -153,67 +128,37 @@ export default function OutreachMessageModal({
             </div>
           )}
 
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={handleSendWithDefault}
-              disabled={isSending || userDefaultEmpty}
-              className="w-full px-4 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {isSending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Sending {sentCount}/{count}...
-                </>
-              ) : (
-                <>
-                  <Radio className="w-4 h-4" />
-                  Blast with default message
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('custom')}
-              disabled={isSending}
-              className="w-full px-4 py-3 border-2 border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Use custom message
-            </button>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Blast message
+            </label>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Add context for the AI agent. Leave blank for generic AI automation."
+              rows={4}
+              className="w-full px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50 resize-y min-h-[100px]"
+            />
           </div>
 
-          {mode === 'custom' && (
-            <div className="space-y-2 pt-2">
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Message
-              </label>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder={defaultMessage}
-                rows={4}
-                className="w-full px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50 resize-y min-h-[100px]"
-              />
-              <button
-                type="button"
-                onClick={handleSendCustom}
-                disabled={isSending}
-                className="w-full px-4 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isSending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Sending {sentCount}/{count}...
-                  </>
-                ) : (
-                  <>
-                    <Radio className="w-4 h-4" />
-                    Blast to {count} contacts
-                  </>
-                )}
-              </button>
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={handleBlast}
+            disabled={isSending}
+            className="w-full px-4 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isSending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Sending {sentCount}/{count}...
+              </>
+            ) : (
+              <>
+                <Radio className="w-4 h-4" />
+                Blast
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>

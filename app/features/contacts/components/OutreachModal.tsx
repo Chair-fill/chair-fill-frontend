@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { X, Radio, MessageSquare, Loader2 } from 'lucide-react';
 import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
-import { useUser } from '@/app/providers/UserProvider';
 import { sendOutreach } from '@/lib/api/outreach';
 import { isDemoMode } from '@/lib/demo';
 import FormError from '@/app/components/ui/FormError';
@@ -26,9 +25,7 @@ interface OutreachModalProps {
 }
 
 export default function OutreachModal({ isOpen, contact, onClose, onSent }: OutreachModalProps) {
-  const { user } = useUser();
-  const userDefaultEmpty = !user?.defaultOutreachMessage?.trim();
-  const defaultMessage = (user?.defaultOutreachMessage?.trim() || FALLBACK_OUTREACH_MESSAGE);
+  const defaultMessage = FALLBACK_OUTREACH_MESSAGE;
   const [mode, setMode] = useState<'choice' | 'customize'>('choice');
   const [message, setMessage] = useState(defaultMessage);
   const [error, setError] = useState('');
@@ -40,9 +37,9 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
   useEffect(() => {
     if (isOpen) {
       setMessage(defaultMessage);
-      setError(userDefaultEmpty ? 'Please set a default outreach message in your profile first.' : '');
+      setError('');
     }
-  }, [isOpen, defaultMessage, userDefaultEmpty]);
+  }, [isOpen, defaultMessage]);
 
   const reset = () => {
     setMode('choice');
@@ -84,20 +81,16 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
   };
 
   const handleSendWithDefault = () => {
-    if (userDefaultEmpty) {
-      setError('Please set a default blast message in your profile first.');
-      return;
-    }
     doSend(defaultMessage);
   };
 
   const handleSendCustom = () => {
     const text = message.trim();
-    if (!text && userDefaultEmpty) {
-      setError('Please enter a message or set a default outreach message in your profile.');
+    if (!text) {
+      setError('Please enter a message.');
       return;
     }
-    doSend(text || defaultMessage);
+    doSend(text);
   };
 
   if (!isOpen) return null;
@@ -137,7 +130,7 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
                 <button
                   type="button"
                   onClick={handleSendWithDefault}
-                  disabled={isSending || userDefaultEmpty}
+                  disabled={isSending}
                   className="w-full px-4 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isSending ? (
