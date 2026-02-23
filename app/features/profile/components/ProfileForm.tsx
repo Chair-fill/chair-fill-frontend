@@ -1,35 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useUser } from '@/app/providers/UserProvider';
 import { getApiErrorMessage } from '@/lib/api-client';
 import { User, Mail, Phone, Loader2, CheckCircle2 } from 'lucide-react';
 import FormError from '@/app/components/ui/FormError';
-import { FORM_LABEL, INPUT_LEFT_ICON, INPUT_ICON_LEFT, FORM_SUCCESS_BOX, FORM_SUCCESS_TEXT, BTN_PRIMARY_INLINE } from '@/lib/constants/ui';
+import { FORM_LABEL, INPUT_LEFT_ICON, INPUT_ICON_LEFT, BTN_PRIMARY_INLINE } from '@/lib/constants/ui';
+
+function getInitialFormData(user: { firstName?: string; lastName?: string; name?: string; email?: string; phone?: string } | null) {
+  if (!user) return { firstName: '', lastName: '', email: '', phone: '' };
+  const first = user.firstName ?? (user.name ? user.name.split(/\s+/)[0] ?? '' : '');
+  const last = user.lastName ?? (user.name ? user.name.split(/\s+/).slice(1).join(' ') ?? '' : '');
+  return { firstName: first, lastName: last, email: user.email || '', phone: user.phone || '' };
+}
 
 export default function ProfileForm() {
   const { user, updateProfile, isLoading } = useUser();
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-  });
+  const [formData, setFormData] = useState(() => getInitialFormData(user));
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (user) {
-      const first = user.firstName ?? (user.name ? user.name.split(/\s+/)[0] ?? '' : '');
-      const last = user.lastName ?? (user.name ? user.name.split(/\s+/).slice(1).join(' ') ?? '' : '');
-      setFormData({
-        firstName: first,
-        lastName: last,
-        email: user.email || '',
-        phone: user.phone || '',
-      });
-    }
-  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -62,74 +51,77 @@ export default function ProfileForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className={FORM_LABEL}>
-            First name
-          </label>
-          <div className="relative">
-            <User className={INPUT_ICON_LEFT} />
-            <input
-              type="text"
-              name="firstName"
-              value={formData.firstName}
-              onChange={handleChange}
-              placeholder="John"
-              className={INPUT_LEFT_ICON}
-            />
+    <>
+      <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
+        Update your name, phone, and email so clients and the app can reach you.
+      </p>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className={FORM_LABEL}>
+              First name
+            </label>
+            <div className="relative">
+              <User className={INPUT_ICON_LEFT} />
+              <input
+                type="text"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                placeholder="John"
+                className={INPUT_LEFT_ICON}
+              />
+            </div>
+          </div>
+          <div>
+            <label className={FORM_LABEL}>
+              Last name
+            </label>
+            <div className="relative">
+              <User className={INPUT_ICON_LEFT} />
+              <input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                placeholder="Doe"
+                className={INPUT_LEFT_ICON}
+              />
+            </div>
+          </div>
+          <div>
+            <label className={FORM_LABEL}>
+              Phone Number
+            </label>
+            <div className="relative">
+              <Phone className={INPUT_ICON_LEFT} />
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="+1 (555) 123-4567"
+                className={INPUT_LEFT_ICON}
+              />
+            </div>
+          </div>
+          <div>
+            <label className={FORM_LABEL}>
+              Email Address
+            </label>
+            <div className="relative">
+              <Mail className={INPUT_ICON_LEFT} />
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="john@example.com"
+                className={INPUT_LEFT_ICON}
+              />
+            </div>
           </div>
         </div>
-        <div>
-          <label className={FORM_LABEL}>
-            Last name
-          </label>
-          <div className="relative">
-            <User className={INPUT_ICON_LEFT} />
-            <input
-              type="text"
-              name="lastName"
-              value={formData.lastName}
-              onChange={handleChange}
-              placeholder="Doe"
-              className={INPUT_LEFT_ICON}
-            />
-          </div>
-        </div>
-        <div>
-          <label className={FORM_LABEL}>
-            Phone Number
-          </label>
-          <div className="relative">
-            <Phone className={INPUT_ICON_LEFT} />
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              placeholder="+1 (555) 123-4567"
-              className={INPUT_LEFT_ICON}
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className={FORM_LABEL}>
-            Email Address
-          </label>
-          <div className="relative">
-            <Mail className={INPUT_ICON_LEFT} />
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="john@example.com"
-              className={INPUT_LEFT_ICON}
-            />
-          </div>
-        </div>
-      </div>
 
       {error && (
         <FormError message={error} />
@@ -159,5 +151,6 @@ export default function ProfileForm() {
         </button>
       </div>
     </form>
+    </>
   );
 }

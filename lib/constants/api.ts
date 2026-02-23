@@ -75,6 +75,8 @@ export const API = {
     QUERY: '/contact/query',
     /** DELETE - Remove one contact (Postman: Delete Contact). Path: /contact/:id */
     DELETE: (id: string) => `/contact/${encodeURIComponent(id)}`,
+    /** GET - Verify contact has iMessage (Postman: verify imessage Contact). Query: contact_id */
+    IMESSAGE_VERIFY: '/contact/imessage/verify',
   },
   /** Outreach (Postman: Send Outreach). POST /outreach/send */
   OUTREACH: {

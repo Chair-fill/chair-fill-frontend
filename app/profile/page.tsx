@@ -62,7 +62,7 @@ export default function ProfilePage() {
     { id: 'technician' as const, label: 'Barber info', icon: Scissors },
     { id: 'services' as const, label: 'Services', icon: ClipboardList },
     { id: 'preferences' as const, label: 'Preferences', icon: Sliders },
-    { id: 'security' as const, label: 'Security', icon: Shield },
+    { id: 'security' as const, label: 'Change password', icon: Shield },
   ];
 
   const getInitials = (name: string) => {
@@ -183,10 +183,10 @@ export default function ProfilePage() {
             </div>
 
             <div className="p-4 sm:p-6">
-              {activeTab === 'user' && <ProfileForm />}
+              {activeTab === 'user' && <ProfileForm key={user?.id ?? user?.email ?? 'loading'} />}
               {activeTab === 'technician' && <TechnicianProfileForm />}
               {activeTab === 'services' && <BarberServicesForm />}
-              {activeTab === 'preferences' && <NotificationSettings />}
+              {activeTab === 'preferences' && <NotificationSettings key={user?.id ?? user?.email ?? 'loading'} />}
               {activeTab === 'security' && <SecuritySettings />}
             </div>
           </div>

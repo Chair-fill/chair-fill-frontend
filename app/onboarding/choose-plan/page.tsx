@@ -231,6 +231,14 @@ export default function OnboardingChoosePlanPage() {
                 const isSelectable = !isComingSoon && !!plan.price_id;
                 const isSubscribing = subscribingPlanId === plan.id;
 
+                // On mobile: show Professional first; on desktop: keep DOM order (Independent, Professional, Shop Owner)
+                const orderClass =
+                  plan.id === 'professional'
+                    ? 'order-1 lg:order-none'
+                    : plan.id === 'independent'
+                    ? 'order-2 lg:order-none'
+                    : 'order-3 lg:order-none';
+
                 return (
                   <article
                     key={plan.id}
@@ -244,7 +252,7 @@ export default function OnboardingChoosePlanPage() {
                         handlePlanClick(plan);
                       }
                     }}
-                    className={`relative flex flex-col rounded-xl border-2 transition-all duration-200 ${
+                    className={`relative flex flex-col rounded-xl border-2 transition-all duration-200 ${orderClass} ${
                       isPopular
                         ? 'border-blue-500 dark:border-blue-400 bg-white dark:bg-zinc-900 shadow-lg shadow-blue-500/10 lg:shadow-xl lg:shadow-blue-500/10'
                         : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm'

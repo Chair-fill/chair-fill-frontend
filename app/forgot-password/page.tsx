@@ -19,10 +19,14 @@ import {
   BTN_PRIMARY,
   BTN_PRIMARY_FLEX,
   BTN_SECONDARY,
-  AUTH_SUBTITLE,
 } from '@/lib/constants/ui';
 
 type Step = 'request' | 'otp' | 'password';
+
+function isValidEmail(value: string): boolean {
+  const t = value.trim();
+  return t.length > 0 && t.includes('@');
+}
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -38,27 +42,29 @@ export default function ForgotPasswordPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const canSendCode = field.trim().length > 0 && isValidEmail(field);
+
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const emailTrimmed = field.trim().toLowerCase();
-    if (!emailTrimmed || !emailTrimmed.includes('@')) {
-      setError('Please enter your email address.');
+    const value = field.trim().toLowerCase();
+    if (!isValidEmail(value)) {
+      setError('Please enter a valid email address.');
       return;
     }
     setIsLoading(true);
     try {
       const { data } = await api.post(API.AUTH.FORGOT_PASSWORD_VERIFY, {
-        field: emailTrimmed,
-        strategy: 'otp',
+        field: value,
+        strategy: 1, // 1 = OTP (backend expects a number)
       });
       const nextToken = getResponseToken(data);
       if (nextToken) {
+        setField(value);
         setToken(nextToken);
         setStep('otp');
       } else {
-        setError('Check your email for the verification code.');
-        setStep('otp');
+        setError('We could not get a verification token. Please try again.');
       }
     } catch (err) {
       setError(getApiErrorMessage(err));
@@ -148,13 +154,13 @@ export default function ForgotPasswordPage() {
             <form onSubmit={handleRequestOtp} className="space-y-5">
               {error && <FormError message={error} />}
               <div>
-                <label htmlFor="field" className={FORM_LABEL}>Email address</label>
+                <label htmlFor="field" className={FORM_LABEL}>Email</label>
                 <div className="relative">
                   <Mail className={INPUT_ICON_LEFT} />
-                  <input id="field" name="field" type="email" autoComplete="email" required value={field} onChange={e => { setField(e.target.value); setError(''); }} placeholder="you@example.com" className={INPUT_LEFT_ICON} />
+                  <input id="field" name="field" type="email" inputMode="email" autoComplete="email" value={field} onChange={e => { setField(e.target.value); setError(''); }} placeholder="you@example.com" className={INPUT_LEFT_ICON} />
                 </div>
               </div>
-              <button type="submit" disabled={isLoading} className={BTN_PRIMARY}>
+              <button type="submit" disabled={isLoading || !canSendCode} className={BTN_PRIMARY}>
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send verification code'}
               </button>
             </form>
@@ -167,7 +173,7 @@ export default function ForgotPasswordPage() {
                 <input id="otp" name="otp" type="text" inputMode="numeric" autoComplete="one-time-code" value={otp} onChange={e => { setOtp(e.target.value); setError(''); }} placeholder="123456" className={INPUT_PLAIN} />
               </div>
               <div className="flex gap-2">
-                <button type="button" onClick={() => setStep('request')} className={`flex-1 ${BTN_SECONDARY}`}>Back</button>
+                <button type="button" onClick={() => { setStep('request'); setToken(''); setOtp(''); setError(''); }} className={`flex-1 ${BTN_SECONDARY}`}>Back</button>
                 <button type="submit" disabled={isLoading} className={BTN_PRIMARY_FLEX}>
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify'}
                 </button>

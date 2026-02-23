@@ -257,6 +257,40 @@ export async function deleteContact(id: string): Promise<void> {
   }
 }
 
+/** iMessage verify API response (data wrapper). */
+export interface ImessageVerifyResponse {
+  data?: {
+    verified?: boolean;
+    updatedAddresses?: string[];
+  };
+}
+
+/**
+ * Verify whether a contact can receive iMessage (Postman: verify imessage Contact).
+ * GET /contact/imessage/verify?contact_id=...
+ */
+export async function verifyContactImessage(contactId: string): Promise<{ verified?: boolean }> {
+  const { data } = await api.get<ImessageVerifyResponse>(API.CONTACT.IMESSAGE_VERIFY, {
+    params: { contact_id: contactId },
+  });
+  const inner = data?.data;
+  return { verified: inner?.verified };
+}
+
+/**
+ * Verify whether an email or phone address is a valid iMessage contact (e.g. for signup).
+ * GET /contact/imessage/verify?contact_address=...
+ */
+export async function verifyImessageAddress(contactAddress: string): Promise<{ verified: boolean }> {
+  const trimmed = contactAddress.trim();
+  if (!trimmed) return { verified: false };
+  const { data } = await api.get<ImessageVerifyResponse>(API.CONTACT.IMESSAGE_VERIFY, {
+    params: { contact_address: trimmed },
+  });
+  const verified = data?.data?.verified === true;
+  return { verified };
+}
+
 /**
  * Fetch all contacts for a user by cursor-paging (for clear-all, etc.).
  */

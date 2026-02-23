@@ -1,30 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useUser } from '@/app/providers/UserProvider';
-import { Sliders, Mail, MessageSquare, Megaphone, Upload, Loader2, CheckCircle2 } from 'lucide-react';
+import { Mail, MessageSquare, Megaphone, Upload, Loader2, CheckCircle2 } from 'lucide-react';
 import type { NotificationPreferences } from '@/lib/types/user';
+
+const DEFAULT_PREFS: NotificationPreferences = {
+  email: true,
+  sms: false,
+  marketing: false,
+  allowAutomatedOutreachOnBulkUpload: false,
+};
+
+function getInitialPrefs(user: { notifications?: Partial<NotificationPreferences> } | null): NotificationPreferences {
+  if (!user?.notifications) return DEFAULT_PREFS;
+  return {
+    email: user.notifications.email ?? true,
+    sms: user.notifications.sms ?? false,
+    marketing: user.notifications.marketing ?? false,
+    allowAutomatedOutreachOnBulkUpload: user.notifications.allowAutomatedOutreachOnBulkUpload ?? false,
+  };
+}
 
 export default function NotificationSettings() {
   const { user, updateNotifications, isLoading } = useUser();
-  const [prefs, setPrefs] = useState<NotificationPreferences>({
-    email: true,
-    sms: false,
-    marketing: false,
-    allowAutomatedOutreachOnBulkUpload: false,
-  });
+  const [prefs, setPrefs] = useState(() => getInitialPrefs(user));
   const [success, setSuccess] = useState(false);
-
-  useEffect(() => {
-    if (user?.notifications) {
-      setPrefs({
-        email: user.notifications.email ?? true,
-        sms: user.notifications.sms ?? false,
-        marketing: user.notifications.marketing ?? false,
-        allowAutomatedOutreachOnBulkUpload: user.notifications.allowAutomatedOutreachOnBulkUpload ?? false,
-      });
-    }
-  }, [user]);
 
   const handleToggle = (key: keyof NotificationPreferences) => {
     setPrefs(prev => ({ ...prev, [key]: !prev[key] }));
@@ -70,12 +71,9 @@ export default function NotificationSettings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 mb-4">
-        <Sliders className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
-        <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-          Preferences
-        </h3>
-      </div>
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        Choose how you want to be notified — email, SMS, and whether to send outreach when you upload contacts.
+      </p>
 
       <div className="space-y-4">
         {toggleItems.map(({ key, icon: Icon, title, description }) => (

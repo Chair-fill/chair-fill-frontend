@@ -6,6 +6,7 @@ import { User, Mail, Lock, Loader2, Phone, ArrowLeft, Eye, EyeOff } from 'lucide
 import { useUser } from '@/app/providers/UserProvider';
 import { api, getApiErrorMessage, getResponseToken } from '@/lib/api-client';
 import { API } from '@/lib/constants/api';
+import { verifyImessageAddress } from '@/lib/api/contacts';
 import AuthLayout from '@/app/components/ui/AuthLayout';
 import AuthCard from '@/app/components/ui/AuthCard';
 import FormError from '@/app/components/ui/FormError';
@@ -38,8 +39,10 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [stepLoading, setStepLoading] = useState(false);
+  const [imessageChecking, setImessageChecking] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [confirmPasswordBlurred, setConfirmPasswordBlurred] = useState(false);
 
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,6 +112,25 @@ export default function SignupPage() {
       setError('Passwords do not match.');
       return;
     }
+
+    setImessageChecking(true);
+    try {
+      const [emailResult, phoneResult] = await Promise.all([
+        verifyImessageAddress(email.trim()),
+        verifyImessageAddress(phoneTrimmed),
+      ]);
+      const atLeastOneVerified = emailResult.verified || phoneResult.verified;
+      if (!atLeastOneVerified) {
+        setError('At least one of your email or phone number must be a valid iMessage contact to sign up.');
+        return;
+      }
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+      return;
+    } finally {
+      setImessageChecking(false);
+    }
+
     try {
       await signup({
         name: name.trim(),
@@ -124,7 +146,7 @@ export default function SignupPage() {
     }
   };
 
-  const loading = isLoading || stepLoading;
+  const loading = isLoading || stepLoading || imessageChecking;
 
   return (
     <AuthLayout>
@@ -187,7 +209,7 @@ export default function SignupPage() {
               />
             </div>
             <div className="flex gap-2">
-              <button type="button" onClick={() => { setStep('email'); setError(''); setOtp(''); }} className={`flex-1 ${BTN_SECONDARY}`}>
+              <button type="button" onClick={() => { setStep('email'); setError(''); setOtp(''); setVerifyToken(''); }} className={`flex-1 ${BTN_SECONDARY}`}>
                 <ArrowLeft className="w-4 h-4" /> Back
               </button>
               <button type="submit" disabled={loading} className={BTN_PRIMARY_FLEX}>
@@ -238,19 +260,28 @@ export default function SignupPage() {
               <label htmlFor="confirmPassword" className={FORM_LABEL}>Confirm password</label>
               <div className="relative">
                 <Lock className={INPUT_ICON_LEFT} />
-                <input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} autoComplete="new-password" required value={confirmPassword} onChange={e => { setConfirmPassword(e.target.value); setError(''); }} placeholder="••••••••" className={INPUT_LEFT_RIGHT_ICON} />
+                <input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} autoComplete="new-password" required value={confirmPassword} onChange={e => { setConfirmPassword(e.target.value); setError(''); }} onBlur={() => setConfirmPasswordBlurred(true)} placeholder="••••••••" className={INPUT_LEFT_RIGHT_ICON} />
                 <button type="button" onClick={() => setShowConfirmPassword(p => !p)} className={INPUT_ICON_RIGHT} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
                   {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              {confirmPasswordBlurred && confirmPassword.length > 0 && (
+                <p className={`mt-1 text-xs ${password === confirmPassword ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {password === confirmPassword ? 'Passwords match' : 'Passwords do not match'}
+                </p>
+              )}
             </div>
 
             <div className="flex gap-2">
-              <button type="button" onClick={() => setStep('otp')} className={`flex-1 ${BTN_SECONDARY}`}>
+              <button type="button" onClick={() => setStep('otp')} disabled={loading} className={`flex-1 ${BTN_SECONDARY}`}>
                 <ArrowLeft className="w-4 h-4" /> Back
               </button>
               <button type="submit" disabled={loading} className={BTN_PRIMARY_FLEX}>
-                {loading ? (<><Loader2 className="w-5 h-5 animate-spin" /> Creating...</>) : 'Sign up'}
+                {loading ? (
+                  <><Loader2 className="w-5 h-5 animate-spin" /> Creating…</>
+                ) : (
+                  'Sign up'
+                )}
               </button>
             </div>
           </form>
