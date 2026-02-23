@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useUser } from '@/app/providers/UserProvider';
 import { useTechnician } from '@/app/providers/TechnicianProvider';
-import { User, Settings, Shield, Sliders, Camera, Trash2, Loader2, Scissors, ClipboardList } from 'lucide-react';
+import { User, Settings, Shield, Sliders, Camera, Trash2, Loader2, Scissors } from 'lucide-react';
 import { getApiErrorMessage } from '@/lib/api-client';
 import { formatDisplayName } from '@/lib/utils/format';
 import PageLoader from '@/app/components/ui/PageLoader';
@@ -12,9 +12,7 @@ import ProfileForm from '@/app/features/profile/components/ProfileForm';
 import TechnicianProfileForm from '@/app/features/profile/components/TechnicianProfileForm';
 import NotificationSettings from '@/app/features/profile/components/NotificationSettings';
 import SecuritySettings from '@/app/features/profile/components/SecuritySettings';
-import BarberServicesForm from '@/app/features/profile/components/BarberServicesForm';
-
-type Tab = 'user' | 'technician' | 'services' | 'preferences' | 'security';
+type Tab = 'user' | 'technician' | 'preferences' | 'security';
 
 export default function ProfilePage() {
   const { user, uploadProfilePicture, removeProfilePicture, refetchProfile, isLoading } = useUser();
@@ -60,7 +58,6 @@ export default function ProfilePage() {
   const tabs = [
     { id: 'user' as const, label: 'User info', icon: User },
     { id: 'technician' as const, label: 'Barber info', icon: Scissors },
-    { id: 'services' as const, label: 'Services', icon: ClipboardList },
     { id: 'preferences' as const, label: 'Preferences', icon: Sliders },
     { id: 'security' as const, label: 'Change password', icon: Shield },
   ];
@@ -185,7 +182,6 @@ export default function ProfilePage() {
             <div className="p-4 sm:p-6">
               {activeTab === 'user' && <ProfileForm key={user?.id ?? user?.email ?? 'loading'} />}
               {activeTab === 'technician' && <TechnicianProfileForm />}
-              {activeTab === 'services' && <BarberServicesForm />}
               {activeTab === 'preferences' && <NotificationSettings key={user?.id ?? user?.email ?? 'loading'} />}
               {activeTab === 'security' && <SecuritySettings />}
             </div>

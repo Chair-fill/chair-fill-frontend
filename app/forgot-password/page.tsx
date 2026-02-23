@@ -197,15 +197,22 @@ export default function ForgotPasswordPage() {
                 <label htmlFor="confirmPassword" className={FORM_LABEL}>Confirm new password</label>
                 <div className="relative">
                   <Lock className={INPUT_ICON_LEFT} />
-                  <input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} autoComplete="new-password" value={confirmPassword} onChange={e => { setConfirmPassword(e.target.value); setError(''); }} placeholder="••••••••" className={INPUT_LEFT_RIGHT_ICON} />
+                  <input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} autoComplete="new-password" value={confirmPassword} onChange={e => { setConfirmPassword(e.target.value); setError(''); }} placeholder="••••••••" className={INPUT_LEFT_RIGHT_ICON} aria-invalid={confirmPassword.length > 0 && newPassword !== confirmPassword} />
                   <button type="button" onClick={() => setShowConfirmPassword(p => !p)} className={INPUT_ICON_RIGHT} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
                     {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
+                {confirmPassword.length > 0 && (
+                  newPassword !== confirmPassword ? (
+                    <p id="confirm-password-mismatch" className="text-sm text-red-600 dark:text-red-400 mt-1.5">Passwords do not match</p>
+                  ) : (
+                    <p className="text-sm text-green-600 dark:text-green-400 mt-1.5">Passwords match</p>
+                  )
+                )}
               </div>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setStep('otp')} className={`flex-1 ${BTN_SECONDARY}`}>Back</button>
-                <button type="submit" disabled={isLoading} className={BTN_PRIMARY_FLEX}>
+                <button type="submit" disabled={isLoading || newPassword !== confirmPassword || newPassword.length < 8} className={BTN_PRIMARY_FLEX}>
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Reset password'}
                 </button>
               </div>

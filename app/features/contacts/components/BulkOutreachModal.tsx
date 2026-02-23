@@ -8,6 +8,7 @@ import { isDemoMode } from '@/lib/demo';
 import FormError from '@/app/components/ui/FormError';
 import { formatDisplayName } from '@/lib/utils/format';
 import type { Contact } from '@/lib/types/contact';
+import { useUser } from '@/app/providers/UserProvider';
 
 const FALLBACK_OUTREACH_MESSAGE = 'Follow up on your appointment';
 

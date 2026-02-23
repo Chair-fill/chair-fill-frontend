@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, Radio, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Radio, Loader2, CheckCircle2 } from 'lucide-react';
 import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
 import { sendOutreach } from '@/lib/api/outreach';
 import { isDemoMode } from '@/lib/demo';
@@ -31,8 +31,10 @@ export default function OutreachMessageModal({
 
   const [error, setError] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [sentCount, setSentCount] = useState(0);
   const [message, setMessage] = useState('');
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useModalKeyboard(isOpen, onClose);
   useModalScrollLock(isOpen);
@@ -40,14 +42,26 @@ export default function OutreachMessageModal({
   useEffect(() => {
     if (isOpen) {
       setError('');
+      setShowSuccess(false);
       setSentCount(0);
       setMessage('');
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    };
+  }, []);
+
   const handleClose = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
     setError('');
     setIsSending(false);
+    setShowSuccess(false);
     onClose();
   };
 
@@ -73,7 +87,12 @@ export default function OutreachMessageModal({
         }
       }
       onSent?.();
-      handleClose();
+      setShowSuccess(true);
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = setTimeout(() => {
+        closeTimeoutRef.current = null;
+        handleClose();
+      }, 1800);
     } catch (err) {
       console.error('Bulk outreach failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to send blast.');
@@ -111,6 +130,12 @@ export default function OutreachMessageModal({
         </div>
 
         <div className="p-4 space-y-4">
+          {showSuccess && (
+            <div className="flex items-center gap-2 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3 text-green-800 dark:text-green-200">
+              <CheckCircle2 className="w-5 h-5 shrink-0" />
+              <p className="text-sm font-medium">Blast successfully initiated</p>
+            </div>
+          )}
           {error && <FormError message={error} />}
 
           {toSend.length > 0 && (

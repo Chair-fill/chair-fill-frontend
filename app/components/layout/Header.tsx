@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ContactRound, CreditCard, User, Settings, LogOut, ChevronDown, LogIn, UserPlus } from 'lucide-react';
+import { ContactRound, CreditCard, ClipboardList, User, Settings, LogOut, ChevronDown, LogIn, UserPlus } from 'lucide-react';
 import { useUser } from '@/app/providers/UserProvider';
 import { isPublicRoute } from '@/lib/auth';
 import { formatDisplayName } from '@/lib/utils/format';
@@ -73,7 +73,7 @@ export default function Header() {
                 <nav className="flex items-center space-x-1">
                   <Link
                     href="/contacts"
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex items-center gap-2 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive('/contacts')
                         ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900'
                         : 'text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
@@ -84,7 +84,7 @@ export default function Header() {
                   </Link>
                   <Link
                     href="/subscription"
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex items-center gap-2 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive('/subscription')
                         ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900'
                         : 'text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
@@ -92,6 +92,17 @@ export default function Header() {
                   >
                     <CreditCard className="w-4 h-4" />
                     <span className="hidden sm:block pt-0.5">Subscription</span>
+                  </Link>
+                  <Link
+                    href="/services"
+                    className={`flex items-center gap-2 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive('/services')
+                        ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900'
+                        : 'text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    <ClipboardList className="w-4 h-4" />
+                    <span className="hidden sm:block pt-0.5">Services</span>
                   </Link>
                 </nav>
 

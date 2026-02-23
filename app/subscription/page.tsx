@@ -226,7 +226,7 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black py-8">
+    <div className="min-h-screen bg-zinc-50 dark:bg-black pt-12 sm:pt-28 pb-8">
       <main className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           {subscriptionError && (
@@ -244,18 +244,6 @@ export default function SubscriptionPage() {
               </button>
             </div>
           )}
-
-          {/* Header */}
-          <div className="mb-8 text-center">
-            <div className="flex items-center justify-center gap-3 mb-2">
-              <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-50">
-                Manage subscription
-              </h1>
-            </div>
-            <p className="text-lg text-zinc-600 dark:text-zinc-400">
-              Upgrade your plan or manage your current subscription
-            </p>
-          </div>
 
           {/* Active subscription – always show; no subscription = prompt to select */}
           <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-6 mb-8 shadow-sm">
