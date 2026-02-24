@@ -129,9 +129,6 @@ export default function ContactsList() {
             >
               <Radio className="w-4 h-4" />
               <span className="sm:inline">Blast</span>
-              {selectedContactsWithPhone.length > 0 && (
-                <span className="sm:inline">({selectedContactsWithPhone.length})</span>
-              )}
             </button>
             <button
               onClick={clearAllContacts}

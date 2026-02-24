@@ -66,8 +66,8 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
     }
     setIsTechnicianLoading(true);
     try {
-      const { data } = await api.get<Technician | { technician?: Technician; data?: Technician }>(API.TECHNICIAN.ME);
-      const raw = data as { technician?: Technician; data?: Technician } | Technician;
+      const { data } = await api.get<Technician | { technician?: Technician; data?: Technician; technician_id?: string }>(API.TECHNICIAN.ME);
+      const raw = data as { technician?: Technician; data?: Technician; technician_id?: string } | Technician;
       const tech = (raw && typeof raw === 'object' && 'technician' in raw
         ? (raw as { technician?: Technician }).technician
         : (raw && typeof raw === 'object' && 'data' in raw
@@ -76,6 +76,13 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
       if (tech && typeof tech === 'object') {
         const id = tech.id ?? tech.technician_id ?? (tech as { _id?: string })._id;
         setTechnician({ ...tech, id: id ?? tech.id, technician_id: tech.technician_id ?? id });
+      } else if (raw && typeof raw === 'object') {
+        const topLevelId = (raw as { technician_id?: string }).technician_id ?? (raw as { data?: { technician_id?: string } }).data?.technician_id;
+        if (topLevelId && typeof topLevelId === 'string') {
+          setTechnician({ id: topLevelId, technician_id: topLevelId });
+        } else {
+          setTechnician(null);
+        }
       } else {
         setTechnician(null);
       }

@@ -78,10 +78,23 @@ export const API = {
     /** GET - Verify contact has iMessage (Postman: verify imessage Contact). Query: contact_id */
     IMESSAGE_VERIFY: '/contact/imessage/verify',
   },
-  /** Outreach (Postman: Send Outreach). POST /outreach/send */
+  /** Outreach (Postman: Blast). POST /outreach/blast. Body: technician_id OR shop_id (mutually exclusive). */
   OUTREACH: {
-    /** POST - Send outreach. Body: { message, phone_number, send_to_all } */
-    SEND: '/outreach/send',
+    /** POST - Blast outreach. Body: { contact_ids, initial_outreach_message, technician_id } (shop_id later) */
+    BLAST: '/outreach/blast',
+  },
+  /** Offerings (services). Create, update, list, get, delete. JWT required. */
+  OFFERINGS: {
+    /** POST - Create offering. Body: name, price, duration, description, technician_id, shop_id?, premium_hours?, promo? */
+    CREATE: '/offerings',
+    /** PUT - Update offering. Body: offering_id, name?, price?, duration?, description?, promo_enabled?, promo? */
+    UPDATE: '/offerings',
+    /** GET - List offerings. Query: technician_id?, shop_id?, search?, cursor?, from?, to?, page_size? */
+    LIST: '/offerings/list',
+    /** GET - Get offering by id */
+    GET: (id: string) => `/offerings/${encodeURIComponent(id)}`,
+    /** DELETE - Delete offering by id */
+    DELETE: (id: string) => `/offerings/${encodeURIComponent(id)}`,
   },
   /** GET - Generate signed/served URL for an asset. Query: path, size (e.g. s, m) */
   URL: {

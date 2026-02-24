@@ -2,23 +2,23 @@ import { api } from '@/lib/api-client';
 import { API } from '@/lib/constants/api';
 import { getApiErrorMessage } from '@/lib/api-client';
 
-/** Payload for POST /outreach/send (Postman: Send Outreach) */
-export interface SendOutreachPayload {
-  message: string;
-  phone_number: string;
-  send_to_all: boolean;
+/** Payload for POST /outreach/blast (Postman: Blast). Use technician_id only; shop_id is mutually exclusive and for later. */
+export interface SendBlastPayload {
+  contact_ids: string[];
+  initial_outreach_message: string;
+  technician_id: string;
 }
 
 /**
- * Send outreach to a contact or all contacts (Postman: Send Outreach).
- * POST /outreach/send. Body: { message, phone_number, send_to_all }.
+ * Send outreach blast to contacts (technician-based; shop_id not sent).
+ * POST /outreach/blast. Body: { contact_ids, initial_outreach_message, technician_id }.
  */
-export async function sendOutreach(payload: SendOutreachPayload): Promise<void> {
+export async function sendBlast(payload: SendBlastPayload): Promise<void> {
   try {
-    await api.post(API.OUTREACH.SEND, {
-      message: payload.message,
-      phone_number: payload.phone_number,
-      send_to_all: payload.send_to_all,
+    await api.post(API.OUTREACH.BLAST, {
+      contact_ids: payload.contact_ids,
+      initial_outreach_message: payload.initial_outreach_message,
+      technician_id: payload.technician_id,
     });
   } catch (err) {
     const message = getApiErrorMessage(err);

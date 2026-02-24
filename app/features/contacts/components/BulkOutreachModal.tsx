@@ -3,12 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Radio, MessageSquare, Loader2, ChevronRight, Users } from 'lucide-react';
 import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
-import { sendOutreach } from '@/lib/api/outreach';
+import { sendBlast } from '@/lib/api/outreach';
 import { isDemoMode } from '@/lib/demo';
 import FormError from '@/app/components/ui/FormError';
 import { formatDisplayName } from '@/lib/utils/format';
 import type { Contact } from '@/lib/types/contact';
 import { useUser } from '@/app/providers/UserProvider';
+import { useTechnician } from '@/app/providers/TechnicianProvider';
 
 const FALLBACK_OUTREACH_MESSAGE = 'Follow up on your appointment';
 
@@ -23,6 +24,8 @@ interface BulkOutreachModalProps {
 
 export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }: BulkOutreachModalProps) {
   const { user } = useUser();
+  const { technician } = useTechnician();
+  const technicianId = technician?.id ?? technician?.technician_id ?? '';
   const userDefaultEmpty = !user?.defaultOutreachMessage?.trim();
   const defaultMessage = (user?.defaultOutreachMessage?.trim() || FALLBACK_OUTREACH_MESSAGE);
 
@@ -94,25 +97,27 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
   };
 
   const doSendBulk = async (text: string) => {
-    const toSend = selectedContacts.map((c) => ({ ...c, phone: c.phone!.trim() }));
+    const contactIds = selectedContacts.map((c) => c.id);
     setError('');
     setIsSending(true);
     setSentCount(0);
     try {
       if (isDemoMode()) {
-        for (let i = 0; i < toSend.length; i++) {
+        for (let i = 0; i < contactIds.length; i++) {
           await new Promise((r) => setTimeout(r, 300));
           setSentCount(i + 1);
         }
       } else {
-        for (let i = 0; i < toSend.length; i++) {
-          await sendOutreach({
-            message: text.trim() || defaultMessage,
-            phone_number: toSend[i].phone,
-            send_to_all: false,
-          });
-          setSentCount(i + 1);
+        if (!technicianId) {
+          setError('Technician profile not found. Please complete onboarding first.');
+          return;
         }
+        await sendBlast({
+          contact_ids: contactIds,
+          initial_outreach_message: text.trim() || defaultMessage,
+          technician_id: technicianId,
+        });
+        setSentCount(contactIds.length);
       }
       onSent?.();
       handleClose();
@@ -258,7 +263,7 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
                   {isSending ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Sending {sentCount}/{selectedCount}...
+                      Blasting...
                     </>
                   ) : (
                     <>
@@ -307,7 +312,7 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
                       {isSending ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          Sending {sentCount}/{selectedCount}...
+                          Blasting...
                         </>
                       ) : (
                         <>

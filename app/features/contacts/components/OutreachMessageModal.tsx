@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Radio, Loader2, CheckCircle2 } from 'lucide-react';
 import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
-import { sendOutreach } from '@/lib/api/outreach';
+import { sendBlast } from '@/lib/api/outreach';
 import { isDemoMode } from '@/lib/demo';
+import { useTechnician } from '@/app/providers/TechnicianProvider';
 import FormError from '@/app/components/ui/FormError';
 import { formatDisplayName } from '@/lib/utils/format';
 import type { Contact } from '@/lib/types/contact';
@@ -24,6 +25,8 @@ export default function OutreachMessageModal({
   onClose,
   onSent,
 }: OutreachMessageModalProps) {
+  const { technician } = useTechnician();
+  const technicianId = technician?.id ?? technician?.technician_id ?? '';
   const defaultMessage = FALLBACK_OUTREACH_MESSAGE;
 
   const toSend = selectedContacts.filter((c) => c.phone?.trim());
@@ -66,25 +69,27 @@ export default function OutreachMessageModal({
   };
 
   const doSendBulk = async (text: string) => {
-    const list = toSend.map((c) => ({ ...c, phone: c.phone!.trim() }));
+    const contactIds = toSend.map((c) => c.id);
     setError('');
     setIsSending(true);
     setSentCount(0);
     try {
       if (isDemoMode()) {
-        for (let i = 0; i < list.length; i++) {
+        for (let i = 0; i < contactIds.length; i++) {
           await new Promise((r) => setTimeout(r, 300));
           setSentCount(i + 1);
         }
       } else {
-        for (let i = 0; i < list.length; i++) {
-          await sendOutreach({
-            message: text.trim() || defaultMessage,
-            phone_number: list[i].phone,
-            send_to_all: false,
-          });
-          setSentCount(i + 1);
+        if (!technicianId) {
+          setError('Technician profile not found. Please complete onboarding first.');
+          return;
         }
+        await sendBlast({
+          contact_ids: contactIds,
+          initial_outreach_message: text.trim() || defaultMessage,
+          technician_id: technicianId,
+        });
+        setSentCount(contactIds.length);
       }
       onSent?.();
       setShowSuccess(true);
@@ -175,7 +180,7 @@ export default function OutreachMessageModal({
             {isSending ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Sending {sentCount}/{count}...
+                Blasting...
               </>
             ) : (
               <>

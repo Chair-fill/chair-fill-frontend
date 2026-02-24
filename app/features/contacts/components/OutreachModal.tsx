@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { X, Radio, MessageSquare, Loader2 } from 'lucide-react';
 import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
-import { sendOutreach } from '@/lib/api/outreach';
+import { sendBlast } from '@/lib/api/outreach';
 import { isDemoMode } from '@/lib/demo';
+import { useTechnician } from '@/app/providers/TechnicianProvider';
 import FormError from '@/app/components/ui/FormError';
 import { formatDisplayName } from '@/lib/utils/format';
 
@@ -25,6 +26,8 @@ interface OutreachModalProps {
 }
 
 export default function OutreachModal({ isOpen, contact, onClose, onSent }: OutreachModalProps) {
+  const { technician } = useTechnician();
+  const technicianId = technician?.id ?? technician?.technician_id ?? '';
   const defaultMessage = FALLBACK_OUTREACH_MESSAGE;
   const [mode, setMode] = useState<'choice' | 'customize'>('choice');
   const [message, setMessage] = useState(defaultMessage);
@@ -64,10 +67,14 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
       if (isDemoMode()) {
         await new Promise((r) => setTimeout(r, 800));
       } else {
-        await sendOutreach({
-          message: text.trim() || defaultMessage,
-          phone_number: contact.phone.trim(),
-          send_to_all: false,
+        if (!technicianId) {
+          setError('Technician profile not found. Please complete onboarding first.');
+          return;
+        }
+        await sendBlast({
+          contact_ids: [contact.id],
+          initial_outreach_message: text.trim() || defaultMessage,
+          technician_id: technicianId,
         });
       }
       onSent?.();
@@ -185,7 +192,7 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
                   {isSending ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Sending...
+                      Blasting...
                     </>
                   ) : (
                     <>

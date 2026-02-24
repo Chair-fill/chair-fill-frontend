@@ -91,7 +91,7 @@ export default function NotificationSettings() {
             <button
               type="button"
               onClick={() => handleToggle(key)}
-              className={`relative w-12 h-6 rounded-full transition-colors shrink-0 self-end sm:self-center min-h-[24px] touch-manipulation ${
+              className={`relative w-12 h-6 rounded-full transition-colors shrink-0 self-end sm:self-center min-h-[24px] touch-manipulation focus:outline-none ${
                 prefs[key]
                   ? 'bg-green-600 dark:bg-green-400'
                   : 'bg-zinc-300 dark:bg-zinc-700'
@@ -100,7 +100,7 @@ export default function NotificationSettings() {
               aria-pressed={prefs[key]}
             >
               <span
-                className={`absolute top-1 w-4 h-4 rounded-full bg-white dark:bg-zinc-900 transition-transform ${
+                className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
                   prefs[key] ? 'left-7' : 'left-1'
                 }`}
               />
