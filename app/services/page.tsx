@@ -47,7 +47,8 @@ function offeringToService(o: { id: string; name: string; price: number; duratio
 }
 
 export default function ServicesPage() {
-  const { technician, isTechnicianLoading } = useTechnician();
+  const { technician, isTechnicianLoading, refetchTechnician } = useTechnician();
+  const { progress } = useProgress();
   const technicianId = technician?.technician_id ?? technician?.id ?? '';
 
   const [services, setServices] = useState<BarberService[]>([]);
@@ -255,8 +256,8 @@ export default function ServicesPage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black pt-12 sm:pt-24 pb-8">
       <main className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto space-y-6">
-          {/* Header */}
+        <div className="max-w-5xl mx-auto space-y-6">
+          {/* Header - full width */}
           <div>
             <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Services</h1>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
@@ -282,11 +283,13 @@ export default function ServicesPage() {
             </button>
           </div>
 
-          {/* Add / Edit form (desktop only) */}
-          <section
-            className="hidden sm:block rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 sm:p-6 shadow-sm"
-            aria-labelledby="add-service-heading"
-          >
+          {/* Desktop: two columns - form left, list right */}
+          <div className="flex flex-col lg:flex-row lg:gap-8 lg:items-start">
+            {/* Add / Edit form (desktop only) - left column */}
+            <section
+              className="hidden sm:block flex-1 min-w-0 max-w-xl rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 sm:p-6 shadow-sm shrink-0"
+              aria-labelledby="add-service-heading"
+            >
             <h2 id="add-service-heading" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-4">
               {editingId ? 'Edit service' : 'Add a service'}
             </h2>
@@ -439,8 +442,11 @@ export default function ServicesPage() {
             </form>
           </section>
 
-          {/* List */}
-          <section aria-labelledby="services-list-heading">
+          {/* List - right column on desktop */}
+          <section
+            aria-labelledby="services-list-heading"
+            className="flex-1 min-w-0 w-full"
+          >
             <h2 id="services-list-heading" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">
               Your services ({services.length})
             </h2>
@@ -604,6 +610,9 @@ export default function ServicesPage() {
               </ul>
             )}
           </section>
+
+          </div>
+          {/* End desktop two-column: form left, list right */}
 
           {/* Mobile-only modal: Add/Edit service form */}
           <div className="sm:hidden">
