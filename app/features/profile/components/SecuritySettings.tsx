@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
-import { useUser } from '@/app/providers/UserProvider';
-import { getApiErrorMessage } from '@/lib/api-client';
+import { useState } from "react";
+import { Eye, EyeOff, Loader2, CheckCircle2 } from "lucide-react";
+import { useUser } from "@/app/providers/UserProvider";
+import { getApiErrorMessage } from "@/lib/api-client";
 
 export default function SecuritySettings() {
   const { updatePassword, isLoading: userLoading } = useUser();
@@ -11,36 +11,36 @@ export default function SecuritySettings() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    setError('');
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setError("");
     setSuccess(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setSuccess(false);
 
     if (!formData.currentPassword) {
-      setError('Current password is required');
+      setError("Current password is required");
       return;
     }
     if (formData.newPassword.length < 8) {
-      setError('New password must be at least 8 characters');
+      setError("New password must be at least 8 characters");
       return;
     }
     if (formData.newPassword !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return;
     }
 
@@ -50,7 +50,11 @@ export default function SecuritySettings() {
         newPassword: formData.newPassword,
       });
       setSuccess(true);
-      setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setFormData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       setError(getApiErrorMessage(err));
@@ -70,7 +74,7 @@ export default function SecuritySettings() {
           </label>
           <div className="relative">
             <input
-              type={showCurrentPassword ? 'text' : 'password'}
+              type={showCurrentPassword ? "text" : "password"}
               name="currentPassword"
               value={formData.currentPassword}
               onChange={handleChange}
@@ -82,7 +86,11 @@ export default function SecuritySettings() {
               onClick={() => setShowCurrentPassword(!showCurrentPassword)}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
             >
-              {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showCurrentPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
             </button>
           </div>
         </div>
@@ -93,7 +101,7 @@ export default function SecuritySettings() {
           </label>
           <div className="relative">
             <input
-              type={showNewPassword ? 'text' : 'password'}
+              type={showNewPassword ? "text" : "password"}
               name="newPassword"
               value={formData.newPassword}
               onChange={handleChange}
@@ -105,7 +113,11 @@ export default function SecuritySettings() {
               onClick={() => setShowNewPassword(!showNewPassword)}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
             >
-              {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showNewPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
             </button>
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
@@ -119,7 +131,7 @@ export default function SecuritySettings() {
           </label>
           <div className="relative">
             <input
-              type={showConfirmPassword ? 'text' : 'password'}
+              type={showConfirmPassword ? "text" : "password"}
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
@@ -131,7 +143,11 @@ export default function SecuritySettings() {
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
             >
-              {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showConfirmPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
             </button>
           </div>
         </div>
@@ -145,7 +161,9 @@ export default function SecuritySettings() {
         {success && (
           <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-            <p className="text-sm text-green-600 dark:text-green-400">Password changed successfully!</p>
+            <p className="text-sm text-green-600 dark:text-green-400">
+              Password changed successfully!
+            </p>
           </div>
         )}
 
@@ -153,7 +171,7 @@ export default function SecuritySettings() {
           <button
             type="submit"
             disabled={userLoading}
-            className="px-6 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-6 py-2.5 bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {userLoading ? (
               <>
@@ -161,7 +179,7 @@ export default function SecuritySettings() {
                 Updating...
               </>
             ) : (
-              'Update Password'
+              "Update Password"
             )}
           </button>
         </div>

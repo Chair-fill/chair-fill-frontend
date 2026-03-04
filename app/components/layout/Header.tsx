@@ -1,14 +1,25 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { ContactRound, CreditCard, ClipboardList, User, Settings, LogOut, ChevronDown, LogIn, UserPlus } from 'lucide-react';
-import { useUser } from '@/app/providers/UserProvider';
-import { isPublicRoute } from '@/lib/auth';
-import { formatDisplayName } from '@/lib/utils/format';
-import { isDemoMode } from '@/lib/demo';
-import AuthenticatedAvatar from '@/app/components/ui/AuthenticatedAvatar';
+import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import {
+  ContactRound,
+  CreditCard,
+  ClipboardList,
+  User,
+  Settings,
+  LogOut,
+  ChevronDown,
+  LogIn,
+  UserPlus,
+} from "lucide-react";
+import { useUser } from "@/app/providers/UserProvider";
+import { isPublicRoute } from "@/lib/auth";
+import { formatDisplayName } from "@/lib/utils/format";
+import { isDemoMode } from "@/lib/demo";
+import AuthenticatedAvatar from "@/app/components/ui/AuthenticatedAvatar";
 
 export default function Header() {
   const pathname = usePathname();
@@ -29,9 +40,9 @@ export default function Header() {
 
   const getInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
       .toUpperCase()
       .slice(0, 2);
   };
@@ -43,8 +54,8 @@ export default function Header() {
         setIsMenuOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Close menu on route change
@@ -53,11 +64,22 @@ export default function Header() {
   }, [pathname]);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="sticky top-4 z-50 px-4 sm:px-6 lg:px-8 flex justify-center w-full pb-4 pointer-events-none">
+      <header className="w-full max-w-6xl bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl px-4 sm:px-6 pointer-events-auto">
         <div className="flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <span className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+          <Link
+            href="/"
+            className="flex items-center gap-0.5 hover:opacity-80 transition-opacity"
+          >
+            <Image
+              src="/logo.png"
+              alt="Chairfill Logo"
+              width={140}
+              height={40}
+              className="h-8 w-auto object-contain"
+              priority
+            />
+            <span className="text-xl font-bold text-foreground tracking-tight hidden sm:block">
               chairfill
             </span>
             {showDemoBadge && (
@@ -73,10 +95,10 @@ export default function Header() {
                 <nav className="flex items-center space-x-1">
                   <Link
                     href="/contacts"
-                    className={`flex items-center gap-2 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm font-medium transition-colors ${
-                      isActive('/contacts')
-                        ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900'
-                        : 'text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
+                    className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
+                      isActive("/contacts")
+                        ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)]"
+                        : "text-foreground/60 hover:bg-white/5 hover:text-foreground"
                     }`}
                   >
                     <ContactRound className="w-4 h-4" />
@@ -84,10 +106,10 @@ export default function Header() {
                   </Link>
                   <Link
                     href="/subscription"
-                    className={`flex items-center gap-2 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm font-medium transition-colors ${
-                      isActive('/subscription')
-                        ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900'
-                        : 'text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
+                    className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
+                      isActive("/subscription")
+                        ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)]"
+                        : "text-foreground/60 hover:bg-white/5 hover:text-foreground"
                     }`}
                   >
                     <CreditCard className="w-4 h-4" />
@@ -95,10 +117,10 @@ export default function Header() {
                   </Link>
                   <Link
                     href="/services"
-                    className={`flex items-center gap-2 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm font-medium transition-colors ${
-                      isActive('/services')
-                        ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900'
-                        : 'text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
+                    className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
+                      isActive("/services")
+                        ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)]"
+                        : "text-foreground/60 hover:bg-white/5 hover:text-foreground"
                     }`}
                   >
                     <ClipboardList className="w-4 h-4" />
@@ -110,36 +132,38 @@ export default function Header() {
                 <div className="relative" ref={menuRef}>
                   <button
                     onClick={() => setIsMenuOpen(!isMenuOpen)}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full hover:bg-white/5 border border-transparent hover:border-white/10 transition-all duration-300"
                   >
                     <AuthenticatedAvatar
                       src={user.avatar}
                       alt={formatDisplayName(user.name)}
                       className="w-8 h-8 rounded-full object-cover"
                       fallback={
-                        <div className="w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-50 flex items-center justify-center">
-                          <span className="text-xs font-semibold text-white dark:text-zinc-900">
+                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                          <span className="text-xs font-bold text-primary-foreground">
                             {getInitials(user.name)}
                           </span>
                         </div>
                       }
                     />
-                    <ChevronDown className={`w-4 h-4 text-zinc-600 dark:text-zinc-400 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown
+                      className={`w-4 h-4 text-foreground/60 transition-transform duration-300 ${isMenuOpen ? "rotate-180" : ""}`}
+                    />
                   </button>
 
                   {isMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-lg py-1 z-50">
-                      <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
-                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 truncate">
+                    <div className="absolute right-0 mt-3 w-56 bg-[#0a0a0a]/95 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl py-2 z-50">
+                      <div className="px-4 py-3 border-b border-white/5 mb-1">
+                        <p className="text-sm font-bold text-foreground truncate">
                           {formatDisplayName(user.name)}
                         </p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                        <p className="text-xs text-foreground/70 truncate">
                           {user.email}
                         </p>
                       </div>
                       <Link
                         href="/profile"
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-foreground/5 transition-all"
                       >
                         <Settings className="w-4 h-4" />
                         Account Settings
@@ -149,7 +173,7 @@ export default function Header() {
                           logout();
                           setIsMenuOpen(false);
                         }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-red-500 hover:bg-red-500/10 transition-all"
                       >
                         <LogOut className="w-4 h-4" />
                         Sign Out
@@ -163,14 +187,14 @@ export default function Header() {
                 <nav className="flex items-center gap-2">
                   <Link
                     href="/login"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-foreground hover:bg-foreground/5 transition-all"
                   >
                     <LogIn className="w-4 h-4" />
                     <span className="hidden sm:inline">Sign in</span>
                   </Link>
                   <Link
                     href="/signup"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-all"
                   >
                     <UserPlus className="w-4 h-4" />
                     <span className="hidden sm:inline">Sign up</span>
@@ -180,7 +204,7 @@ export default function Header() {
             )}
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+    </div>
   );
 }

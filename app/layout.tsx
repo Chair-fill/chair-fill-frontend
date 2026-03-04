@@ -41,6 +41,15 @@ const satoshi = localFont({
 export const metadata: Metadata = {
   title: "Chairfill - Contact Management",
   description: "Upload and manage your contacts",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
+  openGraph: {
+    title: "Chairfill - Contact Management",
+    description: "Upload and manage your contacts",
+    images: [{ url: "/logo.png" }],
+  },
 };
 
 export default function RootLayout({
@@ -52,7 +61,10 @@ export default function RootLayout({
     <html lang="en" className={satoshi.variable}>
       <body
         className="font-sans antialiased"
-        style={{ fontFamily: 'var(--font-satoshi), system-ui, -apple-system, sans-serif' }}
+        style={{
+          fontFamily:
+            "var(--font-satoshi), system-ui, -apple-system, sans-serif",
+        }}
         suppressHydrationWarning
       >
         <Providers>

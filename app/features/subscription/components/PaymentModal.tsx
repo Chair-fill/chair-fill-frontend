@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { X, CreditCard, Loader2, CheckCircle2, Lock } from 'lucide-react';
-import type { PlanDetails } from '@/lib/types/subscription';
-import { formatCardNumber, formatExpiryDate } from '@/lib/utils/payment';
-import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
-import { api } from '@/lib/api-client';
+import { useState, useEffect } from "react";
+import { X, CreditCard, Loader2, CheckCircle2, Lock } from "lucide-react";
+import type { PlanDetails } from "@/lib/types/subscription";
+import { formatCardNumber, formatExpiryDate } from "@/lib/utils/payment";
+import { useModalKeyboard, useModalScrollLock } from "@/lib/hooks/use-modal";
+import { api } from "@/lib/api-client";
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -14,21 +14,26 @@ interface PaymentModalProps {
   onSuccess: () => void;
 }
 
-export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: PaymentModalProps) {
+export default function PaymentModal({
+  isOpen,
+  onClose,
+  plan,
+  onSuccess,
+}: PaymentModalProps) {
   const [formData, setFormData] = useState({
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
-    cardholderName: '',
-    billingEmail: '',
-    billingAddress: '',
-    billingCity: '',
-    billingState: '',
-    billingZip: '',
-    billingCountry: 'US',
+    cardNumber: "",
+    expiryDate: "",
+    cvv: "",
+    cardholderName: "",
+    billingEmail: "",
+    billingAddress: "",
+    billingCity: "",
+    billingState: "",
+    billingZip: "",
+    billingCountry: "US",
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState(false);
 
   useModalKeyboard(isOpen, onClose);
@@ -38,69 +43,74 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
   useEffect(() => {
     if (!isOpen) {
       setFormData({
-        cardNumber: '',
-        expiryDate: '',
-        cvv: '',
-        cardholderName: '',
-        billingEmail: '',
-        billingAddress: '',
-        billingCity: '',
-        billingState: '',
-        billingZip: '',
-        billingCountry: 'US',
+        cardNumber: "",
+        expiryDate: "",
+        cvv: "",
+        cardholderName: "",
+        billingEmail: "",
+        billingAddress: "",
+        billingCity: "",
+        billingState: "",
+        billingZip: "",
+        billingCountry: "US",
       });
-      setError('');
+      setError("");
       setSuccess(false);
     }
   }, [isOpen]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = e.target;
-    
-    if (name === 'cardNumber') {
-      setFormData(prev => ({ ...prev, [name]: formatCardNumber(value) }));
-    } else if (name === 'expiryDate') {
-      setFormData(prev => ({ ...prev, [name]: formatExpiryDate(value) }));
-    } else if (name === 'cvv') {
-      const v = value.replace(/\D/g, '').substring(0, 4);
-      setFormData(prev => ({ ...prev, [name]: v }));
+
+    if (name === "cardNumber") {
+      setFormData((prev) => ({ ...prev, [name]: formatCardNumber(value) }));
+    } else if (name === "expiryDate") {
+      setFormData((prev) => ({ ...prev, [name]: formatExpiryDate(value) }));
+    } else if (name === "cvv") {
+      const v = value.replace(/\D/g, "").substring(0, 4);
+      setFormData((prev) => ({ ...prev, [name]: v }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
-    setError('');
+    setError("");
   };
 
   const validateForm = () => {
-    if (!formData.cardNumber || formData.cardNumber.replace(/\s/g, '').length < 13) {
-      setError('Please enter a valid card number');
+    if (
+      !formData.cardNumber ||
+      formData.cardNumber.replace(/\s/g, "").length < 13
+    ) {
+      setError("Please enter a valid card number");
       return false;
     }
     if (!formData.expiryDate || formData.expiryDate.length !== 5) {
-      setError('Please enter a valid expiry date (MM/YY)');
+      setError("Please enter a valid expiry date (MM/YY)");
       return false;
     }
     if (!formData.cvv || formData.cvv.length < 3) {
-      setError('Please enter a valid CVV');
+      setError("Please enter a valid CVV");
       return false;
     }
     if (!formData.cardholderName.trim()) {
-      setError('Please enter the cardholder name');
+      setError("Please enter the cardholder name");
       return false;
     }
-    if (!formData.billingEmail.trim() || !formData.billingEmail.includes('@')) {
-      setError('Please enter a valid billing email');
+    if (!formData.billingEmail.trim() || !formData.billingEmail.includes("@")) {
+      setError("Please enter a valid billing email");
       return false;
     }
     if (!formData.billingAddress.trim()) {
-      setError('Please enter a billing address');
+      setError("Please enter a billing address");
       return false;
     }
     if (!formData.billingCity.trim()) {
-      setError('Please enter a city');
+      setError("Please enter a city");
       return false;
     }
     if (!formData.billingZip.trim()) {
-      setError('Please enter a ZIP code');
+      setError("Please enter a ZIP code");
       return false;
     }
     return true;
@@ -115,7 +125,7 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
     }
 
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
       await api.post("/payment", {
@@ -146,8 +156,11 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
     } catch (err) {
       console.error("Payment error:", err);
       const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        (err instanceof Error ? err.message : "Payment processing failed. Please try again.");
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ||
+        (err instanceof Error
+          ? err.message
+          : "Payment processing failed. Please try again.");
       setError(msg);
     } finally {
       setIsLoading(false);
@@ -163,11 +176,11 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
         onClick={onClose}
       />
 
-      <div className="relative bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
-        <div className="sticky top-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-6 py-4 flex items-center justify-between z-10">
+      <div className="relative bg-[#0a0a0a] rounded-2xl border border-border shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+        <div className="sticky top-0 bg-[#0a0a0a] border-b border-border px-6 py-4 flex items-center justify-between z-10">
           <div className="flex items-center gap-3">
             <Lock className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
-            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+            <h2 className="text-xl font-bold text-foreground">
               Complete Payment
             </h2>
           </div>
@@ -196,15 +209,21 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
               <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-lg p-4 mb-6">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">Plan</p>
-                    <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{plan.name}</p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Plan
+                    </p>
+                    <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                      {plan.name}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">Amount</p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Amount
+                    </p>
                     <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
                       {plan.price != null
                         ? `$${plan.price.toFixed(2)}/${plan.pricePeriod}`
-                        : 'Custom / Contact us'}
+                        : "Custom / Contact us"}
                     </p>
                   </div>
                 </div>
@@ -212,7 +231,9 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
 
               {error && (
                 <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    {error}
+                  </p>
                 </div>
               )}
 
@@ -396,7 +417,8 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
                 <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <Lock className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                   <p className="text-xs text-blue-700 dark:text-blue-300">
-                    Your payment information is encrypted and secure. We use industry-standard security measures to protect your data.
+                    Your payment information is encrypted and secure. We use
+                    industry-standard security measures to protect your data.
                   </p>
                 </div>
 
@@ -405,14 +427,14 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
                     type="button"
                     onClick={onClose}
                     disabled={isLoading}
-                    className="flex-1 px-4 py-3 text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-3 text-foreground bg-[#121212] border border-border rounded-full hover:bg-foreground/5 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="flex-1 px-4 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-3 bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isLoading ? (
                       <>
@@ -422,7 +444,9 @@ export default function PaymentModal({ isOpen, onClose, plan, onSuccess }: Payme
                     ) : (
                       <>
                         <Lock className="w-5 h-5" />
-                        {plan.price != null ? `Pay $${plan.price.toFixed(2)}` : 'Submit'}
+                        {plan.price != null
+                          ? `Pay $${plan.price.toFixed(2)}`
+                          : "Submit"}
                       </>
                     )}
                   </button>

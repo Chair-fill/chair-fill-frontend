@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { X, Radio, MessageSquare, Loader2 } from 'lucide-react';
-import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
-import { sendBlast } from '@/lib/api/outreach';
-import { isDemoMode } from '@/lib/demo';
-import { useTechnician } from '@/app/providers/TechnicianProvider';
-import FormError from '@/app/components/ui/FormError';
-import { formatDisplayName } from '@/lib/utils/format';
+import { useState, useEffect } from "react";
+import { X, Radio, MessageSquare, Loader2 } from "lucide-react";
+import { useModalKeyboard, useModalScrollLock } from "@/lib/hooks/use-modal";
+import { sendBlast } from "@/lib/api/outreach";
+import { isDemoMode } from "@/lib/demo";
+import { useTechnician } from "@/app/providers/TechnicianProvider";
+import FormError from "@/app/components/ui/FormError";
+import { formatDisplayName } from "@/lib/utils/format";
 
-const FALLBACK_OUTREACH_MESSAGE = 'Follow up on your appointment';
+const FALLBACK_OUTREACH_MESSAGE = "Follow up on your appointment";
 
 export interface OutreachContact {
   id: string;
@@ -25,13 +25,18 @@ interface OutreachModalProps {
   onSent?: () => void;
 }
 
-export default function OutreachModal({ isOpen, contact, onClose, onSent }: OutreachModalProps) {
+export default function OutreachModal({
+  isOpen,
+  contact,
+  onClose,
+  onSent,
+}: OutreachModalProps) {
   const { technician } = useTechnician();
-  const technicianId = technician?.id ?? technician?.technician_id ?? '';
+  const technicianId = technician?.id ?? technician?.technician_id ?? "";
   const defaultMessage = FALLBACK_OUTREACH_MESSAGE;
-  const [mode, setMode] = useState<'choice' | 'customize'>('choice');
+  const [mode, setMode] = useState<"choice" | "customize">("choice");
   const [message, setMessage] = useState(defaultMessage);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isSending, setIsSending] = useState(false);
 
   useModalKeyboard(isOpen, onClose);
@@ -40,14 +45,14 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
   useEffect(() => {
     if (isOpen) {
       setMessage(defaultMessage);
-      setError('');
+      setError("");
     }
   }, [isOpen, defaultMessage]);
 
   const reset = () => {
-    setMode('choice');
+    setMode("choice");
     setMessage(defaultMessage);
-    setError('');
+    setError("");
     setIsSending(false);
   };
 
@@ -58,17 +63,19 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
 
   const doSend = async (text: string) => {
     if (!contact?.phone?.trim()) {
-      setError('This contact has no phone number.');
+      setError("This contact has no phone number.");
       return;
     }
-    setError('');
+    setError("");
     setIsSending(true);
     try {
       if (isDemoMode()) {
         await new Promise((r) => setTimeout(r, 800));
       } else {
         if (!technicianId) {
-          setError('Technician profile not found. Please complete onboarding first.');
+          setError(
+            "Technician profile not found. Please complete onboarding first.",
+          );
           return;
         }
         await sendBlast({
@@ -80,8 +87,8 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
       onSent?.();
       handleClose();
     } catch (err) {
-      console.error('Outreach failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to send blast.');
+      console.error("Outreach failed:", err);
+      setError(err instanceof Error ? err.message : "Failed to send blast.");
     } finally {
       setIsSending(false);
     }
@@ -94,7 +101,7 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
   const handleSendCustom = () => {
     const text = message.trim();
     if (!text) {
-      setError('Please enter a message.');
+      setError("Please enter a message.");
       return;
     }
     doSend(text);
@@ -102,17 +109,20 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
 
   if (!isOpen) return null;
 
-  const contactName = formatDisplayName(contact?.name) || 'Unnamed contact';
+  const contactName = formatDisplayName(contact?.name) || "Unnamed contact";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleClose} />
       <div
-        className="relative bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md overflow-hidden"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={handleClose}
+      />
+      <div
+        className="relative bg-[#0a0a0a] rounded-2xl border border-border shadow-xl w-full max-w-md overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
             <Radio className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             Blast to {contactName}
           </h2>
@@ -128,17 +138,18 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
         <div className="p-4 space-y-4">
           {error && <FormError message={error} />}
 
-          {mode === 'choice' ? (
+          {mode === "choice" ? (
             <>
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Send a quick follow-up or add context so the message is tailored to this contact.
+                Send a quick follow-up or add context so the message is tailored
+                to this contact.
               </p>
               <div className="flex flex-col gap-2">
                 <button
                   type="button"
                   onClick={handleSendWithDefault}
                   disabled={isSending}
-                  className="w-full px-4 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full px-4 py-3 bg-primary text-primary-foreground rounded-full hover:opacity-90 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
                 >
                   {isSending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -149,9 +160,9 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMode('customize')}
+                  onClick={() => setMode("customize")}
                   disabled={isSending}
-                  className="w-full px-4 py-3 border-2 border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 border border-border text-foreground rounded-full hover:bg-foreground/5 font-semibold transition-all"
                 >
                   Customize message
                 </button>
@@ -160,7 +171,8 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
           ) : (
             <>
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Edit the message below to add context or tailor the blast for this contact.
+                Edit the message below to add context or tailor the blast for
+                this contact.
               </p>
               <div>
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
@@ -177,9 +189,9 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setMode('choice')}
+                  onClick={() => setMode("choice")}
                   disabled={isSending}
-                  className="flex-1 px-4 py-2.5 text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 font-medium disabled:opacity-50"
+                  className="flex-1 px-4 py-2.5 text-foreground bg-[#121212] border border-border rounded-full hover:bg-foreground/5 font-semibold transition-all disabled:opacity-50"
                 >
                   Back
                 </button>
@@ -187,7 +199,7 @@ export default function OutreachModal({ isOpen, contact, onClose, onSent }: Outr
                   type="button"
                   onClick={handleSendCustom}
                   disabled={isSending}
-                  className="flex-1 px-4 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-full hover:opacity-90 font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                 >
                   {isSending ? (
                     <>

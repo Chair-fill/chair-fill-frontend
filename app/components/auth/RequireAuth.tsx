@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import PageLoader from '@/app/components/ui/PageLoader';
-import { useUser } from '@/app/providers/UserProvider';
-import { useProgress } from '@/app/providers/ProgressProvider';
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import PageLoader from "@/app/components/ui/PageLoader";
+import { useUser } from "@/app/providers/UserProvider";
+import { useProgress } from "@/app/providers/ProgressProvider";
 import {
   isPublicRoute,
   ONBOARDING_BARBER_ACCOUNT,
   ONBOARDING_CHOOSE_PLAN,
-} from '@/lib/auth';
-import { isDemoMode } from '@/lib/demo';
+} from "@/lib/auth";
+import { isDemoMode } from "@/lib/demo";
 
 interface RequireAuthProps {
   children: React.ReactNode;
@@ -22,13 +22,13 @@ interface RequireAuthProps {
  */
 function getRedirectForProgress(
   progress: { is_technician?: boolean; has_subscribed?: boolean } | null,
-  demo: boolean
+  demo: boolean,
 ): string {
-  if (demo) return '/contacts';
+  if (demo) return "/contacts";
   if (progress == null) return ONBOARDING_BARBER_ACCOUNT;
+  if (progress.has_subscribed === true) return "/contacts";
   if (progress.is_technician !== true) return ONBOARDING_BARBER_ACCOUNT;
-  if (progress.has_subscribed !== true) return ONBOARDING_CHOOSE_PLAN;
-  return '/contacts';
+  return ONBOARDING_CHOOSE_PLAN;
 }
 
 /**
@@ -51,7 +51,9 @@ export default function RequireAuth({ children }: RequireAuthProps) {
     if (!user) {
       if (!publicRoute) {
         const loginUrl =
-          pathname === '/' ? '/login' : `/login?redirect=${encodeURIComponent(pathname)}`;
+          pathname === "/"
+            ? "/login"
+            : `/login?redirect=${encodeURIComponent(pathname)}`;
         router.replace(loginUrl);
       }
       return;
@@ -59,12 +61,12 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 
     if (user && isProgressLoading) return;
 
-    if (publicRoute || pathname === '/') {
+    if (publicRoute || pathname === "/") {
       router.replace(desiredPath);
       return;
     }
 
-    if (desiredPath !== '/contacts' && pathname !== desiredPath) {
+    if (desiredPath !== "/contacts" && pathname !== desiredPath) {
       router.replace(desiredPath);
     }
   }, [

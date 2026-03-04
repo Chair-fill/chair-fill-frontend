@@ -1,19 +1,22 @@
-'use client';
+"use client";
 
-import { useState, useRef } from 'react';
-import { Upload, Loader2, CheckCircle2, X } from 'lucide-react';
-import { useContacts } from '@/app/providers/ContactsProvider';
-import { getApiErrorMessage } from '@/lib/api-client';
-import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
+import { useState, useRef } from "react";
+import { Upload, Loader2, CheckCircle2, X } from "lucide-react";
+import { useContacts } from "@/app/providers/ContactsProvider";
+import { getApiErrorMessage } from "@/lib/api-client";
+import { useModalKeyboard, useModalScrollLock } from "@/lib/hooks/use-modal";
 
 interface ContactUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export default function ContactUploadModal({ isOpen, onClose }: ContactUploadModalProps) {
+export default function ContactUploadModal({
+  isOpen,
+  onClose,
+}: ContactUploadModalProps) {
   const { uploadBulkFile } = useContacts();
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -21,25 +24,27 @@ export default function ContactUploadModal({ isOpen, onClose }: ContactUploadMod
   useModalKeyboard(isOpen, onClose);
   useModalScrollLock(isOpen);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.endsWith('.csv') && !file.name.endsWith('.vcf')) {
-      setError('Unsupported file format. Please upload a CSV or VCF file.');
+    if (!file.name.endsWith(".csv") && !file.name.endsWith(".vcf")) {
+      setError("Unsupported file format. Please upload a CSV or VCF file.");
       return;
     }
 
-    setError('');
+    setError("");
     setIsLoading(true);
     setUploadSuccess(false);
 
     try {
       await uploadBulkFile(file);
       setUploadSuccess(true);
-      setError('');
+      setError("");
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
       setTimeout(() => {
         setUploadSuccess(false);
@@ -48,7 +53,7 @@ export default function ContactUploadModal({ isOpen, onClose }: ContactUploadMod
     } catch (err) {
       setError(getApiErrorMessage(err));
       setUploadSuccess(false);
-      console.error('Bulk upload error:', err);
+      console.error("Bulk upload error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -57,12 +62,14 @@ export default function ContactUploadModal({ isOpen, onClose }: ContactUploadMod
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const file = event.dataTransfer.files[0];
-    if (file && (file.name.endsWith('.csv') || file.name.endsWith('.vcf'))) {
+    if (file && (file.name.endsWith(".csv") || file.name.endsWith(".vcf"))) {
       const dataTransfer = new DataTransfer();
       dataTransfer.items.add(file);
       if (fileInputRef.current) {
         fileInputRef.current.files = dataTransfer.files;
-        handleFileUpload({ target: fileInputRef.current } as React.ChangeEvent<HTMLInputElement>);
+        handleFileUpload({
+          target: fileInputRef.current,
+        } as React.ChangeEvent<HTMLInputElement>);
       }
     }
   };
@@ -72,10 +79,10 @@ export default function ContactUploadModal({ isOpen, onClose }: ContactUploadMod
   };
 
   const handleClose = () => {
-    setError('');
+    setError("");
     setUploadSuccess(false);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
     onClose();
   };
@@ -88,13 +95,13 @@ export default function ContactUploadModal({ isOpen, onClose }: ContactUploadMod
       onClick={handleClose}
     >
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      
+
       <div
-        className="relative bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="relative bg-[#0a0a0a] rounded-2xl border border-border shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-800">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h2 className="text-2xl font-bold text-foreground">
             Upload Contacts
           </h2>
           <button
@@ -131,7 +138,9 @@ export default function ContactUploadModal({ isOpen, onClose }: ContactUploadMod
               )}
               <div className="space-y-2">
                 <p className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
-                  {isLoading ? 'Processing...' : 'Drop your file here or click to browse'}
+                  {isLoading
+                    ? "Processing..."
+                    : "Drop your file here or click to browse"}
                 </p>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">
                   Supports CSV and VCF formats

@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSubscription } from "@/app/providers/SubscriptionProvider";
 import type { SubscriptionPlan, PlanDetails } from "@/lib/types/subscription";
 import {
@@ -20,7 +20,10 @@ import { getApiErrorMessage } from "@/lib/api-client";
 import { API } from "@/lib/constants/api";
 import { isDemoMode } from "@/lib/demo";
 import { useTechnician } from "@/app/providers/TechnicianProvider";
-import { fetchCurrentSubscription, SUBSCRIPTION_QUERY_KEY } from "@/lib/api/subscription";
+import {
+  fetchCurrentSubscription,
+  SUBSCRIPTION_QUERY_KEY,
+} from "@/lib/api/subscription";
 import { SUBSCRIPTION_PLANS } from "@/lib/constants/subscription";
 import SubscriptionPaymentModal from "@/app/features/subscription/components/SubscriptionPaymentModal";
 import PageLoader from "@/app/components/ui/PageLoader";
@@ -35,9 +38,9 @@ interface ApiPlan {
 }
 
 const API_PLAN_TO_STATIC: Record<string, string> = {
-  INDEPENDENT: 'independent',
-  PROFESSIONAL: 'professional',
-  SHOP_OWNER: 'shop-owner',
+  INDEPENDENT: "independent",
+  PROFESSIONAL: "professional",
+  SHOP_OWNER: "shop-owner",
 };
 
 export default function SubscriptionPage() {
@@ -46,7 +49,7 @@ export default function SubscriptionPage() {
   const queryClient = useQueryClient();
 
   const subscriptionQuery = useQuery({
-    queryKey: [...SUBSCRIPTION_QUERY_KEY, technicianId ?? ''],
+    queryKey: [...SUBSCRIPTION_QUERY_KEY, technicianId ?? ""],
     queryFn: () => fetchCurrentSubscription(technicianId!),
     enabled: !!technicianId && !isDemoMode(),
   });
@@ -65,19 +68,28 @@ export default function SubscriptionPage() {
     ? subscriptionFromProvider
     : (subscriptionQuery.data ?? subscriptionFromProvider);
 
-  const [displayPlans, setDisplayPlans] = useState<PlanDetails[]>(SUBSCRIPTION_PLANS);
+  const [displayPlans, setDisplayPlans] =
+    useState<PlanDetails[]>(SUBSCRIPTION_PLANS);
   const [isLoadingPlans, setIsLoadingPlans] = useState(!isDemoMode());
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [planToPurchase, setPlanToPurchase] = useState<PlanDetails | null>(null);
-  const [subscribingPlanId, setSubscribingPlanId] = useState<string | null>(null);
+  const [planToPurchase, setPlanToPurchase] = useState<PlanDetails | null>(
+    null,
+  );
+  const [subscribingPlanId, setSubscribingPlanId] = useState<string | null>(
+    null,
+  );
   const [subscribeError, setSubscribeError] = useState<string | null>(null);
 
-  const currentPlan = displaySubscription ? displayPlans.find(p => p.id === displaySubscription.plan) : null;
-  const isActive = displaySubscription?.status === 'active';
-  const isCancelled = displaySubscription?.status === 'cancelled';
+  const currentPlan = displaySubscription
+    ? displayPlans.find((p) => p.id === displaySubscription.plan)
+    : null;
+  const isActive = displaySubscription?.status === "active";
+  const isCancelled = displaySubscription?.status === "cancelled";
   const isLoading = providerLoading || subscriptionQuery.isLoading;
-  const subscriptionError = subscriptionQuery.error ? 'Could not load subscription.' : providerError;
+  const subscriptionError = subscriptionQuery.error
+    ? "Could not load subscription."
+    : providerError;
   const refetchSubscription = () => subscriptionQuery.refetch();
 
   // Keep loading until we have technician, subscription, and plans data (or error)
@@ -96,11 +108,32 @@ export default function SubscriptionPage() {
     let cancelled = false;
     async function fetchPlans() {
       setIsLoadingPlans(true);
+
+      // Try to load from session storage first
+      const cachedPlans = sessionStorage.getItem(
+        "chairfill_subscription_plans",
+      );
+      if (cachedPlans) {
+        try {
+          const parsed = JSON.parse(cachedPlans);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setDisplayPlans(parsed);
+            setIsLoadingPlans(false);
+            return;
+          }
+        } catch (e) {
+          // Ignore parse errors and fetch fresh
+          console.warn("Failed to parse cached subscription plans", e);
+        }
+      }
+
       try {
         const { data } = await api.get<ApiPlan[] | { data?: ApiPlan[] }>(
-          `${API.PLANS.LIST}?provider=stripe`
+          `${API.PLANS.LIST}?provider=stripe`,
         );
-        const raw = Array.isArray(data) ? data : (data as { data?: ApiPlan[] })?.data;
+        const raw = Array.isArray(data)
+          ? data
+          : (data as { data?: ApiPlan[] })?.data;
         const apiPlans: ApiPlan[] = Array.isArray(raw) ? raw : [];
         if (cancelled) return;
         const merged: PlanDetails[] = SUBSCRIPTION_PLANS.map((p) => {
@@ -114,6 +147,12 @@ export default function SubscriptionPage() {
             : p.price_id;
           return { ...p, price_id: priceId ?? p.price_id };
         });
+
+        // Cache the merged result
+        sessionStorage.setItem(
+          "chairfill_subscription_plans",
+          JSON.stringify(merged),
+        );
         setDisplayPlans(merged);
       } catch {
         if (!cancelled) setDisplayPlans(SUBSCRIPTION_PLANS);
@@ -122,7 +161,9 @@ export default function SubscriptionPage() {
       }
     }
     fetchPlans();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handlePlanClick = async (plan: PlanDetails) => {
@@ -130,11 +171,13 @@ export default function SubscriptionPage() {
     if (displaySubscription && displaySubscription.plan === plan.id) return;
 
     if (!plan.price_id) {
-      setSubscribeError('This plan is not available for subscription yet.');
+      setSubscribeError("This plan is not available for subscription yet.");
       return;
     }
     if (!technicianId) {
-      setSubscribeError('Technician profile not found. Please complete onboarding first.');
+      setSubscribeError(
+        "Technician profile not found. Please complete onboarding first.",
+      );
       return;
     }
 
@@ -154,16 +197,22 @@ export default function SubscriptionPage() {
         price_id: plan.price_id,
         technician_id: technicianId,
       });
-      const raw = data && typeof data === 'object' ? data : null;
+      const raw = data && typeof data === "object" ? data : null;
       const checkoutUrl =
-        (raw && typeof (raw as { url?: string }).url === 'string' ? (raw as { url: string }).url : null) ??
+        (raw && typeof (raw as { url?: string }).url === "string"
+          ? (raw as { url: string }).url
+          : null) ??
         (raw && (raw as { data?: { url?: string } }).data?.url) ??
-        (raw && (raw as { data?: { checkoutSession?: { url?: string } } }).data?.checkoutSession?.url);
-      if (checkoutUrl && typeof checkoutUrl === 'string') {
+        (raw &&
+          (raw as { data?: { checkoutSession?: { url?: string } } }).data
+            ?.checkoutSession?.url);
+      if (checkoutUrl && typeof checkoutUrl === "string") {
         window.location.href = checkoutUrl;
         return;
       }
-      setSubscribeError('No checkout URL returned. Please try again or contact support.');
+      setSubscribeError(
+        "No checkout URL returned. Please try again or contact support.",
+      );
     } catch (err) {
       setSubscribeError(getApiErrorMessage(err));
     } finally {
@@ -174,14 +223,16 @@ export default function SubscriptionPage() {
   const handlePaymentSuccess = async () => {
     if (planToPurchase) {
       try {
-        if (displaySubscription && displaySubscription.status === 'active') {
+        if (displaySubscription && displaySubscription.status === "active") {
           await updateSubscription(planToPurchase.id as SubscriptionPlan);
         } else {
           await subscribe(planToPurchase.id as SubscriptionPlan);
         }
-        await queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_QUERY_KEY });
+        await queryClient.invalidateQueries({
+          queryKey: SUBSCRIPTION_QUERY_KEY,
+        });
       } catch (e) {
-        console.error('Subscription error:', e);
+        console.error("Subscription error:", e);
       }
       setPlanToPurchase(null);
       setShowPaymentModal(false);
@@ -194,17 +245,17 @@ export default function SubscriptionPage() {
       await queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_QUERY_KEY });
       setShowCancelConfirm(false);
     } catch (error) {
-      console.error('Cancellation error:', error);
+      console.error("Cancellation error:", error);
     }
   };
 
   const getPlanIcon = (planId: string) => {
     switch (planId) {
-      case 'independent':
+      case "independent":
         return <Zap className="w-5 h-5" />;
-      case 'professional':
+      case "professional":
         return <Crown className="w-5 h-5" />;
-      case 'shop-owner':
+      case "shop-owner":
         return <Building2 className="w-5 h-5" />;
       default:
         return <CreditCard className="w-5 h-5" />;
@@ -212,21 +263,19 @@ export default function SubscriptionPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
   if (isPageLoading) {
-    return (
-      <PageLoader message="Loading subscription…" />
-    );
+    return <PageLoader message="Loading subscription…" />;
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black pt-12 sm:pt-24 pb-8">
+    <div className="min-h-screen bg-background pt-4 sm:pt-8 pb-8">
       <main className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           {subscriptionError && (
@@ -246,8 +295,8 @@ export default function SubscriptionPage() {
           )}
 
           {/* Active subscription – always show; no subscription = prompt to select */}
-          <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-6 mb-8 shadow-sm">
-            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-4">
+          <div className="bg-[#0a0a0a] rounded-2xl border border-border p-6 mb-8 shadow-sm">
+            <h2 className="text-xl font-bold text-foreground mb-4">
               Active subscription
             </h2>
 
@@ -257,16 +306,18 @@ export default function SubscriptionPage() {
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-3">
                       {currentPlan && getPlanIcon(currentPlan.id)}
-                      <span className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                      <span className="text-2xl font-bold text-foreground">
                         {currentPlan?.name ?? displaySubscription.plan}
                       </span>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        isActive
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                          : isCancelled
-                          ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                      }`}>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          isActive
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            : isCancelled
+                              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                              : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                        }`}
+                      >
                         {displaySubscription.status.toUpperCase()}
                       </span>
                     </div>
@@ -282,31 +333,36 @@ export default function SubscriptionPage() {
                         </span>
                       )}
                       <span className="flex items-center gap-2">
-                        <RefreshCw className={`w-4 h-4 ${displaySubscription.autoRenew ? 'text-green-600 dark:text-green-400' : ''}`} />
-                        Auto-renew: {displaySubscription.autoRenew ? 'On' : 'Off'}
+                        <RefreshCw
+                          className={`w-4 h-4 ${displaySubscription.autoRenew ? "text-green-600 dark:text-green-400" : ""}`}
+                        />
+                        Auto-renew:{" "}
+                        {displaySubscription.autoRenew ? "On" : "Off"}
                       </span>
                     </div>
                   </div>
 
                   {isActive && (
                     <div className="border-t sm:border-t-0 sm:border-l border-zinc-200 dark:border-zinc-700 pt-4 sm:pt-0 sm:pl-6 flex flex-col sm:items-end gap-2">
-                      <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Manage subscription</p>
+                      <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        Manage subscription
+                      </p>
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => toggleAutoRenew()}
                           disabled={isLoading}
-                          className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-4 py-2 text-sm font-semibold text-foreground bg-[#121212] border border-border rounded-full hover:bg-foreground/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {isLoading ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
-                            `Turn auto-renew ${displaySubscription.autoRenew ? 'off' : 'on'}`
+                            `Turn auto-renew ${displaySubscription.autoRenew ? "off" : "on"}`
                           )}
                         </button>
                         {!showCancelConfirm ? (
                           <button
                             onClick={() => setShowCancelConfirm(true)}
-                            className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                            className="px-4 py-2 text-sm font-semibold text-red-500 bg-red-500/10 border border-red-500/20 rounded-full hover:bg-red-500/20 transition-all"
                           >
                             Cancel subscription
                           </button>
@@ -315,13 +371,17 @@ export default function SubscriptionPage() {
                             <button
                               onClick={handleCancel}
                               disabled={isLoading}
-                              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-full hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm cancel'}
+                              {isLoading ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                "Confirm cancel"
+                              )}
                             </button>
                             <button
                               onClick={() => setShowCancelConfirm(false)}
-                              className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                              className="px-4 py-2 text-sm font-semibold text-foreground bg-[#121212] border border-border rounded-full hover:bg-foreground/5 transition-all"
                             >
                               Keep subscription
                             </button>
@@ -333,185 +393,214 @@ export default function SubscriptionPage() {
                 </div>
                 {isCancelled && displaySubscription.endDate && (
                   <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
-                    Your subscription remains active until {formatDate(displaySubscription.endDate)}. You can select a new plan below before then.
+                    Your subscription remains active until{" "}
+                    {formatDate(displaySubscription.endDate)}. You can select a
+                    new plan below before then.
                   </p>
                 )}
               </>
             ) : (
               <div className="py-4">
-                <p className="text-zinc-600 dark:text-zinc-400 mb-2">You don’t have an active subscription.</p>
-                <p className="text-sm text-zinc-500 dark:text-zinc-500">Select a plan below to get started.</p>
+                <p className="text-zinc-600 dark:text-zinc-400 mb-2">
+                  You don’t have an active subscription.
+                </p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-500">
+                  Select a plan below to get started.
+                </p>
               </div>
             )}
           </div>
 
           {/* Plan cards: only when no active subscription (e.g. cancelled or no subscription yet) */}
-          {(!displaySubscription || displaySubscription.status !== 'active') && (
-          <section className="mb-8" aria-labelledby="plans-heading">
-            <h2 id="plans-heading" className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-              Compare plans
-            </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-              Choose the plan that fits your business. You will complete payment on Stripe.
-            </p>
+          {(!displaySubscription ||
+            displaySubscription.status !== "active") && (
+            <section className="mb-8" aria-labelledby="plans-heading">
+              <h2
+                id="plans-heading"
+                className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2"
+              >
+                Compare plans
+              </h2>
+              <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+                Choose the plan that fits your business. You will complete
+                payment on Stripe.
+              </p>
 
-            {isLoadingPlans ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-10 h-10 animate-spin text-zinc-500 dark:text-zinc-400" aria-hidden />
-              </div>
-            ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-              {displayPlans.map((plan) => {
-                const isCurrentPlan = displaySubscription?.plan === plan.id;
-                const isPopular = plan.badge === 'Most Popular';
-                const isComingSoon = plan.comingSoon ?? false;
-                const isSelectable = !isCurrentPlan && !isComingSoon && !!plan.price_id;
+              {isLoadingPlans ? (
+                <div className="flex justify-center py-12">
+                  <Loader2
+                    className="w-10 h-10 animate-spin text-zinc-500 dark:text-zinc-400"
+                    aria-hidden
+                  />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+                  {displayPlans.map((plan) => {
+                    const isCurrentPlan = displaySubscription?.plan === plan.id;
+                    const isPopular = plan.badge === "Most Popular";
+                    const isComingSoon = plan.comingSoon ?? false;
+                    const isSelectable =
+                      !isCurrentPlan && !isComingSoon && !!plan.price_id;
 
-                const getCtaLabel = () => {
-                  if (isCurrentPlan) return 'Your plan';
-                  if (isComingSoon) return 'Contact us';
-                  const shortName = plan.name.replace(/^The\s+/, '');
-                  if (displaySubscription?.status === 'active') return `Switch to ${shortName}`;
-                  return `Get ${shortName}`;
-                };
+                    const getCtaLabel = () => {
+                      if (isCurrentPlan) return "Your plan";
+                      if (isComingSoon) return "Contact us";
+                      const shortName = plan.name.replace(/^The\s+/, "");
+                      if (displaySubscription?.status === "active")
+                        return `Switch to ${shortName}`;
+                      return `Get ${shortName}`;
+                    };
 
-                return (
-                  <article
-                    key={plan.id}
-                    aria-current={isCurrentPlan ? 'true' : undefined}
-                    className={`relative flex flex-col rounded-xl border-2 transition-all duration-200 ${
-                      isCurrentPlan
-                        ? 'border-zinc-400 dark:border-zinc-500 bg-zinc-50/50 dark:bg-zinc-800/30 shadow-sm'
-                        : isPopular
-                        ? 'border-blue-500 dark:border-blue-400 bg-white dark:bg-zinc-900 shadow-lg shadow-blue-500/10 lg:shadow-xl lg:shadow-blue-500/10'
-                        : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm'
-                    } ${isSelectable ? 'hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-md cursor-pointer' : ''}`}
-                  >
-                    {/* Badges */}
-                    <div className="flex items-start justify-between gap-2 p-5 pb-0">
-                      <div className="flex flex-wrap gap-2">
-                        {plan.badge === 'Most Popular' && (
-                          <span className="inline-flex items-center rounded-full bg-blue-500 px-2.5 py-0.5 text-xs font-medium text-white">
-                            Recommended
-                          </span>
-                        )}
-                        {plan.badge === 'Coming Soon' && (
-                          <span className="inline-flex items-center rounded-full bg-zinc-200 dark:bg-zinc-700 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                            Coming soon
-                          </span>
-                        )}
-                        {isCurrentPlan && (
-                          <span className="inline-flex items-center rounded-full bg-zinc-900 dark:bg-zinc-50 px-2.5 py-0.5 text-xs font-medium text-white dark:text-zinc-900">
-                            Your plan
-                          </span>
-                        )}
-                      </div>
-                      {getPlanIcon(plan.id)}
-                    </div>
-
-                    <div className="p-5 flex flex-col flex-1">
-                      <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50 mb-1">
-                        {plan.name}
-                      </h3>
-                      {plan.tagline && (
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
-                          {plan.tagline}
-                        </p>
-                      )}
-
-                      <div className="mb-4">
-                        {plan.price != null ? (
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                              ${plan.price}
-                            </span>
-                            <span className="text-zinc-500 dark:text-zinc-400">
-                              /{plan.pricePeriod}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-                              Custom
-                            </span>
-                            <span className="text-zinc-500 dark:text-zinc-400 text-sm">
-                              — {plan.pricePeriodLabel ?? 'Contact us'}
-                            </span>
-                          </div>
-                        )}
-                        {plan.subtitle && (
-                          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                            {plan.subtitle}
-                          </p>
-                        )}
-                      </div>
-
-                      <ul className="space-y-2.5 flex-1 mb-6" role="list">
-                        {plan.features.map((feature, index) => (
-                          <li key={index} className="flex items-start gap-2.5 text-sm">
-                            <Check className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5" aria-hidden />
-                            <span className="text-zinc-600 dark:text-zinc-400">
-                              {feature}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!isSelectable) return;
-                          handlePlanClick(plan);
-                        }}
-                        disabled={isComingSoon || subscribingPlanId !== null}
-                        aria-disabled={isCurrentPlan || isComingSoon}
-                        className={`w-full py-3 px-4 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-900 ${
+                    return (
+                      <article
+                        key={plan.id}
+                        aria-current={isCurrentPlan ? "true" : undefined}
+                        className={`relative flex flex-col rounded-2xl border transition-all duration-200 ${
                           isCurrentPlan
-                            ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 cursor-default'
-                            : isComingSoon
-                            ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-default'
+                            ? "border-zinc-400 dark:border-zinc-500 bg-zinc-50/50 dark:bg-zinc-800/30 shadow-sm"
                             : isPopular
-                            ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
-                            : 'bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 focus:ring-zinc-900 dark:focus:ring-zinc-50'
-                        } ${(isCurrentPlan || isComingSoon || subscribingPlanId) ? 'cursor-not-allowed' : ''}`}
+                              ? "border-blue-500 dark:border-blue-400 bg-[#0a0a0a] shadow-lg shadow-blue-500/10 lg:shadow-xl lg:shadow-blue-500/10"
+                              : "border-border bg-[#0a0a0a] shadow-sm"
+                        } ${isSelectable ? "hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-md cursor-pointer" : ""}`}
                       >
-                        {subscribingPlanId === plan.id ? (
-                          <span className="inline-flex items-center justify-center gap-2">
-                            <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-                            Subscribing…
-                          </span>
-                        ) : (
-                          getCtaLabel()
-                        )}
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-            )}
+                        {/* Badges */}
+                        <div className="flex items-start justify-between gap-2 p-5 pb-0">
+                          <div className="flex flex-wrap gap-2">
+                            {plan.badge === "Most Popular" && (
+                              <span className="inline-flex items-center rounded-full bg-blue-500 px-2.5 py-0.5 text-xs font-medium text-white">
+                                Recommended
+                              </span>
+                            )}
+                            {plan.badge === "Coming Soon" && (
+                              <span className="inline-flex items-center rounded-full bg-zinc-200 dark:bg-zinc-700 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                                Coming soon
+                              </span>
+                            )}
+                            {isCurrentPlan && (
+                              <span className="inline-flex items-center rounded-full bg-primary px-2.5 py-0.5 text-xs font-medium text-primary-foreground">
+                                Your plan
+                              </span>
+                            )}
+                          </div>
+                          {getPlanIcon(plan.id)}
+                        </div>
 
-          {subscribeError && (
-            <p className="mt-4 text-sm text-red-600 dark:text-red-400 text-center">{subscribeError}</p>
-          )}
-          </section>
+                        <div className="p-5 flex flex-col flex-1">
+                          <h3 className="text-lg font-bold text-foreground mb-1">
+                            {plan.name}
+                          </h3>
+                          {plan.tagline && (
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                              {plan.tagline}
+                            </p>
+                          )}
+
+                          <div className="mb-4">
+                            {plan.price != null ? (
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-3xl font-bold tracking-tight text-foreground">
+                                  ${plan.price}
+                                </span>
+                                <span className="text-zinc-500 dark:text-zinc-400">
+                                  /{plan.pricePeriod}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-2xl font-bold text-foreground">
+                                  Custom
+                                </span>
+                                <span className="text-zinc-500 dark:text-zinc-400 text-sm">
+                                  — {plan.pricePeriodLabel ?? "Contact us"}
+                                </span>
+                              </div>
+                            )}
+                            {plan.subtitle && (
+                              <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+                                {plan.subtitle}
+                              </p>
+                            )}
+                          </div>
+
+                          <ul className="space-y-2.5 flex-1 mb-6" role="list">
+                            {plan.features.map((feature, index) => (
+                              <li
+                                key={index}
+                                className="flex items-start gap-2.5 text-sm"
+                              >
+                                <Check
+                                  className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5"
+                                  aria-hidden
+                                />
+                                <span className="text-zinc-600 dark:text-zinc-400">
+                                  {feature}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!isSelectable) return;
+                              handlePlanClick(plan);
+                            }}
+                            disabled={
+                              isComingSoon || subscribingPlanId !== null
+                            }
+                            aria-disabled={isCurrentPlan || isComingSoon}
+                            className={`w-full py-3 px-4 rounded-full font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-900 ${
+                              isCurrentPlan
+                                ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 cursor-default"
+                                : isComingSoon
+                                  ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-default"
+                                  : isPopular
+                                    ? "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500"
+                                    : "bg-primary text-primary-foreground hover:opacity-90 focus:ring-primary"
+                            } ${isCurrentPlan || isComingSoon || subscribingPlanId ? "cursor-not-allowed" : ""}`}
+                          >
+                            {subscribingPlanId === plan.id ? (
+                              <span className="inline-flex items-center justify-center gap-2">
+                                <Loader2
+                                  className="w-4 h-4 animate-spin"
+                                  aria-hidden
+                                />
+                                Subscribing…
+                              </span>
+                            ) : (
+                              getCtaLabel()
+                            )}
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+
+              {subscribeError && (
+                <p className="mt-4 text-sm text-red-600 dark:text-red-400 text-center">
+                  {subscribeError}
+                </p>
+              )}
+            </section>
           )}
 
           {/* Additional Info */}
-          <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-4">
+          <div className="bg-[#0a0a0a] rounded-2xl border border-border p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-foreground mb-4">
               Manage your subscription
             </h3>
             <div className="space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
               <p>
-                • To change plan, cancel your current subscription first. Plan options will then appear so you can start a new subscription.
+                • To change plan, cancel your current subscription first. Plan
+                options will then appear so you can start a new subscription.
               </p>
               <p>
-                • Cancelled subscriptions remain active until the end of the current billing period.
+                • Cancelled subscriptions remain active until the end of the
+                current billing period.
               </p>
-              <p>
-                • Use the buttons above to turn auto-renew on or off.
-              </p>
+              <p>• Use the buttons above to turn auto-renew on or off.</p>
             </div>
           </div>
         </div>

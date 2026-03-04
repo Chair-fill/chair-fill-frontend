@@ -1,25 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --primary: #d4af37; /* Chairfill Gold */
+  --primary-foreground: #000000;
+  --border: #27272a; /* zinc-800 */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-border: var(--border);
   --font-sans: var(--font-satoshi), system-ui, -apple-system, sans-serif;
 }
 
-html {
-  font-family: var(--font-satoshi), system-ui, -apple-system, sans-serif;
-}
-
-* {
-  font-family: inherit;
-}
-
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: light) {
+  /* Force dark theme anyway for brand consistency, or leave it identical */
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
@@ -29,7 +28,11 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-satoshi), system-ui, -apple-system, sans-serif;
+  font-family:
+    var(--font-satoshi),
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
 
 button {

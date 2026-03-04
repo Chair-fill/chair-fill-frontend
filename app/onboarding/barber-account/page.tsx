@@ -1,59 +1,59 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Loader2, Scissors, User, MapPin } from 'lucide-react';
-import { useTechnician } from '@/app/providers/TechnicianProvider';
-import { useProgress } from '@/app/providers/ProgressProvider';
-import { getApiErrorMessage } from '@/lib/api-client';
-import AuthLayout from '@/app/components/ui/AuthLayout';
-import AuthCard from '@/app/components/ui/AuthCard';
-import FormError from '@/app/components/ui/FormError';
-import PageLoader from '@/app/components/ui/PageLoader';
-import { ONBOARDING_CHOOSE_PLAN } from '@/lib/auth';
-import { US_STATES } from '@/lib/constants/us-states';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Loader2, Scissors, User, MapPin } from "lucide-react";
+import { useTechnician } from "@/app/providers/TechnicianProvider";
+import { useProgress } from "@/app/providers/ProgressProvider";
+import { getApiErrorMessage } from "@/lib/api-client";
+import AuthLayout from "@/app/components/ui/AuthLayout";
+import AuthCard from "@/app/components/ui/AuthCard";
+import FormError from "@/app/components/ui/FormError";
+import PageLoader from "@/app/components/ui/PageLoader";
+import { ONBOARDING_CHOOSE_PLAN } from "@/lib/auth";
+import { US_STATES } from "@/lib/constants/us-states";
 import {
   FORM_LABEL,
   INPUT_LEFT_ICON,
   INPUT_ICON_LEFT,
   INPUT_PLAIN,
   BTN_PRIMARY,
-} from '@/lib/constants/ui';
+} from "@/lib/constants/ui";
 
 export default function BarberAccountPage() {
   const router = useRouter();
   const { createTechnician, isTechnicianLoading } = useTechnician();
   const { progress, isProgressLoading, refetchProgress } = useProgress();
-  const [nickName, setNickName] = useState('');
-  const [workAddress, setWorkAddress] = useState('');
-  const [state, setState] = useState('');
-  const [error, setError] = useState('');
+  const [nickName, setNickName] = useState("");
+  const [workAddress, setWorkAddress] = useState("");
+  const [state, setState] = useState("");
+  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const country = 'United States';
+  const country = "United States";
 
-  // Page-level progress check: if user is already a technician, redirect to choose-plan or contacts
+  // Page-level progress check: if user is subscribed, redirect to contacts, if technician, to choose-plan
   useEffect(() => {
     if (isProgressLoading || progress == null) return;
-    if (progress.is_technician !== true) return;
     if (progress.has_subscribed === true) {
-      router.replace('/contacts');
-    } else {
-      router.replace(ONBOARDING_CHOOSE_PLAN);
+      router.replace("/contacts");
+      return;
     }
+    if (progress.is_technician !== true) return;
+    router.replace(ONBOARDING_CHOOSE_PLAN);
   }, [progress, isProgressLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     const addressTrimmed = workAddress.trim();
     if (!addressTrimmed) {
-      setError('Please enter your work address.');
+      setError("Please enter your work address.");
       return;
     }
     const stateTrimmed = state.trim();
     if (!stateTrimmed) {
-      setError('Please select your state.');
+      setError("Please select your state.");
       return;
     }
     setIsSubmitting(true);
@@ -102,7 +102,10 @@ export default function BarberAccountPage() {
           {error && <FormError message={error} />}
           <div>
             <label htmlFor="nickName" className={FORM_LABEL}>
-              Nickname <span className="text-zinc-500 dark:text-zinc-400 font-normal">(optional)</span>
+              Nickname{" "}
+              <span className="text-zinc-500 dark:text-zinc-400 font-normal">
+                (optional)
+              </span>
             </label>
             <div className="relative">
               <User className={INPUT_ICON_LEFT} />
@@ -113,7 +116,7 @@ export default function BarberAccountPage() {
                 value={nickName}
                 onChange={(e) => {
                   setNickName(e.target.value);
-                  setError('');
+                  setError("");
                 }}
                 placeholder="How clients know you"
                 className={`${INPUT_LEFT_ICON} placeholder:text-zinc-400`}
@@ -134,7 +137,7 @@ export default function BarberAccountPage() {
                 value={workAddress}
                 onChange={(e) => {
                   setWorkAddress(e.target.value);
-                  setError('');
+                  setError("");
                 }}
                 placeholder="Work address"
                 className={`${INPUT_LEFT_ICON} placeholder:text-zinc-400`}
@@ -164,7 +167,7 @@ export default function BarberAccountPage() {
               value={state}
               onChange={(e) => {
                 setState(e.target.value);
-                setError('');
+                setError("");
               }}
               required
               className="w-full py-2.5 pl-10 pr-4 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
@@ -184,7 +187,7 @@ export default function BarberAccountPage() {
                 Creating...
               </>
             ) : (
-              'Continue to choose plan'
+              "Continue to choose plan"
             )}
           </button>
         </form>

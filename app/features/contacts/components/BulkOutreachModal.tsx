@@ -1,19 +1,26 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { X, Radio, MessageSquare, Loader2, ChevronRight, Users } from 'lucide-react';
-import { useModalKeyboard, useModalScrollLock } from '@/lib/hooks/use-modal';
-import { sendBlast } from '@/lib/api/outreach';
-import { isDemoMode } from '@/lib/demo';
-import FormError from '@/app/components/ui/FormError';
-import { formatDisplayName } from '@/lib/utils/format';
-import type { Contact } from '@/lib/types/contact';
-import { useUser } from '@/app/providers/UserProvider';
-import { useTechnician } from '@/app/providers/TechnicianProvider';
+import { useState, useEffect, useCallback } from "react";
+import {
+  X,
+  Radio,
+  MessageSquare,
+  Loader2,
+  ChevronRight,
+  Users,
+} from "lucide-react";
+import { useModalKeyboard, useModalScrollLock } from "@/lib/hooks/use-modal";
+import { sendBlast } from "@/lib/api/outreach";
+import { isDemoMode } from "@/lib/demo";
+import FormError from "@/app/components/ui/FormError";
+import { formatDisplayName } from "@/lib/utils/format";
+import type { Contact } from "@/lib/types/contact";
+import { useUser } from "@/app/providers/UserProvider";
+import { useTechnician } from "@/app/providers/TechnicianProvider";
 
-const FALLBACK_OUTREACH_MESSAGE = 'Follow up on your appointment';
+const FALLBACK_OUTREACH_MESSAGE = "Follow up on your appointment";
 
-type Step = 'select' | 'message';
+type Step = "select" | "message";
 
 interface BulkOutreachModalProps {
   isOpen: boolean;
@@ -22,19 +29,25 @@ interface BulkOutreachModalProps {
   onSent?: () => void;
 }
 
-export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }: BulkOutreachModalProps) {
+export default function BulkOutreachModal({
+  isOpen,
+  contacts,
+  onClose,
+  onSent,
+}: BulkOutreachModalProps) {
   const { user } = useUser();
   const { technician } = useTechnician();
-  const technicianId = technician?.id ?? technician?.technician_id ?? '';
+  const technicianId = technician?.id ?? technician?.technician_id ?? "";
   const userDefaultEmpty = !user?.defaultOutreachMessage?.trim();
-  const defaultMessage = (user?.defaultOutreachMessage?.trim() || FALLBACK_OUTREACH_MESSAGE);
+  const defaultMessage =
+    user?.defaultOutreachMessage?.trim() || FALLBACK_OUTREACH_MESSAGE;
 
   const contactsWithPhone = contacts.filter((c) => c.phone?.trim());
-  const [step, setStep] = useState<Step>('select');
+  const [step, setStep] = useState<Step>("select");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [mode, setMode] = useState<'default' | 'custom'>('default');
+  const [mode, setMode] = useState<"default" | "custom">("default");
   const [message, setMessage] = useState(defaultMessage);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sentCount, setSentCount] = useState(0);
 
@@ -43,16 +56,18 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
 
   useEffect(() => {
     if (isOpen) {
-      setStep('select');
+      setStep("select");
       setSelectedIds(new Set());
-      setMode('default');
+      setMode("default");
       setMessage(defaultMessage);
-      setError('');
+      setError("");
       setSentCount(0);
     }
   }, [isOpen, defaultMessage]);
 
-  const selectedContacts = contactsWithPhone.filter((c) => selectedIds.has(c.id));
+  const selectedContacts = contactsWithPhone.filter((c) =>
+    selectedIds.has(c.id),
+  );
   const selectedCount = selectedContacts.length;
 
   const toggleOne = useCallback((id: string) => {
@@ -74,31 +89,31 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
 
   const goToMessage = () => {
     if (selectedCount === 0) {
-      setError('Select at least one contact with a phone number.');
+      setError("Select at least one contact with a phone number.");
       return;
     }
-    setError('');
-    setStep('message');
+    setError("");
+    setStep("message");
   };
 
   const goBack = () => {
-    setStep('select');
-    setError('');
+    setStep("select");
+    setError("");
   };
 
   const handleClose = () => {
-    setStep('select');
+    setStep("select");
     setSelectedIds(new Set());
-    setMode('default');
+    setMode("default");
     setMessage(defaultMessage);
-    setError('');
+    setError("");
     setIsSending(false);
     onClose();
   };
 
   const doSendBulk = async (text: string) => {
     const contactIds = selectedContacts.map((c) => c.id);
-    setError('');
+    setError("");
     setIsSending(true);
     setSentCount(0);
     try {
@@ -109,7 +124,9 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
         }
       } else {
         if (!technicianId) {
-          setError('Technician profile not found. Please complete onboarding first.');
+          setError(
+            "Technician profile not found. Please complete onboarding first.",
+          );
           return;
         }
         await sendBlast({
@@ -122,8 +139,8 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
       onSent?.();
       handleClose();
     } catch (err) {
-      console.error('Bulk outreach failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to send blast.');
+      console.error("Bulk outreach failed:", err);
+      setError(err instanceof Error ? err.message : "Failed to send blast.");
     } finally {
       setIsSending(false);
     }
@@ -131,7 +148,9 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
 
   const handleSendWithDefault = () => {
     if (userDefaultEmpty) {
-      setError('Set a default outreach message in your profile (Technician tab) first.');
+      setError(
+        "Set a default outreach message in your profile (Technician tab) first.",
+      );
       return;
     }
     doSendBulk(defaultMessage);
@@ -140,7 +159,9 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
   const handleSendCustom = () => {
     const text = message.trim();
     if (!text && userDefaultEmpty) {
-      setError('Enter a message or set a default blast message in your profile.');
+      setError(
+        "Enter a message or set a default blast message in your profile.",
+      );
       return;
     }
     doSendBulk(text || defaultMessage);
@@ -150,15 +171,20 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleClose} />
       <div
-        className="relative bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={handleClose}
+      />
+      <div
+        className="relative bg-[#0a0a0a] rounded-2xl border border-border shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+        <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
+          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            {step === 'select' ? 'Select contacts for outreach' : 'Choose message'}
+            {step === "select"
+              ? "Select contacts for outreach"
+              : "Choose message"}
           </h2>
           <button
             type="button"
@@ -173,10 +199,11 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
         <div className="p-4 space-y-4 overflow-y-auto flex-1 min-h-0">
           {error && <FormError message={error} />}
 
-          {step === 'select' ? (
+          {step === "select" ? (
             <>
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Select contacts you want to send outreach to. Only contacts with a phone number can receive messages.
+                Select contacts you want to send outreach to. Only contacts with
+                a phone number can receive messages.
               </p>
               <div className="flex items-center gap-2 mb-2">
                 <button
@@ -201,7 +228,7 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
                   return (
                     <li
                       key={c.id}
-                      className={`flex items-center gap-3 px-3 py-3 ${hasPhone ? 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50' : 'opacity-70'}`}
+                      className={`flex items-center gap-3 px-3 py-3 ${hasPhone ? "hover:bg-zinc-50 dark:hover:bg-zinc-800/50" : "opacity-70"}`}
                     >
                       <input
                         type="checkbox"
@@ -213,13 +240,17 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
                       />
                       <label
                         htmlFor={`bulk-${c.id}`}
-                        className={`flex-1 text-sm text-zinc-900 dark:text-zinc-50 ${hasPhone ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                        className={`flex-1 text-sm text-zinc-900 dark:text-zinc-50 ${hasPhone ? "cursor-pointer" : "cursor-not-allowed"}`}
                       >
-                        {formatDisplayName(c.name) || 'Unnamed'}
+                        {formatDisplayName(c.name) || "Unnamed"}
                         {hasPhone ? (
-                          <span className="text-zinc-500 ml-1">({c.phone})</span>
+                          <span className="text-zinc-500 ml-1">
+                            ({c.phone})
+                          </span>
                         ) : (
-                          <span className="text-amber-600 dark:text-amber-400 ml-1">(no phone)</span>
+                          <span className="text-amber-600 dark:text-amber-400 ml-1">
+                            (no phone)
+                          </span>
                         )}
                       </label>
                     </li>
@@ -227,7 +258,9 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
                 })}
               </ul>
               {contacts.length === 0 ? (
-                <p className="text-sm text-zinc-500">No contacts yet. Add contacts first.</p>
+                <p className="text-sm text-zinc-500">
+                  No contacts yet. Add contacts first.
+                </p>
               ) : (
                 <p className="text-sm text-zinc-500">
                   {selectedCount} selected
@@ -239,8 +272,10 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
                 <button
                   type="button"
                   onClick={goToMessage}
-                  disabled={contactsWithPhone.length === 0 || selectedCount === 0}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={
+                    contactsWithPhone.length === 0 || selectedCount === 0
+                  }
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                   <ChevronRight className="w-4 h-4" />
@@ -251,14 +286,15 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
             <>
               <p className="text-sm text-zinc-600 dark:text-zinc-400 flex items-center gap-2">
                 <Users className="w-4 h-4" />
-                Sending to {selectedCount} contact{selectedCount !== 1 ? 's' : ''}.
+                Sending to {selectedCount} contact
+                {selectedCount !== 1 ? "s" : ""}.
               </p>
               <div className="flex flex-col gap-2">
                 <button
                   type="button"
                   onClick={handleSendWithDefault}
                   disabled={isSending}
-                  className="w-full px-4 py-3 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full px-4 py-3 bg-primary text-primary-foreground rounded-full hover:opacity-90 font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isSending ? (
                     <>
@@ -274,15 +310,15 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMode('custom')}
+                  onClick={() => setMode("custom")}
                   disabled={isSending}
-                  className="w-full px-4 py-3 border-2 border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 border border-border text-foreground rounded-full hover:bg-foreground/5 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Use custom message
                 </button>
               </div>
 
-              {mode === 'custom' && (
+              {mode === "custom" && (
                 <div className="space-y-2 pt-2">
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     Message
@@ -299,7 +335,7 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
                       type="button"
                       onClick={goBack}
                       disabled={isSending}
-                      className="px-4 py-2.5 text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 font-medium disabled:opacity-50"
+                      className="px-4 py-2.5 text-foreground bg-[#121212] border border-border rounded-full hover:bg-foreground/5 transition-all font-semibold disabled:opacity-50"
                     >
                       Back
                     </button>
@@ -307,7 +343,7 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
                       type="button"
                       onClick={handleSendCustom}
                       disabled={isSending}
-                      className="flex-1 px-4 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 rounded-lg hover:bg-zinc-800 dark:hover:bg-zinc-100 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-full hover:opacity-90 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {isSending ? (
                         <>
@@ -325,7 +361,7 @@ export default function BulkOutreachModal({ isOpen, contacts, onClose, onSent }:
                 </div>
               )}
 
-              {mode !== 'custom' && (
+              {mode !== "custom" && (
                 <button
                   type="button"
                   onClick={goBack}
