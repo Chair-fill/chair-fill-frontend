@@ -59,7 +59,7 @@ export default function RequireAuth({ children }: RequireAuthProps) {
       return;
     }
 
-    if (user && isProgressLoading) return;
+    if (user && (isProgressLoading || progress === null)) return;
 
     if (publicRoute || pathname === "/") {
       router.replace(desiredPath);

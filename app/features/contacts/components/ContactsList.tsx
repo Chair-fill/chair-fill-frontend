@@ -232,7 +232,7 @@ export default function ContactsList() {
                       checked={isSelected}
                       onChange={() => hasPhone && toggleSelect(contact.id)}
                       disabled={!hasPhone}
-                      className="cursor-pointer h-4 w-4 rounded border border-zinc-300 dark:border-zinc-600 bg-transparent appearance-none checked:bg-blue-600 checked:border-blue-600 text-blue-600 focus:ring-blue-500 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="cursor-pointer h-4 w-4 rounded border border-zinc-300 dark:border-zinc-600 bg-transparent appearance-none checked:bg-blue-500 checked:border-blue-500 text-blue-500 focus:ring-blue-500 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -326,7 +326,7 @@ export default function ContactsList() {
                         checked={isSelected}
                         onChange={() => hasPhone && toggleSelect(contact.id)}
                         disabled={!hasPhone}
-                        className="cursor-pointer h-4 w-4 rounded border border-zinc-300 dark:border-zinc-600 bg-transparent appearance-none checked:bg-blue-600 checked:border-blue-600 text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="cursor-pointer h-4 w-4 rounded border border-zinc-300 dark:border-zinc-600 bg-transparent appearance-none checked:bg-blue-500 checked:border-blue-500 text-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </td>
                     <td className="py-3 px-4 text-zinc-900 dark:text-zinc-50">

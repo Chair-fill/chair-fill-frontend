@@ -170,7 +170,7 @@ export default function BarberAccountPage() {
                 setError("");
               }}
               required
-              className="w-full py-2.5 pl-10 pr-4 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
+              className="w-full py-2.5 pl-10 pr-4 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
             >
               <option value="">Select your state</option>
               {US_STATES.map((s) => (

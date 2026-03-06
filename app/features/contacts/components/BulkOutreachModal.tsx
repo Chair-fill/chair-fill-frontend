@@ -328,7 +328,7 @@ export default function BulkOutreachModal({
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder={defaultMessage}
                     rows={4}
-                    className="w-full px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50 resize-y min-h-[100px]"
+                    className="w-full px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-y min-h-[100px]"
                   />
                   <div className="flex gap-3">
                     <button

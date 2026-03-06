@@ -161,19 +161,6 @@ export default function LoginPage() {
   return (
     <AuthLayout>
       <div className="text-center mb-8 flex flex-col items-center">
-        <div className="flex items-center justify-center gap-1.5 mb-6">
-          <Image
-            src="/logo.png"
-            alt="Chairfill Logo"
-            width={160}
-            height={40}
-            className="h-10 w-auto object-contain"
-            priority
-          />
-          <span className="text-3xl font-bold text-foreground tracking-tight">
-            chairfill
-          </span>
-        </div>
         <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
         <p className={AUTH_SUBTITLE}>
           {step === "credentials"

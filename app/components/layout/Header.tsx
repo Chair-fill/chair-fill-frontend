@@ -69,17 +69,17 @@ export default function Header() {
         <div className="flex h-16 items-center justify-between">
           <Link
             href="/"
-            className="flex items-center gap-0.5 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-1 hover:opacity-80 transition-opacity"
           >
             <Image
               src="/logo.png"
               alt="Chairfill Logo"
-              width={140}
-              height={40}
-              className="h-8 w-auto object-contain"
+              width={20}
+              height={20}
+              className="object-contain"
               priority
             />
-            <span className="text-xl font-bold text-foreground tracking-tight hidden sm:block">
+            <span className="text-2xl font-bold text-foreground tracking-tight hidden sm:block">
               chairfill
             </span>
             {showDemoBadge && (

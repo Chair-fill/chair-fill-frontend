@@ -1,55 +1,69 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useTechnician } from '@/app/providers/TechnicianProvider';
-import { getApiErrorMessage } from '@/lib/api-client';
-import { User, MapPin, Loader2, CheckCircle2 } from 'lucide-react';
-import FormError from '@/app/components/ui/FormError';
-import { FORM_LABEL, INPUT_LEFT_ICON, INPUT_ICON_LEFT, INPUT_PLAIN, BTN_PRIMARY_INLINE } from '@/lib/constants/ui';
-import { US_STATES } from '@/lib/constants/us-states';
+import { useState, useEffect } from "react";
+import { useTechnician } from "@/app/providers/TechnicianProvider";
+import { getApiErrorMessage } from "@/lib/api-client";
+import { User, MapPin, Loader2, CheckCircle2 } from "lucide-react";
+import FormError from "@/app/components/ui/FormError";
+import {
+  FORM_LABEL,
+  INPUT_LEFT_ICON,
+  INPUT_ICON_LEFT,
+  INPUT_PLAIN,
+  BTN_PRIMARY_INLINE,
+} from "@/lib/constants/ui";
+import { US_STATES } from "@/lib/constants/us-states";
 
 export default function TechnicianProfileForm() {
   const { technician, updateTechnician, isTechnicianLoading } = useTechnician();
-  const [nickName, setNickName] = useState('');
-  const [workAddress, setWorkAddress] = useState('');
-  const [state, setState] = useState('');
+  const [nickName, setNickName] = useState("");
+  const [workAddress, setWorkAddress] = useState("");
+  const [state, setState] = useState("");
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  const country = 'United States';
+  const country = "United States";
 
   useEffect(() => {
     if (technician) {
-      setNickName(String(technician.nick_name ?? technician.full_name ?? '').trim());
-      const addr = technician.address as { street?: string; country?: string; state?: string } | undefined;
-      setWorkAddress(addr?.street ?? '');
-      setState(addr?.state ?? '');
+      setNickName(
+        String(technician.nick_name ?? technician.full_name ?? "").trim(),
+      );
+      const addr = technician.address as
+        | { street?: string; country?: string; state?: string }
+        | undefined;
+      setWorkAddress(addr?.street ?? "");
+      setState(addr?.state ?? "");
     }
   }, [technician]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
+  ) => {
     const { name, value } = e.target;
-    if (name === 'nickName') setNickName(value);
-    if (name === 'workAddress') setWorkAddress(value);
-    if (name === 'state') setState(value);
-    setError('');
+    if (name === "nickName") setNickName(value);
+    if (name === "workAddress") setWorkAddress(value);
+    if (name === "state") setState(value);
+    setError("");
     setSuccess(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setSuccess(false);
     const hasTechnician = technician != null;
     if (hasTechnician) {
       const addressTrimmed = workAddress.trim();
       if (!addressTrimmed) {
-        setError('Work address is required.');
+        setError("Work address is required.");
         return;
       }
       const stateTrimmed = state.trim();
       if (!stateTrimmed) {
-        setError('Please select your state.');
+        setError("Please select your state.");
         return;
       }
     }
@@ -89,7 +103,10 @@ export default function TechnicianProfileForm() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label htmlFor="technician-nickName" className={FORM_LABEL}>
-            Nickname <span className="text-zinc-500 dark:text-zinc-400 font-normal">(optional)</span>
+            Nickname{" "}
+            <span className="text-zinc-500 dark:text-zinc-400 font-normal">
+              (optional)
+            </span>
           </label>
           <div className="relative">
             <User className={INPUT_ICON_LEFT} />
@@ -145,7 +162,7 @@ export default function TechnicianProfileForm() {
             value={state}
             onChange={handleChange}
             required
-            className="w-full py-2.5 pl-10 pr-4 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50"
+            className="w-full py-2.5 pl-10 pr-4 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
           >
             <option value="">Select your state</option>
             {US_STATES.map((s) => (
@@ -161,7 +178,9 @@ export default function TechnicianProfileForm() {
       {success && (
         <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2">
           <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-          <p className="text-sm text-green-600 dark:text-green-400">Technician profile updated.</p>
+          <p className="text-sm text-green-600 dark:text-green-400">
+            Technician profile updated.
+          </p>
         </div>
       )}
 
@@ -173,11 +192,10 @@ export default function TechnicianProfileForm() {
               Saving...
             </>
           ) : (
-            'Save Changes'
+            "Save Changes"
           )}
         </button>
       </div>
     </form>
   );
 }
-
