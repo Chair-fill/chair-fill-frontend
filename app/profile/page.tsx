@@ -12,6 +12,7 @@ import {
   Trash2,
   Loader2,
   Scissors,
+  MessageSquare,
 } from "lucide-react";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { formatDisplayName } from "@/lib/utils/format";
@@ -21,7 +22,8 @@ import ProfileForm from "@/app/features/profile/components/ProfileForm";
 import TechnicianProfileForm from "@/app/features/profile/components/TechnicianProfileForm";
 import NotificationSettings from "@/app/features/profile/components/NotificationSettings";
 import SecuritySettings from "@/app/features/profile/components/SecuritySettings";
-type Tab = "user" | "technician" | "preferences" | "security";
+import ChatStyleSettings from "@/app/features/profile/components/ChatStyleSettings";
+type Tab = "user" | "technician" | "chat_style" | "preferences" | "security";
 
 export default function ProfilePage() {
   const {
@@ -75,6 +77,7 @@ export default function ProfilePage() {
   const tabs = [
     { id: "user" as const, label: "User info", icon: User },
     { id: "technician" as const, label: "Barber info", icon: Scissors },
+    { id: "chat_style" as const, label: "Chat Style", icon: MessageSquare },
     { id: "preferences" as const, label: "Preferences", icon: Sliders },
     { id: "security" as const, label: "Change password", icon: Shield },
   ];
@@ -211,6 +214,7 @@ export default function ProfilePage() {
                 <ProfileForm key={user?.id ?? user?.email ?? "loading"} />
               )}
               {activeTab === "technician" && <TechnicianProfileForm />}
+              {activeTab === "chat_style" && <ChatStyleSettings />}
               {activeTab === "preferences" && (
                 <NotificationSettings
                   key={user?.id ?? user?.email ?? "loading"}

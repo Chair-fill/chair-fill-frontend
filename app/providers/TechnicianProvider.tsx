@@ -15,6 +15,7 @@ export interface Technician {
   email?: string;
   phone_number?: string;
   address?: Record<string, unknown> | TechnicianAddress;
+  conversational_style?: Array<{ context: string; response: string }>;
   [key: string]: unknown;
 }
 
@@ -36,6 +37,7 @@ export interface CreateTechnicianRequest {
 export interface UpdateTechnicianRequest {
   nick_name?: string;
   address?: TechnicianAddress;
+  conversational_style?: Array<{ context: string; response: string }>;
 }
 
 interface TechnicianContextType {
@@ -125,6 +127,7 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
     const body: Record<string, unknown> = {};
     if (data.nick_name !== undefined) body.nick_name = data.nick_name;
     if (data.address) body.address = data.address;
+    if (data.conversational_style !== undefined) body.conversational_style = data.conversational_style;
     if (Object.keys(body).length === 0) return;
     await api.put(API.TECHNICIAN.ME, body);
     await refetchTechnician();
