@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import ConditionalHeader from "@/app/components/layout/ConditionalHeader";
+import ConditionalBottomNav from "@/app/components/layout/ConditionalBottomNav";
 import Providers from "@/app/providers/Providers";
 import RequireAuth from "@/app/components/auth/RequireAuth";
 
@@ -69,7 +70,10 @@ export default function RootLayout({
       >
         <Providers>
           <ConditionalHeader />
-          <RequireAuth>{children}</RequireAuth>
+          <div className="pb-24 md:pb-0">
+            <RequireAuth>{children}</RequireAuth>
+          </div>
+          <ConditionalBottomNav />
         </Providers>
       </body>
     </html>

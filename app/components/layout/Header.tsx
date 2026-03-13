@@ -8,6 +8,7 @@ import {
   ContactRound,
   CreditCard,
   ClipboardList,
+  Calendar,
   User,
   Settings,
   LogOut,
@@ -92,7 +93,7 @@ export default function Header() {
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                <nav className="flex items-center space-x-1">
+                <nav className="hidden md:flex items-center space-x-1">
                   <Link
                     href="/contacts"
                     className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
@@ -114,6 +115,17 @@ export default function Header() {
                   >
                     <CreditCard className="w-4 h-4" />
                     <span className="hidden sm:block pt-0.5">Subscription</span>
+                  </Link>
+                  <Link
+                    href="/bookings"
+                    className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
+                      isActive("/bookings")
+                        ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)]"
+                        : "text-foreground/60 hover:bg-white/5 hover:text-foreground"
+                    }`}
+                  >
+                    <Calendar className="w-4 h-4" />
+                    <span className="hidden sm:block pt-0.5">Bookings</span>
                   </Link>
                   <Link
                     href="/services"
