@@ -7,9 +7,10 @@ interface CalendarProps {
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
   bookingDates?: string[]; // Array of YYYY-MM-DD strings
+  blockedDates?: string[]; // Array of YYYY-MM-DD strings
 }
 
-export default function Calendar({ selectedDate, onDateSelect, bookingDates = [] }: CalendarProps) {
+export default function Calendar({ selectedDate, onDateSelect, bookingDates = [], blockedDates = [] }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
 
   const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
@@ -41,6 +42,7 @@ export default function Calendar({ selectedDate, onDateSelect, bookingDates = []
       const dateString = date.toISOString().split('T')[0];
       const isSelected = date.toDateString() === selectedDate.toDateString();
       const hasBookings = bookingDates.includes(dateString);
+      const isBlocked = blockedDates.includes(dateString);
       const isToday = date.toDateString() === new Date().toDateString();
 
       days.push(
@@ -50,12 +52,20 @@ export default function Calendar({ selectedDate, onDateSelect, bookingDates = []
           className={`relative h-10 sm:h-12 w-full rounded-xl flex items-center justify-center text-sm font-medium transition-all ${
             isSelected
               ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105 z-10"
-              : "text-foreground hover:bg-white/5"
+              : isBlocked
+                ? "bg-red-500/10 text-red-500/60 border border-red-500/20"
+                : "text-foreground hover:bg-white/5"
           } ${isToday && !isSelected ? "border border-primary/40 text-primary" : ""}`}
         >
           {d}
-          {hasBookings && !isSelected && (
+          {hasBookings && !isSelected && !isBlocked && (
             <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+          )}
+          {isBlocked && !isSelected && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+              <div className="w-full h-[1px] bg-red-500 rotate-45" />
+              <div className="w-full h-[1px] bg-red-500 -rotate-45 absolute" />
+            </div>
           )}
         </button>
       );

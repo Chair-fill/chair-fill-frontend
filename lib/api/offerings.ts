@@ -11,8 +11,15 @@ export interface Offering {
   description?: string;
   technician_id?: string;
   shop_id?: string;
-  premium_hours?: { slots?: unknown[] };
-  promo?: { discount?: number; enabled?: boolean; expiry?: string };
+  premium_hours?: { slots?: { from: string; to: string; price?: number }[] };
+  promo?: {
+    discount?: number;
+    enabled?: boolean;
+    expiry?: string;
+    price?: number;
+    from?: string;
+    to?: string;
+  };
 }
 
 /** Create offering body (POST /offerings). */
@@ -23,8 +30,15 @@ export interface CreateOfferingBody {
   description?: string;
   technician_id: string;
   shop_id?: string;
-  premium_hours?: { slots: unknown[] };
-  promo?: { discount: number; enabled: boolean; expiry: string };
+  premium_hours?: { slots: { from: string; to: string; price?: number }[] };
+  promo?: {
+    discount: number;
+    enabled: boolean;
+    expiry: string;
+    price?: number;
+    from?: string;
+    to?: string;
+  };
 }
 
 /** Update offering body (PUT /offerings). */
@@ -35,7 +49,15 @@ export interface UpdateOfferingBody {
   duration?: number;
   description?: string;
   promo_enabled?: boolean;
-  promo?: { discount: number; enabled: boolean; expiry: string };
+  promo?: {
+    discount: number;
+    enabled: boolean;
+    expiry: string;
+    price?: number;
+    from?: string;
+    to?: string;
+  };
+  premium_hours?: { slots: { from: string; to: string; price?: number }[] };
 }
 
 /** List query params. */

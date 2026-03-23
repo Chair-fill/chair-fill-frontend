@@ -25,7 +25,7 @@ function getRedirectForProgress(
   demo: boolean,
 ): string {
   if (demo) return "/contacts";
-  if (progress == null) return ONBOARDING_BARBER_ACCOUNT;
+  if (progress == null) return "/signup";
   if (progress.has_subscribed === true) return "/contacts";
   if (progress.is_technician !== true) return ONBOARDING_BARBER_ACCOUNT;
   return ONBOARDING_CHOOSE_PLAN;
@@ -41,7 +41,7 @@ export default function RequireAuth({ children }: RequireAuthProps) {
   const router = useRouter();
   const { user, isAuthLoading } = useUser();
   const { progress, isProgressLoading } = useProgress();
-  const publicRoute = isPublicRoute(pathname);
+  const publicRoute = isPublicRoute(pathname) || pathname.startsWith("/book/");
   const demo = isDemoMode();
   const desiredPath = getRedirectForProgress(progress, demo);
 
@@ -59,10 +59,12 @@ export default function RequireAuth({ children }: RequireAuthProps) {
       return;
     }
 
-    if (user && (isProgressLoading || progress === null)) return;
+    if (user && isProgressLoading) return;
 
-    if (publicRoute || pathname === "/") {
-      router.replace(desiredPath);
+    // Don't redirect if we are on a public route or home,
+    // UNLESS it's a route that should be strictly for logged-out guests (like login/signup),
+    // but here we just want to avoid redirecting AWAY from /book/* or /
+    if (pathname === "/" || pathname.startsWith("/book/")) {
       return;
     }
 
@@ -82,7 +84,6 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 
   if (isAuthLoading) return <PageLoader />;
   if (user && isProgressLoading) return <PageLoader />;
-  if (user && progress === null) return <PageLoader />;
   if (!user && !publicRoute) return <PageLoader />;
 
   return <>{children}</>;

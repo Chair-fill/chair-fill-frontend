@@ -68,6 +68,12 @@ function offeringToService(o: {
         ? (o.premium_hours as { slots: unknown[] }).slots.length >= 0
         : true),
     offerPromotion: !!o.promo?.enabled,
+    premiumFrom: (o.premium_hours as any)?.slots?.[0]?.from,
+    premiumTo: (o.premium_hours as any)?.slots?.[0]?.to,
+    premiumPrice: (o.premium_hours as any)?.slots?.[0]?.price !== undefined ? String((o.premium_hours as any).slots[0].price) : undefined,
+    promoFrom: (o.promo as any)?.from,
+    promoTo: (o.promo as any)?.to,
+    promoPrice: (o.promo as any)?.price !== undefined ? String((o.promo as any).price) : undefined,
   };
 }
 
@@ -83,7 +89,13 @@ export default function ServicesPage() {
   const [duration, setDuration] = useState("");
   const [description, setDescription] = useState("");
   const [premiumHours, setPremiumHours] = useState(false);
+  const [premiumFrom, setPremiumFrom] = useState("19:00");
+  const [premiumTo, setPremiumTo] = useState("21:00");
+  const [premiumPrice, setPremiumPrice] = useState("");
   const [offerPromotion, setOfferPromotion] = useState(false);
+  const [promoFrom, setPromoFrom] = useState("11:00");
+  const [promoTo, setPromoTo] = useState("13:00");
+  const [promoPrice, setPromoPrice] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
@@ -136,7 +148,13 @@ export default function ServicesPage() {
     setDuration("");
     setDescription("");
     setPremiumHours(false);
+    setPremiumFrom("19:00");
+    setPremiumTo("21:00");
+    setPremiumPrice("");
     setOfferPromotion(false);
+    setPromoFrom("11:00");
+    setPromoTo("13:00");
+    setPromoPrice("");
     setEditingId(null);
     setFormError("");
   }, []);
@@ -176,10 +194,24 @@ export default function ServicesPage() {
       const promoPayload = offerPromotion
         ? {
             discount: 0,
+            price: promoPrice ? parseFloat(promoPrice) : undefined,
+            from: promoFrom || undefined,
+            to: promoTo || undefined,
             enabled: true,
             expiry: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
               .toISOString()
               .slice(0, 10),
+          }
+        : undefined;
+      const premiumPayload = premiumHours
+        ? {
+            slots: [
+              {
+                from: premiumFrom,
+                to: premiumTo,
+                price: premiumPrice ? parseFloat(premiumPrice) : undefined,
+              },
+            ],
           }
         : undefined;
       if (editingId && editingId.startsWith("OFF-")) {
@@ -191,6 +223,7 @@ export default function ServicesPage() {
           description: description.trim() || undefined,
           promo_enabled: offerPromotion,
           promo: promoPayload,
+          premium_hours: premiumPayload,
         });
       } else {
         await createOffering({
@@ -199,7 +232,7 @@ export default function ServicesPage() {
           duration: durationNum,
           description: description.trim() || undefined,
           technician_id: technicianId,
-          premium_hours: premiumHours ? { slots: [] } : undefined,
+          premium_hours: premiumPayload,
           promo: promoPayload,
         });
       }
@@ -222,7 +255,13 @@ export default function ServicesPage() {
     setDuration(s.duration ?? "");
     setDescription(s.description ?? "");
     setPremiumHours(s.premiumHours ?? false);
+    setPremiumFrom(s.premiumFrom ?? "19:00");
+    setPremiumTo(s.premiumTo ?? "21:00");
+    setPremiumPrice(s.premiumPrice ?? "");
     setOfferPromotion(s.offerPromotion ?? false);
+    setPromoFrom(s.promoFrom ?? "11:00");
+    setPromoTo(s.promoTo ?? "13:00");
+    setPromoPrice(s.promoPrice ?? "");
     setEditingId(s.id);
     setFormError("");
     // Only open modal on mobile (sm breakpoint = 640px); on desktop form is inline, avoid locking body scroll
@@ -322,17 +361,7 @@ export default function ServicesPage() {
             )}
           </div>
 
-          {/* Mobile: Add service button (opens modal) */}
-          <div className="flex sm:hidden">
-            <button
-              type="button"
-              onClick={() => setMobileModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 rounded-full text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              Add service
-            </button>
-          </div>
+
 
           {/* Desktop: two columns - form left, list right */}
           <div className="flex flex-col lg:flex-row lg:gap-8 lg:items-start">
@@ -468,6 +497,46 @@ export default function ServicesPage() {
                   </button>
                 </div>
 
+                {premiumHours && (
+                  <div className="grid grid-cols-2 gap-4 p-4 border border-border bg-white/[0.02] rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">From</label>
+                      <input
+                        type="time"
+                        value={premiumFrom}
+                        onChange={(e) => setPremiumFrom(e.target.value)}
+                        className={`${INPUT_BASE} [color-scheme:dark]`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">To</label>
+                      <input
+                        type="time"
+                        value={premiumTo}
+                        onChange={(e) => setPremiumTo(e.target.value)}
+                        className={`${INPUT_BASE} [color-scheme:dark]`}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">Premium Price</label>
+                      <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50 focus-within:border-transparent">
+                        <span className="flex items-center px-3 text-zinc-500 dark:text-zinc-400 text-sm border-r border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50">
+                          $
+                        </span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={premiumPrice}
+                          onChange={(e) => setPremiumPrice(toNumericPrice(e.target.value))}
+                          placeholder="80.00"
+                          className="flex-1 px-3 py-2 bg-transparent text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none text-sm min-w-0"
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Offer Promotion toggle */}
                 <div className="flex items-start justify-between gap-4 py-2">
                   <div className="min-w-0 flex-1">
@@ -497,6 +566,46 @@ export default function ServicesPage() {
                     />
                   </button>
                 </div>
+
+                {offerPromotion && (
+                  <div className="grid grid-cols-2 gap-4 p-4 border border-border bg-white/[0.02] rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">From</label>
+                      <input
+                        type="time"
+                        value={promoFrom}
+                        onChange={(e) => setPromoFrom(e.target.value)}
+                        className={`${INPUT_BASE} [color-scheme:dark]`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">To</label>
+                      <input
+                        type="time"
+                        value={promoTo}
+                        onChange={(e) => setPromoTo(e.target.value)}
+                        className={`${INPUT_BASE} [color-scheme:dark]`}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">Promotion Price</label>
+                      <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50 focus-within:border-transparent">
+                        <span className="flex items-center px-3 text-zinc-500 dark:text-zinc-400 text-sm border-r border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50">
+                          $
+                        </span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={promoPrice}
+                          onChange={(e) => setPromoPrice(toNumericPrice(e.target.value))}
+                          placeholder="35.00"
+                          className="flex-1 px-3 py-2 bg-transparent text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none text-sm min-w-0"
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex flex-wrap items-center gap-2 pt-2">
                   <button
@@ -580,17 +689,9 @@ export default function ServicesPage() {
                       Use the form above to add your first service.
                     </span>
                     <span className="sm:hidden">
-                      Tap Add service to add your first service.
+                      Tap + to add your first service.
                     </span>
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setMobileModalOpen(true)}
-                    className="mt-4 sm:hidden inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add service
-                  </button>
                 </div>
               ) : (
                 <ul className="space-y-2">
@@ -879,6 +980,46 @@ export default function ServicesPage() {
                         />
                       </button>
                     </div>
+
+                    {premiumHours && (
+                      <div className="grid grid-cols-2 gap-4 p-4 border border-border bg-white/[0.02] rounded-xl">
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">From</label>
+                          <input
+                            type="time"
+                            value={premiumFrom}
+                            onChange={(e) => setPremiumFrom(e.target.value)}
+                            className={`${INPUT_BASE} [color-scheme:dark]`}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">To</label>
+                          <input
+                            type="time"
+                            value={premiumTo}
+                            onChange={(e) => setPremiumTo(e.target.value)}
+                            className={`${INPUT_BASE} [color-scheme:dark]`}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">Premium Price</label>
+                          <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50 focus-within:border-transparent">
+                            <span className="flex items-center px-3 text-zinc-500 dark:text-zinc-400 text-sm border-r border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50">
+                              $
+                            </span>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={premiumPrice}
+                              onChange={(e) => setPremiumPrice(toNumericPrice(e.target.value))}
+                              placeholder="80.00"
+                              className="flex-1 px-3 py-2 bg-transparent text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none text-sm min-w-0"
+                              autoComplete="off"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex items-start justify-between gap-4 py-2">
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-zinc-900 dark:text-zinc-50">
@@ -901,6 +1042,46 @@ export default function ServicesPage() {
                         />
                       </button>
                     </div>
+
+                    {offerPromotion && (
+                      <div className="grid grid-cols-2 gap-4 p-4 border border-border bg-white/[0.02] rounded-xl">
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">From</label>
+                          <input
+                            type="time"
+                            value={promoFrom}
+                            onChange={(e) => setPromoFrom(e.target.value)}
+                            className={`${INPUT_BASE} [color-scheme:dark]`}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">To</label>
+                          <input
+                            type="time"
+                            value={promoTo}
+                            onChange={(e) => setPromoTo(e.target.value)}
+                            className={`${INPUT_BASE} [color-scheme:dark]`}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">Promotion Price</label>
+                          <div className="flex rounded-lg border border-border bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50 focus-within:border-transparent">
+                            <span className="flex items-center px-3 text-zinc-500 dark:text-zinc-400 text-sm border-r border-border bg-zinc-50 dark:bg-zinc-800/50">
+                              $
+                            </span>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={promoPrice}
+                              onChange={(e) => setPromoPrice(toNumericPrice(e.target.value))}
+                              placeholder="35.00"
+                              className="flex-1 px-3 py-2 bg-transparent text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none text-sm min-w-0"
+                              autoComplete="off"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex gap-2 pt-2">
                       {editingId && (
                         <button
@@ -909,35 +1090,45 @@ export default function ServicesPage() {
                             clearForm();
                             setMobileModalOpen(false);
                           }}
-                          className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800"
+                          className="flex-1 flex items-center justify-center p-3 rounded-full text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800"
+                          aria-label="Cancel"
                         >
-                          Cancel
+                          <ChevronDown className="w-5 h-5 rotate-180 sm:rotate-0" />
+                          <span className="hidden sm:inline ml-2 text-sm font-medium">Cancel</span>
                         </button>
                       )}
-                      <button
-                        type="submit"
-                        disabled={
-                          saving || !name.trim() || !toNumericPrice(price)
-                        }
-                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
-                      >
-                        {saving ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Plus className="w-4 h-4" />
-                        )}
-                        {saving
-                          ? "Saving..."
-                          : editingId
-                            ? "Update service"
-                            : "Add service"}
-                      </button>
+                        <button
+                          type="submit"
+                          disabled={
+                            saving || !name.trim() || !toNumericPrice(price)
+                          }
+                          className="flex-1 inline-flex items-center justify-center p-3 rounded-full bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                          aria-label={editingId ? "Update service" : "Add service"}
+                        >
+                          {saving ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <Plus className={`w-5 h-5 ${editingId ? "rotate-45" : ""}`} />
+                          )}
+                          <span className="hidden sm:inline ml-2 text-sm font-bold">
+                            {editingId ? "Update service" : "Add service"}
+                          </span>
+                        </button>
                     </div>
                   </form>
                 </div>
               </div>
             )}
           </div>
+          {/* Global FAB for Services (Mobile Only) */}
+          <button
+            type="button"
+            onClick={() => setMobileModalOpen(true)}
+            className="fixed bottom-24 right-6 z-40 sm:hidden flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground hover:opacity-90 shadow-2xl active:scale-95 transition-all"
+            aria-label="Add service"
+          >
+            <Plus className="w-8 h-8" />
+          </button>
         </div>
       </main>
     </div>

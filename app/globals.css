@@ -122,3 +122,16 @@ button:disabled {
 .animate-fade-out {
   animation: fade-out 0.3s ease-out forwards;
 }
+
+/* Scrollbar hide utility (mobile only) */
+@layer utilities {
+  .scrollbar-hide {
+    @media (max-width: 639px) {
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+      &::-webkit-scrollbar {
+        display: none; /* Chrome, Safari and Opera */
+      }
+    }
+  }
+}

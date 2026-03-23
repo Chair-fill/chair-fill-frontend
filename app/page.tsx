@@ -6,7 +6,7 @@ export default function Home() {
       <div className="text-center flex flex-col items-center max-w-md">
         <div className="flex items-center justify-center gap-2 mb-6">
           <Image
-            src="/logo.png"
+            src="/logo-new.png"
             alt="Chairfill Logo"
             width={240}
             height={60}

@@ -16,6 +16,12 @@ export interface BarberService {
   duration?: string;
   premiumHours?: boolean;
   offerPromotion?: boolean;
+  premiumFrom?: string;
+  premiumTo?: string;
+  premiumPrice?: string;
+  promoFrom?: string;
+  promoTo?: string;
+  promoPrice?: string;
 }
 
 /** Accepts stored items (price may be missing for legacy data). */

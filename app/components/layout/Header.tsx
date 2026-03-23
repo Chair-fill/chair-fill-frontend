@@ -73,16 +73,13 @@ export default function Header() {
             className="flex items-center gap-1 hover:opacity-80 transition-opacity"
           >
             <Image
-              src="/logo.png"
+              src="/logo-new.png"
               alt="Chairfill Logo"
-              width={20}
-              height={20}
+              width={110}
+              height={110}
               className="object-contain"
               priority
             />
-            <span className="text-2xl font-bold text-foreground tracking-tight hidden sm:block">
-              chairfill
-            </span>
             {showDemoBadge && (
               <span className="rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 text-xs font-medium px-2 py-0.5">
                 Demo

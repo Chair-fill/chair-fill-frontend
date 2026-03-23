@@ -112,8 +112,14 @@ export default function SignupPage() {
       setError("Please enter your phone number.");
       return;
     }
-    if (!/^\+?[0-9\s-()]{7,}$/.test(phoneTrimmed)) {
-      setError("Please enter a valid phone number.");
+    // Updated regex to support: 13184611055, +13184611055, 3184611055 (and general digits + optional plus prefix)
+    const phoneDigitsOnly = phoneTrimmed.replace(/[^0-9]/g, "");
+    const hasPlus = phoneTrimmed.startsWith("+");
+    const isValidFormat = (hasPlus ? phoneDigitsOnly.length >= 10 : phoneDigitsOnly.length >= 10);
+    
+    // Very permissive regex that ensures we have enough digits and optional plus
+    if (!/^\+?[0-9]{10,15}$/.test(phoneTrimmed.replace(/[\s-()]/g, ""))) {
+      setError("Must Be Valid Phone Number");
       return;
     }
     if (password.length < 8) {
@@ -145,18 +151,36 @@ export default function SignupPage() {
       setImessageChecking(false);
     }
 
+    // Normalize USA phone numbers: ensure strictly +13184611055 format
+    const digits = phoneTrimmed.replace(/[^0-9]/g, "");
+    let normalizedPhone = phoneTrimmed;
+    
+    if (digits.length === 10) {
+      normalizedPhone = `+1${digits}`;
+    } else if (digits.length === 11 && digits.startsWith("1")) {
+      normalizedPhone = `+${digits}`;
+    } else {
+      // For any other format, at least strip spaces/special chars but keep what user entered if it doesn't match USA pattern
+      normalizedPhone = phoneTrimmed.startsWith("+") ? `+${digits}` : digits;
+    }
+
     try {
       await signup({
         name: name.trim(),
         email: email.trim(),
         password,
-        phoneNumber: phoneTrimmed,
+        phoneNumber: normalizedPhone,
       });
       logout();
       // Full page load ensures clean state so RequireAuth doesn't redirect to /contacts
       window.location.href = "/login?registered=1";
     } catch (err) {
-      setError(getApiErrorMessage(err));
+      const apiError = getApiErrorMessage(err);
+      if (apiError.toLowerCase().includes("phonenumber must be a valid phone number")) {
+        setError("Must Be Valid Phone Number");
+      } else {
+        setError(apiError);
+      }
     }
   };
 
@@ -272,9 +296,21 @@ export default function SignupPage() {
 
             <div>
               <label className={FORM_LABEL}>Email address</label>
-              <p className="text-sm text-foreground/70 py-2 pl-3 rounded-lg bg-foreground/5">
-                {email}
-              </p>
+              <div className="relative">
+                <input
+                  type="email"
+                  name="username"
+                  autoComplete="username"
+                  value={email}
+                  readOnly
+                  className="sr-only"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                />
+                <p className="text-sm text-foreground/70 py-2 pl-3 rounded-lg bg-foreground/5">
+                  {email}
+                </p>
+              </div>
             </div>
 
             <div>

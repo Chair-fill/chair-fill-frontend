@@ -148,34 +148,38 @@ export default function ContactsList() {
               All Contacts ({contacts.length})
             </h2>
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="flex flex-row items-center justify-end flex-wrap gap-2 w-full sm:w-auto">
             <button
               onClick={() => setIsAddContactModalOpen(true)}
-              className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-full hover:opacity-90 transition-all"
+              className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-full hover:opacity-90 transition-all shadow-lg"
+              aria-label="Add contact"
             >
-              <Plus className="w-4 h-4" />
-              <span className="sm:inline">Add contact</span>
+              <Plus className="w-5 h-5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline ml-2">Add contact</span>
             </button>
             <button
               onClick={() => setIsUploadModalOpen(true)}
-              className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-primary border border-border rounded-full hover:bg-foreground/5 transition-all"
+              className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-primary border border-border rounded-full hover:bg-foreground/5 transition-all"
+              aria-label="Upload contacts"
             >
-              <Upload className="w-4 h-4" />
-              <span className="sm:inline">Upload contacts</span>
+              <Upload className="w-5 h-5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline ml-2">Upload contacts</span>
             </button>
             <button
               onClick={openBulkOutreach}
-              className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-blue-500 border border-blue-500/30 rounded-full hover:bg-blue-500/10 transition-all"
+              className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-blue-500 border border-blue-500/30 rounded-full hover:bg-blue-500/10 transition-all"
+              aria-label="Blast"
             >
-              <Radio className="w-4 h-4" />
-              <span className="sm:inline">Blast</span>
+              <Radio className="w-5 h-5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline ml-2">Blast</span>
             </button>
             <button
               onClick={clearAllContacts}
-              className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-red-500 bg-red-500/10 rounded-full hover:bg-red-500/20 transition-all"
+              className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-red-500 bg-red-500/10 rounded-full hover:bg-red-500/20 transition-all"
+              aria-label="Clear All"
             >
-              <Trash2 className="w-4 h-4" />
-              <span className="sm:inline">Clear All</span>
+              <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline ml-2">Clear All</span>
             </button>
           </div>
         </div>

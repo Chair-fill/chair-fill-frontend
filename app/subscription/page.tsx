@@ -14,6 +14,7 @@ import {
   Crown,
   Building2,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -287,9 +288,11 @@ export default function SubscriptionPage() {
               <button
                 type="button"
                 onClick={() => refetchSubscription()}
-                className="px-3 py-1.5 text-sm font-medium text-amber-800 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/40 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors"
+                className="flex items-center justify-center p-2 text-sm font-medium text-amber-800 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/40 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors"
+                aria-label="Retry"
               >
-                Retry
+                <RefreshCw className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Retry</span>
               </button>
             </div>
           )}
@@ -347,43 +350,55 @@ export default function SubscriptionPage() {
                       <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                         Manage subscription
                       </p>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap justify-end gap-2">
                         <button
                           onClick={() => toggleAutoRenew()}
                           disabled={isLoading}
-                          className="px-4 py-2 text-sm font-semibold text-foreground bg-[#121212] border border-border rounded-full hover:bg-foreground/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-foreground bg-[#121212] border border-border rounded-full hover:bg-foreground/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          aria-label={`Turn auto-renew ${displaySubscription.autoRenew ? "off" : "on"}`}
                         >
                           {isLoading ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-5 h-5 animate-spin" />
                           ) : (
-                            `Turn auto-renew ${displaySubscription.autoRenew ? "off" : "on"}`
+                            <>
+                              <RefreshCw className={`w-5 h-5 sm:w-4 sm:h-4 ${displaySubscription.autoRenew ? "text-green-600 outline-green-600" : ""}`} />
+                              <span className="hidden sm:inline ml-2">{`Turn auto-renew ${displaySubscription.autoRenew ? "off" : "on"}`}</span>
+                            </>
                           )}
                         </button>
                         {!showCancelConfirm ? (
                           <button
                             onClick={() => setShowCancelConfirm(true)}
-                            className="px-4 py-2 text-sm font-semibold text-red-500 bg-red-500/10 border border-red-500/20 rounded-full hover:bg-red-500/20 transition-all"
+                            className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-red-500 bg-red-500/10 border border-red-500/20 rounded-full hover:bg-red-500/20 transition-all"
+                            aria-label="Cancel subscription"
                           >
-                            Cancel subscription
+                            <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
+                            <span className="hidden sm:inline ml-2">Cancel subscription</span>
                           </button>
                         ) : (
                           <div className="flex gap-2">
-                            <button
+                             <button
                               onClick={handleCancel}
                               disabled={isLoading}
-                              className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-full hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-white bg-red-600 rounded-full hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              aria-label="Confirm cancel"
                             >
                               {isLoading ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <Loader2 className="w-5 h-5 animate-spin" />
                               ) : (
-                                "Confirm cancel"
+                                <>
+                                  <AlertCircle className="w-5 h-5 sm:w-4 sm:h-4" />
+                                  <span className="hidden sm:inline ml-2">Confirm cancel</span>
+                                </>
                               )}
                             </button>
                             <button
                               onClick={() => setShowCancelConfirm(false)}
-                              className="px-4 py-2 text-sm font-semibold text-foreground bg-[#121212] border border-border rounded-full hover:bg-foreground/5 transition-all"
+                              className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-foreground bg-[#121212] border border-border rounded-full hover:bg-foreground/5 transition-all"
+                              aria-label="Keep subscription"
                             >
-                              Keep subscription
+                              <Check className="w-5 h-5 sm:w-4 sm:h-4 text-green-500" />
+                              <span className="hidden sm:inline ml-2">Keep subscription</span>
                             </button>
                           </div>
                         )}

@@ -7,23 +7,56 @@ import { Clock, User, ClipboardList, TrendingUp } from "lucide-react";
 interface BookingListProps {
   bookings: Booking[];
   selectedDate: Date;
+  isBlocked?: boolean;
+  onToggleBlock?: () => void;
 }
 
-export default function BookingList({ bookings, selectedDate }: BookingListProps) {
+export default function BookingList({ bookings, selectedDate, isBlocked = false, onToggleBlock }: BookingListProps) {
   const sortedBookings = [...bookings].sort((a, b) => 
     new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
   );
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-foreground">
-          {format(selectedDate, "EEEE, MMMM do")}
-        </h3>
-        <span className="text-sm font-medium text-foreground/40">
-          {bookings.length} {bookings.length === 1 ? "booking" : "bookings"}
-        </span>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-bold text-foreground">
+            {format(selectedDate, "EEEE, MMMM do")}
+          </h3>
+          {isBlocked && (
+            <span className="px-2 py-0.5 bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-wider rounded border border-red-500/20">
+              Blocked
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onToggleBlock}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              isBlocked
+                ? "bg-green-500/10 text-green-500 hover:bg-green-500/20 border border-green-500/20"
+                : "bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20"
+            }`}
+          >
+            {isBlocked ? "Unblock Day" : "Block Day"}
+          </button>
+          <span className="text-sm font-medium text-foreground/40 shrink-0">
+            {bookings.length} {bookings.length === 1 ? "booking" : "bookings"}
+          </span>
+        </div>
       </div>
+
+      {isBlocked && (
+        <div className="bg-red-500/5 border border-red-500/10 rounded-2xl p-4 flex items-center gap-3">
+          <div className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center shrink-0">
+            <Clock className="w-5 h-5 text-red-500" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-foreground">This day is blocked</p>
+            <p className="text-xs text-foreground/60">New bookings cannot be made for this date.</p>
+          </div>
+        </div>
+      )}
 
       {sortedBookings.length === 0 ? (
         <div className="bg-[#0a0a0a] rounded-2xl border border-border p-12 text-center">

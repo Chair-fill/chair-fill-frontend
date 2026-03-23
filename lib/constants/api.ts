@@ -40,6 +40,12 @@ export const API = {
     LITE: '/technician/lite',
     /** GET - Get technician profile for current user (JWT) */
     ME: '/technician/me',
+    /** GET - Publicly get technician details by ID/slug */
+    GET_PUBLIC: (id: string) => `/technician/public/${encodeURIComponent(id)}`,
+  },
+  BOOKING: {
+    /** POST - Create a guest booking. Body: service_id, start_time, guest_info: { first_name, last_name, email, phone } */
+    CREATE_GUEST: '/booking/guest',
   },
   PROGRESS: {
     /** GET - Get onboarding progress for current user (JWT). Returns has_subscribed, is_technician, timeline, owner. */
