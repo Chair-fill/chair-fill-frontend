@@ -85,7 +85,7 @@ export default function AddBookingModal({
         onClick={onClose}
       />
       <div
-        className={`relative bg-[#0a0a0a] rounded-t-3xl sm:rounded-2xl border-t sm:border border-white/10 shadow-2xl w-full max-w-md overflow-hidden ${
+        className={`relative bg-card rounded-t-3xl sm:rounded-2xl border-t sm:border border-border shadow-2xl w-full max-w-md overflow-hidden ${
           isAnimatingOut ? "animate-slide-down" : "animate-slide-up"
         }`}
         onClick={(e) => e.stopPropagation()}

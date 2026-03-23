@@ -98,7 +98,7 @@ export default function ContactsList() {
   if (contacts.length === 0) {
     return (
       <>
-        <div className="bg-[#0a0a0a] rounded-2xl border border-border p-12 shadow-sm">
+        <div className="bg-card rounded-2xl border border-border p-12 shadow-sm">
           <div className="text-center">
             <Users className="w-16 h-16 text-zinc-300 dark:text-zinc-700 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-2">
@@ -118,7 +118,7 @@ export default function ContactsList() {
               </button>
               <button
                 onClick={() => setIsUploadModalOpen(true)}
-                className="inline-flex items-center gap-2 px-6 py-3 border border-border bg-[#121212] text-primary rounded-full hover:bg-foreground/5 transition-all font-semibold"
+                className="inline-flex items-center gap-2 px-6 py-3 border border-border bg-zinc-100 dark:bg-white/5 text-primary rounded-full hover:bg-foreground/5 transition-all font-semibold"
               >
                 <Upload className="w-5 h-5" />
                 Upload contacts (CSV/VCF)
@@ -140,7 +140,7 @@ export default function ContactsList() {
 
   return (
     <>
-      <div className="bg-[#0a0a0a] rounded-2xl border border-border p-4 sm:p-6 shadow-sm">
+      <div className="bg-card rounded-2xl border border-border p-4 sm:p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="flex items-center gap-3">
             <Users className="w-5 h-5 sm:w-6 sm:h-6 text-foreground" />

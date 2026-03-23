@@ -121,7 +121,7 @@ export default function OutreachMessageModal({
         onClick={handleClose}
       />
       <div
-        className="relative bg-[#0a0a0a] rounded-2xl border border-border shadow-xl w-full max-w-md overflow-hidden"
+        className="relative bg-card rounded-2xl border border-border shadow-xl w-full max-w-md overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-border">

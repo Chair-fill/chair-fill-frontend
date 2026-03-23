@@ -118,7 +118,7 @@ export default function OutreachModal({
         onClick={handleClose}
       />
       <div
-        className="relative bg-[#0a0a0a] rounded-2xl border border-border shadow-xl w-full max-w-md overflow-hidden"
+        className="relative bg-card rounded-2xl border border-border shadow-xl w-full max-w-md overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-border">
@@ -191,7 +191,7 @@ export default function OutreachModal({
                   type="button"
                   onClick={() => setMode("choice")}
                   disabled={isSending}
-                  className="flex-1 px-4 py-2.5 text-foreground bg-[#121212] border border-border rounded-full hover:bg-foreground/5 font-semibold transition-all disabled:opacity-50"
+                  className="flex-1 px-4 py-2.5 text-foreground bg-zinc-100 dark:bg-white/5 border border-border rounded-full hover:bg-foreground/5 font-semibold transition-all disabled:opacity-50"
                 >
                   Back
                 </button>

@@ -17,7 +17,7 @@ export default function Error({
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="max-w-md w-full rounded-2xl bg-[#0a0a0a] border border-border p-8 shadow-sm text-center">
+      <div className="max-w-md w-full rounded-2xl bg-card border border-border p-8 shadow-sm text-center">
         <AlertCircle
           className="w-12 h-12 mx-auto text-amber-500 dark:text-amber-400 mb-4"
           aria-hidden
@@ -40,7 +40,7 @@ export default function Error({
           <button
             type="button"
             onClick={reset}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-foreground border border-border bg-[#121212] hover:bg-foreground/5 transition-all"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-foreground border border-border bg-zinc-100 dark:bg-white/5 hover:bg-foreground/5 transition-all"
           >
             Try again
           </button>

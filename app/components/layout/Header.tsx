@@ -66,7 +66,7 @@ export default function Header() {
 
   return (
     <div className="sticky top-4 z-50 px-4 sm:px-6 lg:px-8 flex justify-center w-full pb-4 pointer-events-none">
-      <header className="w-full max-w-6xl bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl px-4 sm:px-6 pointer-events-auto">
+      <header className="w-full max-w-6xl bg-background/80 backdrop-blur-2xl border border-border rounded-full shadow-lg px-4 sm:px-6 pointer-events-auto">
         <div className="flex h-16 items-center justify-between">
           <Link
             href="/"
@@ -96,7 +96,7 @@ export default function Header() {
                     className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
                       isActive("/contacts")
                         ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)]"
-                        : "text-foreground/60 hover:bg-white/5 hover:text-foreground"
+                        : "text-foreground/60 hover:bg-foreground/5 hover:text-foreground"
                     }`}
                   >
                     <ContactRound className="w-4 h-4" />
@@ -107,7 +107,7 @@ export default function Header() {
                     className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
                       isActive("/subscription")
                         ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)]"
-                        : "text-foreground/60 hover:bg-white/5 hover:text-foreground"
+                        : "text-foreground/60 hover:bg-foreground/5 hover:text-foreground"
                     }`}
                   >
                     <CreditCard className="w-4 h-4" />
@@ -118,7 +118,7 @@ export default function Header() {
                     className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
                       isActive("/bookings")
                         ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)]"
-                        : "text-foreground/60 hover:bg-white/5 hover:text-foreground"
+                        : "text-foreground/60 hover:bg-foreground/5 hover:text-foreground"
                     }`}
                   >
                     <Calendar className="w-4 h-4" />
@@ -129,7 +129,7 @@ export default function Header() {
                     className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
                       isActive("/services")
                         ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)]"
-                        : "text-foreground/60 hover:bg-white/5 hover:text-foreground"
+                        : "text-foreground/60 hover:bg-foreground/5 hover:text-foreground"
                     }`}
                   >
                     <ClipboardList className="w-4 h-4" />
@@ -161,7 +161,7 @@ export default function Header() {
                   </button>
 
                   {isMenuOpen && (
-                    <div className="absolute right-0 mt-3 w-56 bg-[#0a0a0a]/95 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl py-2 z-50">
+                    <div className="absolute right-0 mt-3 w-56 bg-card/95 backdrop-blur-xl rounded-2xl border border-border shadow-2xl py-2 z-50">
                       <div className="px-4 py-3 border-b border-white/5 mb-1">
                         <p className="text-sm font-bold text-foreground truncate">
                           {formatDisplayName(user.name)}

@@ -80,7 +80,7 @@ export default function Calendar({ selectedDate, onDateSelect, bookingDates = []
   ];
 
   return (
-    <div className="bg-[#0a0a0a] rounded-2xl border border-border p-4 sm:p-6 shadow-sm">
+    <div className="bg-card rounded-2xl border border-border p-4 sm:p-6 shadow-sm">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-bold text-foreground">
           {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}

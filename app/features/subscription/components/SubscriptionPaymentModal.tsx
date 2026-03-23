@@ -98,7 +98,7 @@ export default function SubscriptionPaymentModal({
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
       />
-      <div className="relative bg-[#0a0a0a] rounded-2xl border border-border shadow-xl w-full max-w-md overflow-hidden">
+      <div className="relative bg-card rounded-2xl border border-border shadow-xl w-full max-w-md overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="text-lg font-bold text-foreground">
             {state === "confirm" && "Confirm Payment"}
@@ -195,7 +195,7 @@ export default function SubscriptionPaymentModal({
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="flex-1 px-4 py-2.5 text-foreground bg-[#121212] border border-border rounded-full hover:bg-foreground/5 transition-all font-semibold"
+                  className="flex-1 px-4 py-2.5 text-foreground bg-zinc-100 dark:bg-white/5 border border-border rounded-full hover:bg-foreground/5 transition-all font-semibold"
                 >
                   Close
                 </button>

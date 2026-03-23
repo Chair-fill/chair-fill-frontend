@@ -113,7 +113,7 @@ export default function ProfilePage() {
           </div>
 
           {/* User Info Card */}
-          <div className="bg-[#0a0a0a] rounded-2xl border border-border p-4 sm:p-6 mb-6 shadow-sm">
+          <div className="bg-card rounded-2xl border border-border sm:p-6 mb-6 shadow-sm">
             {pictureError && (
               <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                 <p className="text-sm text-red-600 dark:text-red-400">
@@ -148,7 +148,7 @@ export default function ProfilePage() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={pictureLoading || isLoading}
-                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium text-foreground bg-[#121212] border border-border rounded-full hover:bg-foreground/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium text-foreground bg-zinc-100 dark:bg-white/5 border border-border rounded-full hover:bg-foreground/5 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {pictureLoading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -189,7 +189,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Tabs */}
-          <div className="bg-[#0a0a0a] rounded-2xl border border-border shadow-sm overflow-hidden">
+          <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
             <div className="border-b border-border">
               <nav className="flex flex-col sm:flex-row overflow-hidden divide-y divide-border sm:divide-y-0 sm:divide-x sm:divide-border">
                 {tabs.map(({ id, label, icon: Icon }) => (

@@ -176,8 +176,8 @@ export default function PaymentModal({
         onClick={onClose}
       />
 
-      <div className="relative bg-[#0a0a0a] rounded-2xl border border-border shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
-        <div className="sticky top-0 bg-[#0a0a0a] border-b border-border px-6 py-4 flex items-center justify-between z-10">
+      <div className="relative bg-card rounded-2xl border border-border shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+        <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between z-10">
           <div className="flex items-center gap-3">
             <Lock className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
             <h2 className="text-xl font-bold text-foreground">
@@ -427,7 +427,7 @@ export default function PaymentModal({
                     type="button"
                     onClick={onClose}
                     disabled={isLoading}
-                    className="flex-1 px-4 py-3 text-foreground bg-[#121212] border border-border rounded-full hover:bg-foreground/5 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-3 text-foreground bg-zinc-100 dark:bg-white/5 border border-border rounded-full hover:bg-foreground/5 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Cancel
                   </button>

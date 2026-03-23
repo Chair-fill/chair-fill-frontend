@@ -1,11 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --background: #ffffff;
+  --foreground: #09090b; /* zinc-950 */
   --primary: #d4af37; /* Chairfill Gold */
-  --primary-foreground: #000000;
-  --border: #27272a; /* zinc-800 */
+  --primary-foreground: #ffffff;
+  --border: #e4e4e7; /* zinc-200 */
+  --card: #fdfdfd;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --border: #27272a; /* zinc-800 */
+    --card: #0a0a0a;
+    --primary-foreground: #000000;
+  }
 }
 
 @theme inline {
@@ -14,15 +25,8 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-border: var(--border);
+  --color-card: var(--card);
   --font-sans: var(--font-satoshi), system-ui, -apple-system, sans-serif;
-}
-
-@media (prefers-color-scheme: light) {
-  /* Force dark theme anyway for brand consistency, or leave it identical */
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {

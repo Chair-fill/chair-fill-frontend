@@ -298,7 +298,7 @@ export default function SubscriptionPage() {
           )}
 
           {/* Active subscription – always show; no subscription = prompt to select */}
-          <div className="bg-[#0a0a0a] rounded-2xl border border-border p-6 mb-8 shadow-sm">
+          <div className="bg-card rounded-2xl border border-border p-6 mb-8 shadow-sm">
             <h2 className="text-xl font-bold text-foreground mb-4">
               Active subscription
             </h2>
@@ -354,7 +354,7 @@ export default function SubscriptionPage() {
                         <button
                           onClick={() => toggleAutoRenew()}
                           disabled={isLoading}
-                          className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-foreground bg-[#121212] border border-border rounded-full hover:bg-foreground/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-foreground bg-zinc-100 dark:bg-white/5 border border-border rounded-full hover:bg-foreground/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                           aria-label={`Turn auto-renew ${displaySubscription.autoRenew ? "off" : "on"}`}
                         >
                           {isLoading ? (
@@ -394,7 +394,7 @@ export default function SubscriptionPage() {
                             </button>
                             <button
                               onClick={() => setShowCancelConfirm(false)}
-                              className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-foreground bg-[#121212] border border-border rounded-full hover:bg-foreground/5 transition-all"
+                              className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-foreground bg-zinc-100 dark:bg-white/5 border border-border rounded-full hover:bg-foreground/5 transition-all"
                               aria-label="Keep subscription"
                             >
                               <Check className="w-5 h-5 sm:w-4 sm:h-4 text-green-500" />
@@ -474,8 +474,8 @@ export default function SubscriptionPage() {
                           isCurrentPlan
                             ? "border-zinc-400 dark:border-zinc-500 bg-zinc-50/50 dark:bg-zinc-800/30 shadow-sm"
                             : isPopular
-                              ? "border-blue-500 dark:border-blue-400 bg-[#0a0a0a] shadow-lg shadow-blue-500/10 lg:shadow-xl lg:shadow-blue-500/10"
-                              : "border-border bg-[#0a0a0a] shadow-sm"
+                              ? "border-blue-500 dark:border-blue-400 bg-card shadow-lg shadow-blue-500/10 lg:shadow-xl lg:shadow-blue-500/10"
+                              : "border-border bg-card shadow-sm"
                         } ${isSelectable ? "hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-md cursor-pointer" : ""}`}
                       >
                         {/* Badges */}
@@ -602,7 +602,7 @@ export default function SubscriptionPage() {
           )}
 
           {/* Additional Info */}
-          <div className="bg-[#0a0a0a] rounded-2xl border border-border p-6 shadow-sm">
+          <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
             <h3 className="text-lg font-bold text-foreground mb-4">
               Manage your subscription
             </h3>

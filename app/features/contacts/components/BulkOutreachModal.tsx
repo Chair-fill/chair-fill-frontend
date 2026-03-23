@@ -176,7 +176,7 @@ export default function BulkOutreachModal({
         onClick={handleClose}
       />
       <div
-        className="relative bg-[#0a0a0a] rounded-2xl border border-border shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
+        className="relative bg-card rounded-2xl border border-border shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
@@ -335,7 +335,7 @@ export default function BulkOutreachModal({
                       type="button"
                       onClick={goBack}
                       disabled={isSending}
-                      className="px-4 py-2.5 text-foreground bg-[#121212] border border-border rounded-full hover:bg-foreground/5 transition-all font-semibold disabled:opacity-50"
+                      className="px-4 py-2.5 text-foreground bg-zinc-100 dark:bg-white/5 border border-border rounded-full hover:bg-foreground/5 transition-all font-semibold disabled:opacity-50"
                     >
                       Back
                     </button>

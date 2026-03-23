@@ -317,8 +317,8 @@ export default function OnboardingChoosePlanPage() {
                       }}
                       className={`relative flex flex-col rounded-3xl border-2 transition-all duration-200 ${orderClass} ${
                         isPopular
-                          ? "border-primary bg-[#121212] shadow-lg shadow-primary/10 lg:shadow-xl lg:shadow-primary/10"
-                          : "border-border bg-[#0a0a0a] shadow-sm"
+                          ? "border-primary bg-zinc-100 dark:bg-white/5 shadow-lg shadow-primary/10 lg:shadow-xl lg:shadow-primary/10"
+                          : "border-border bg-card shadow-sm"
                       } ${isSelectable ? "hover:border-primary/50 hover:shadow-md cursor-pointer" : ""}`}
                     >
                       {/* Badges */}

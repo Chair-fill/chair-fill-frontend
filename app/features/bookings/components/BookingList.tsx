@@ -59,7 +59,7 @@ export default function BookingList({ bookings, selectedDate, isBlocked = false,
       )}
 
       {sortedBookings.length === 0 ? (
-        <div className="bg-[#0a0a0a] rounded-2xl border border-border p-12 text-center">
+        <div className="bg-card rounded-2xl border border-border p-12 text-center">
           <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
             <ClipboardList className="w-8 h-8 text-foreground/20" />
           </div>
@@ -70,7 +70,7 @@ export default function BookingList({ bookings, selectedDate, isBlocked = false,
           {sortedBookings.map((booking, index) => (
             <div
               key={booking.id}
-              className="bg-[#0a0a0a] rounded-2xl border border-border p-4 flex items-center justify-between group hover:border-primary/50 transition-all animate-almost-done-in"
+              className="bg-card rounded-2xl border border-border p-4 flex items-center justify-between group hover:border-primary/50 transition-all animate-almost-done-in"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               <div className="flex items-center gap-4">

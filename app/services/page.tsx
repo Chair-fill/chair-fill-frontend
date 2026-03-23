@@ -312,7 +312,7 @@ export default function ServicesPage() {
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-black pt-12 sm:pt-24 pb-8">
         <main className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mx-auto rounded-xl bg-[#0a0a0a] border border-border p-6 text-center">
+          <div className="max-w-2xl mx-auto rounded-xl bg-card border border-border p-6 text-center">
             {isBarber ? (
               <>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -367,7 +367,7 @@ export default function ServicesPage() {
           <div className="flex flex-col lg:flex-row lg:gap-8 lg:items-start">
             {/* Add / Edit form (desktop only) - left column */}
             <section
-              className="hidden sm:block flex-1 min-w-0 max-w-xl rounded-2xl border border-border bg-[#0a0a0a] p-5 sm:p-6 shadow-sm shrink-0"
+              className="hidden sm:block flex-1 min-w-0 max-w-xl rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm shrink-0"
               aria-labelledby="add-service-heading"
             >
               <h2
@@ -669,14 +669,14 @@ export default function ServicesPage() {
                 </div>
               )}
               {listLoading ? (
-                <div className="rounded-2xl border border-border bg-[#0a0a0a] p-8 flex items-center justify-center">
+                <div className="rounded-2xl border border-border bg-card p-8 flex items-center justify-center">
                   <Loader2
                     className="w-8 h-8 animate-spin text-zinc-400"
                     aria-hidden
                   />
                 </div>
               ) : services.length === 0 ? (
-                <div className="rounded-2xl border border-border bg-[#0a0a0a] p-8 text-center">
+                <div className="rounded-2xl border border-border bg-card p-8 text-center">
                   <ClipboardList
                     className="w-12 h-12 mx-auto text-zinc-300 dark:text-zinc-600 mb-3"
                     aria-hidden
@@ -698,7 +698,7 @@ export default function ServicesPage() {
                   {services.map((s) => (
                     <li
                       key={s.id}
-                      className="rounded-2xl border border-border bg-[#0a0a0a] px-4 py-3 flex flex-row flex-wrap sm:flex-nowrap sm:items-center justify-between gap-3 shadow-sm"
+                      className="rounded-2xl border border-border bg-card px-4 py-3 flex flex-row flex-wrap sm:flex-nowrap sm:items-center justify-between gap-3 shadow-sm"
                     >
                       {confirmRemoveId === s.id ? (
                         <>

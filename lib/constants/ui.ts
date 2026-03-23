@@ -12,11 +12,11 @@ export const AUTH_LAYOUT_INNER = "w-full max-w-md";
 
 /** Card container for auth forms */
 export const AUTH_CARD =
-  "bg-[#0a0a0a] rounded-2xl border border-border shadow-sm p-6 sm:p-8";
+  "bg-card rounded-2xl border border-border shadow-sm p-6 sm:p-8";
 
 /** Card with slightly rounder corners (e.g. complete-registration) */
 export const AUTH_CARD_ROUNDED =
-  "bg-[#0a0a0a] rounded-3xl border border-border shadow-sm p-6 sm:p-8";
+  "bg-card rounded-3xl border border-border shadow-sm p-6 sm:p-8";
 
 /** Form label */
 export const FORM_LABEL =
@@ -24,7 +24,7 @@ export const FORM_LABEL =
 
 /** Base input styles */
 const INPUT_BASE =
-  "w-full py-2.5 border border-border rounded-xl bg-[#121212] text-foreground focus:outline-none focus:ring-2 focus:ring-primary";
+  "w-full py-2.5 border border-border rounded-xl bg-zinc-50 dark:bg-zinc-800 text-foreground focus:outline-none focus:ring-2 focus:ring-primary";
 
 /** Input with left icon (e.g. Mail, Lock) */
 export const INPUT_LEFT_ICON = `pl-10 pr-4 ${INPUT_BASE}`;

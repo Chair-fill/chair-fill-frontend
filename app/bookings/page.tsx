@@ -176,7 +176,7 @@ export default function BookingsPage() {
                 blockedDates={technician?.blocked_dates}
               />
 
-              <div className="bg-[#0a0a0a] rounded-2xl border border-border p-6 shadow-xl relative overflow-hidden group">
+              <div className="bg-card rounded-2xl border border-border p-6 shadow-xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                   <Share2 className="w-32 h-32" />
                 </div>
@@ -199,7 +199,7 @@ export default function BookingsPage() {
             </div>
 
             <div className="hidden lg:block lg:col-span-12 xl:col-span-7">
-              <div className="bg-[#0a0a0a] rounded-2xl border border-border p-6 min-h-[500px] shadow-xl">
+              <div className="bg-card rounded-2xl border border-border p-6 min-h-[500px] shadow-xl">
                 <BookingList
                   bookings={bookingsForSelectedDate}
                   selectedDate={selectedDate}

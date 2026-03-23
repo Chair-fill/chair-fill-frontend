@@ -101,7 +101,7 @@ export default function AvailabilityModal({ isOpen, onClose }: AvailabilityModal
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#0a0a0a] w-full max-w-2xl rounded-none sm:rounded-3xl border-t sm:border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+      <div className="bg-card w-full max-w-2xl rounded-none sm:rounded-3xl border-t sm:border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
         <div className="flex items-center justify-between p-6 sm:p-8 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="p-2 sm:p-3 bg-primary/10 rounded-2xl">
