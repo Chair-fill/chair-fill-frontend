@@ -106,9 +106,9 @@ export default function PublicBookingPage() {
           blocked_dates: []
         });
         setOfferings([
-          { id: '1', offering_id: 'off-1', name: 'Signature Haircut', price: 45, duration: 45, description: 'Precision cut with hot towel finish.', promo: true },
-          { id: '2', offering_id: 'off-2', name: 'Beard Grooming', price: 25, duration: 30, description: 'Sculpting and conditioning.' },
-          { id: '3', offering_id: 'off-3', name: 'The Full Service', price: 60, duration: 75, description: 'Haircut + Beard treatment + Facial.' }
+          { id: '1', offering_id: 'off-1', name: 'Signature Haircut', price: 45, duration: 45, description: 'Precision cut with hot towel finish.', promo: true, technician_id: 'barber-id' },
+          { id: '2', offering_id: 'off-2', name: 'Beard Grooming', price: 25, duration: 30, description: 'Sculpting and conditioning.', technician_id: 'barber-id' },
+          { id: '3', offering_id: 'off-3', name: 'The Full Service', price: 60, duration: 75, description: 'Haircut + Beard treatment + Facial.', technician_id: 'barber-id' }
         ]);
         setIsLoading(false);
         return;
