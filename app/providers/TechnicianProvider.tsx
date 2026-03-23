@@ -41,6 +41,7 @@ export interface Technician {
   conversational_style?: Array<{ context: string; response: string }>;
   availability?: Availability;
   blocked_dates?: string[]; // YYYY-MM-DD
+  avatar_url?: string;
   [key: string]: unknown;
 }
 
