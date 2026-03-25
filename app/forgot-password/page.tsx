@@ -83,7 +83,7 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
     try {
       await api.post(API.AUTH.FORGOT_PASSWORD_OTP_VERIFY, {
-        field: field.trim(),
+        field: field.trim().toLowerCase(),
         otp: otp.trim(),
         token,
       });
@@ -109,7 +109,7 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
     try {
       await api.post(API.AUTH.FORGOT_PASSWORD_UPDATE, {
-        field: field.trim(),
+        field: field.trim().toLowerCase(),
         otp: otp.trim(),
         token,
         newPassword,

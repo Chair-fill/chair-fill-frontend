@@ -167,7 +167,7 @@ export default function SignupPage() {
     try {
       await signup({
         name: name.trim(),
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         password,
         phoneNumber: normalizedPhone,
       });

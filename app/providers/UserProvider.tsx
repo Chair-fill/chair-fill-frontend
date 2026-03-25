@@ -429,7 +429,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       const { data } = await api.post<{ user?: UserProfile; token?: string }>(API.AUTH.SIGNIN, {
-        field: email,
+        field: email.trim().toLowerCase(),
         password,
       });
       const profile = (data as { user?: UserProfile }).user ?? data;
@@ -455,7 +455,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       const { data } = await api.post<{ user?: UserProfile; token?: string }>(API.AUTH.SIGNIN, {
-        field: email,
+        field: email.trim().toLowerCase(),
         token: verifyToken,
         otp,
       });
@@ -489,7 +489,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         ? { firstname: data.firstname, lastname: data.lastname }
         : splitName(data.name);
       const body = {
-        email: data.email,
+        email: data.email.trim().toLowerCase(),
         password: data.password,
         firstname: parts.firstname,
         lastname: parts.lastname,

@@ -15,12 +15,15 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  MessageSquare,
 } from "lucide-react";
 import ContactUploadModal from "@/app/features/contacts/components/ContactUploadModal";
 import AddContactModal from "@/app/features/contacts/components/AddContactModal";
 import OutreachMessageModal from "@/app/features/contacts/components/OutreachMessageModal";
 import FormError from "@/app/components/ui/FormError";
 import { formatDisplayName } from "@/lib/utils/format";
+import ChatThreadModal from "@/app/features/contacts/components/ChatThreadModal";
+import { useTechnician } from "@/app/providers/TechnicianProvider";
 
 export default function ContactsList() {
   const {
@@ -41,6 +44,10 @@ export default function ContactsList() {
   const [outreachError, setOutreachError] = useState("");
   const [isOutreachMessageOpen, setIsOutreachMessageOpen] = useState(false);
   const [desktopPageIndex, setDesktopPageIndex] = useState(0);
+  const [chatContact, setChatContact] = useState<{ id: string; name: string } | null>(null);
+
+  const { technician } = useTechnician();
+  const technicianId = technician?.technician_id ?? technician?.id ?? "";
 
   const pageCount = Math.max(1, Math.ceil(contacts.length / pageSize));
   const clampedPageIndex = Math.max(
@@ -226,7 +233,8 @@ export default function ContactsList() {
             return (
               <div
                 key={contact.id}
-                className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                onClick={() => setChatContact({ id: contact.id, name: contact.name })}
+                className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer"
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -234,7 +242,10 @@ export default function ContactsList() {
                       type="checkbox"
                       id={`mobile-${contact.id}`}
                       checked={isSelected}
-                      onChange={() => hasPhone && toggleSelect(contact.id)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        if (hasPhone) toggleSelect(contact.id);
+                      }}
                       disabled={!hasPhone}
                       className="cursor-pointer h-4 w-4 rounded border border-zinc-300 dark:border-zinc-600 bg-transparent appearance-none checked:bg-blue-500 checked:border-blue-500 text-blue-500 focus:ring-blue-500 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
@@ -249,7 +260,10 @@ export default function ContactsList() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <button
-                      onClick={() => removeContact(contact.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeContact(contact.id);
+                      }}
                       className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       title="Delete contact"
                     >
@@ -263,6 +277,7 @@ export default function ContactsList() {
                       <Mail className="w-4 h-4 text-zinc-500 dark:text-zinc-500 shrink-0" />
                       <a
                         href={`mailto:${contact.email}`}
+                        onClick={(e) => e.stopPropagation()}
                         className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 truncate"
                       >
                         {contact.email}
@@ -321,25 +336,33 @@ export default function ContactsList() {
                 return (
                   <tr
                     key={contact.id}
-                    className="border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                    onClick={() => setChatContact({ id: contact.id, name: contact.name })}
+                    className="border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer group/row"
                   >
                     <td className="py-3 px-4">
                       <input
                         type="checkbox"
                         id={`table-${contact.id}`}
                         checked={isSelected}
-                        onChange={() => hasPhone && toggleSelect(contact.id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          if (hasPhone) toggleSelect(contact.id);
+                        }}
                         disabled={!hasPhone}
                         className="cursor-pointer h-4 w-4 rounded border border-zinc-300 dark:border-zinc-600 bg-transparent appearance-none checked:bg-blue-500 checked:border-blue-500 text-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </td>
                     <td className="py-3 px-4 text-zinc-900 dark:text-zinc-50">
-                      {formatDisplayName(contact.name) || "-"}
+                      <div className="flex items-center gap-3">
+                        <span>{formatDisplayName(contact.name) || "-"}</span>
+                        <MessageSquare className="w-3.5 h-3.5 opacity-0 group-hover/row:opacity-100 transition-opacity text-primary" />
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-zinc-700 dark:text-zinc-300">
                       {contact.email ? (
                         <a
                           href={`mailto:${contact.email}`}
+                          onClick={(e) => e.stopPropagation()}
                           className="hover:text-zinc-900 dark:hover:text-zinc-100"
                         >
                           {contact.email}
@@ -354,7 +377,10 @@ export default function ContactsList() {
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => removeContact(contact.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeContact(contact.id);
+                          }}
                           className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                           title="Delete contact"
                         >
@@ -451,6 +477,14 @@ export default function ContactsList() {
         selectedContacts={selectedContactsWithPhone}
         onClose={() => setIsOutreachMessageOpen(false)}
         onSent={() => clearOutreachSelection()}
+      />
+      
+      <ChatThreadModal
+        isOpen={!!chatContact}
+        onClose={() => setChatContact(null)}
+        contactId={chatContact?.id ?? ""}
+        contactName={chatContact?.name ?? ""}
+        technicianId={technicianId}
       />
     </>
   );

@@ -106,4 +106,11 @@ export const API = {
   URL: {
     GENERATE: '/url/generate',
   },
+  /** Chat Threads (Postman: Threads). Query and stream. */
+  THREADS: {
+    /** GET - Query threads. Query: provider_chat_id?, barber_id?, user_id?, conversation_type?, contact_id?, cursor?, from?, to?, page_size?, lean? */
+    QUERY: '/threads/query',
+    /** GET - Stream messages for a thread. Path: /threads/:id/stream. Query: provider?, page_number?, cursor?, from?, to?, page_size?, lean? */
+    STREAM: (id: string) => `/threads/${encodeURIComponent(id)}/stream`,
+  },
 } as const;
