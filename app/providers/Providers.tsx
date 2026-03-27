@@ -1,5 +1,6 @@
 'use client';
 
+import { ReactNode } from 'react';
 import QueryProvider from "@/app/providers/QueryProvider";
 import { ContactsProvider } from "@/app/providers/ContactsProvider";
 import { ProgressProvider } from "@/app/providers/ProgressProvider";
