@@ -115,8 +115,10 @@ export default function SignupPage() {
     // Updated regex to support: 13184611055, +13184611055, 3184611055 (and general digits + optional plus prefix)
     const phoneDigitsOnly = phoneTrimmed.replace(/[^0-9]/g, "");
     const hasPlus = phoneTrimmed.startsWith("+");
-    const isValidFormat = (hasPlus ? phoneDigitsOnly.length >= 10 : phoneDigitsOnly.length >= 10);
-    
+    const isValidFormat = hasPlus
+      ? phoneDigitsOnly.length >= 10
+      : phoneDigitsOnly.length >= 10;
+
     // Very permissive regex that ensures we have enough digits and optional plus
     if (!/^\+?[0-9]{10,15}$/.test(phoneTrimmed.replace(/[\s-()]/g, ""))) {
       setError("Must Be Valid Phone Number");
@@ -154,7 +156,7 @@ export default function SignupPage() {
     // Normalize USA phone numbers: ensure strictly +13184611055 format
     const digits = phoneTrimmed.replace(/[^0-9]/g, "");
     let normalizedPhone = phoneTrimmed;
-    
+
     if (digits.length === 10) {
       normalizedPhone = `+1${digits}`;
     } else if (digits.length === 11 && digits.startsWith("1")) {
@@ -176,7 +178,11 @@ export default function SignupPage() {
       window.location.href = "/login?registered=1";
     } catch (err) {
       const apiError = getApiErrorMessage(err);
-      if (apiError.toLowerCase().includes("phonenumber must be a valid phone number")) {
+      if (
+        apiError
+          .toLowerCase()
+          .includes("phonenumber must be a valid phone number")
+      ) {
         setError("Must Be Valid Phone Number");
       } else {
         setError(apiError);
@@ -299,8 +305,8 @@ export default function SignupPage() {
               <div className="relative">
                 <input
                   type="email"
-                  name="username"
-                  autoComplete="username"
+                  name="email"
+                  autoComplete="email"
                   value={email}
                   readOnly
                   className="sr-only"

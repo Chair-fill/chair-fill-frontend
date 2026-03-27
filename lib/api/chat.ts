@@ -21,6 +21,8 @@ export async function streamMessages(threadId: string, params: {
   provider?: string;
   page_size?: number;
   cursor?: string;
+  from?: string;
+  to?: string;
 }) {
   const query = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
@@ -42,6 +44,9 @@ export async function streamMessages(threadId: string, params: {
         provider_message_id: msgData.guid,
       };
     });
+    
+    // Sort messages by created_at in ascending order (oldest first)
+    mappedMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     
     return {
       ...response,

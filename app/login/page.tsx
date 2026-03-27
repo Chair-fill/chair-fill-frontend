@@ -189,7 +189,6 @@ export default function LoginPage() {
                   id="email"
                   name="email"
                   type="email"
-                  autoComplete="username"
                   required
                   value={email}
                   onChange={(e) => {
@@ -223,7 +222,6 @@ export default function LoginPage() {
                   id="password"
                   name="password"
                   type="password"
-                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => {
@@ -254,9 +252,7 @@ export default function LoginPage() {
                     <div className="w-full border-t border-border" />
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="bg-card px-2 text-foreground/60">
-                      or
-                    </span>
+                    <span className="bg-card px-2 text-foreground/60">or</span>
                   </div>
                 </div>
 

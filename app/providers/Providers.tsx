@@ -6,21 +6,24 @@ import { ProgressProvider } from "@/app/providers/ProgressProvider";
 import { SubscriptionProvider } from "@/app/providers/SubscriptionProvider";
 import { TechnicianProvider } from "@/app/providers/TechnicianProvider";
 import { UserProvider } from "@/app/providers/UserProvider";
+import { ChatProvider } from "@/app/providers/ChatProvider";
 import SubscriptionPrefetcher from "@/app/components/SubscriptionPrefetcher";
 
-export default function Providers({ children }: { children: React.ReactNode }) {
+export default function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryProvider>
     <UserProvider>
       <TechnicianProvider>
-        <SubscriptionPrefetcher />
-        <ProgressProvider>
-          <ContactsProvider>
-            <SubscriptionProvider>
-              {children}
-            </SubscriptionProvider>
-          </ContactsProvider>
-        </ProgressProvider>
+        <ChatProvider>
+          <SubscriptionPrefetcher />
+          <ProgressProvider>
+            <ContactsProvider>
+              <SubscriptionProvider>
+                {children}
+              </SubscriptionProvider>
+            </ContactsProvider>
+          </ProgressProvider>
+        </ChatProvider>
       </TechnicianProvider>
     </UserProvider>
     </QueryProvider>
