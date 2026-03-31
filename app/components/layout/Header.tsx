@@ -13,8 +13,10 @@ import {
   Settings,
   LogOut,
   ChevronDown,
-  LogIn,
   UserPlus,
+  Wallet,
+  LogIn,
+  Home,
 } from "lucide-react";
 import { useUser } from "@/app/providers/UserProvider";
 import { isPublicRoute } from "@/lib/auth";
@@ -92,26 +94,15 @@ export default function Header() {
               <>
                 <nav className="hidden md:flex items-center space-x-1">
                   <Link
-                    href="/contacts"
+                    href="/"
                     className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
-                      isActive("/contacts")
+                      isActive("/")
                         ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)]"
                         : "text-foreground/60 hover:bg-foreground/5 hover:text-foreground"
                     }`}
                   >
-                    <ContactRound className="w-4 h-4" />
-                    <span className="hidden sm:block pt-0.5">Contacts</span>
-                  </Link>
-                  <Link
-                    href="/subscription"
-                    className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
-                      isActive("/subscription")
-                        ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)]"
-                        : "text-foreground/60 hover:bg-foreground/5 hover:text-foreground"
-                    }`}
-                  >
-                    <CreditCard className="w-4 h-4" />
-                    <span className="hidden sm:block pt-0.5">Subscription</span>
+                    <Home className="w-4 h-4" />
+                    <span className="hidden sm:block pt-0.5">Home</span>
                   </Link>
                   <Link
                     href="/bookings"
@@ -125,6 +116,17 @@ export default function Header() {
                     <span className="hidden sm:block pt-0.5">Bookings</span>
                   </Link>
                   <Link
+                    href="/contacts"
+                    className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
+                      isActive("/contacts")
+                        ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)]"
+                        : "text-foreground/60 hover:bg-foreground/5 hover:text-foreground"
+                    }`}
+                  >
+                    <ContactRound className="w-4 h-4" />
+                    <span className="hidden sm:block pt-0.5">Contacts</span>
+                  </Link>
+                  <Link
                     href="/services"
                     className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
                       isActive("/services")
@@ -135,7 +137,34 @@ export default function Header() {
                     <ClipboardList className="w-4 h-4" />
                     <span className="hidden sm:block pt-0.5">Services</span>
                   </Link>
+                  <Link
+                    href="/subscription"
+                    className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
+                      isActive("/subscription")
+                        ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)]"
+                        : "text-foreground/60 hover:bg-foreground/5 hover:text-foreground"
+                    }`}
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span className="hidden sm:block pt-0.5">Subscription</span>
+                  </Link>
+                  <Link
+                    href="/wallet"
+                    className="flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold text-foreground/60 hover:bg-foreground/5 hover:text-foreground transition-all duration-300"
+                  >
+                    <Wallet className="w-4 h-4" />
+                    <span className="hidden sm:block pt-0.5">Wallet</span>
+                  </Link>
                 </nav>
+
+                {/* Mobile Wallet Icon */}
+                <Link
+                  href="/wallet"
+                  className="md:hidden flex items-center justify-center w-10 h-10 rounded-full text-foreground/60 hover:bg-foreground/5 hover:text-foreground transition-all active:scale-95 border border-transparent"
+                  aria-label="Wallet"
+                >
+                  <Wallet className="w-5 h-5" />
+                </Link>
 
                 {/* User Menu */}
                 <div className="relative" ref={menuRef}>

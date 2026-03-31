@@ -134,8 +134,65 @@ button:disabled {
       scrollbar-width: none; /* Firefox */
       -ms-overflow-style: none; /* IE and Edge */
       &::-webkit-scrollbar {
-        display: none; /* Chrome, Safari and Opera */
       }
     }
+  }
+}
+
+/* Print Styles for PDF Export */
+@media print {
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    background-color: white !important;
+    color: black !important;
+  }
+
+  /* Hide navigation and interactive elements */
+  header, 
+  nav, 
+  footer,
+  .sticky,
+  .fixed,
+  button,
+  .pointer-events-auto,
+  [aria-label="Wallet"],
+  [title="Refresh Data"] {
+    display: none !important;
+  }
+
+  /* Reset layout for print */
+  .container {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  main {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .max-w-7xl {
+    max-width: 100% !important;
+  }
+
+  /* Prevent page breaks inside cards */
+  .bg-card, 
+  .rounded-2xl {
+    break-inside: avoid;
+    border: 1px solid #e4e4e7 !important;
+    box-shadow: none !important;
+    background: white !important;
+  }
+
+  /* Ensure text is visible */
+  .text-foreground\/60 {
+    color: #71717a !important; /* zinc-500 */
+  }
+
+  .text-primary {
+    color: #d4af37 !important;
   }
 }

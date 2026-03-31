@@ -7,6 +7,8 @@ import {
   CreditCard,
   Calendar,
   ClipboardList,
+  Home,
+  Wallet,
 } from "lucide-react";
 
 export default function BottomNav() {
@@ -18,14 +20,9 @@ export default function BottomNav() {
 
   const navItems = [
     {
-      label: "Contacts",
-      href: "/contacts",
-      icon: ContactRound,
-    },
-    {
-      label: "Subscription",
-      href: "/subscription",
-      icon: CreditCard,
+      label: "Home",
+      href: "/",
+      icon: Home,
     },
     {
       label: "Bookings",
@@ -33,9 +30,19 @@ export default function BottomNav() {
       icon: Calendar,
     },
     {
+      label: "Contacts",
+      href: "/contacts",
+      icon: ContactRound,
+    },
+    {
       label: "Services",
       href: "/services",
       icon: ClipboardList,
+    },
+    {
+      label: "Subscription",
+      href: "/subscription",
+      icon: CreditCard,
     },
   ];
 
