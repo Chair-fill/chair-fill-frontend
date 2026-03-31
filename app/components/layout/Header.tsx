@@ -105,17 +105,6 @@ export default function Header() {
                     <span className="hidden sm:block pt-0.5">Home</span>
                   </Link>
                   <Link
-                    href="/bookings"
-                    className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
-                      isActive("/bookings")
-                        ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)]"
-                        : "text-foreground/60 hover:bg-foreground/5 hover:text-foreground"
-                    }`}
-                  >
-                    <Calendar className="w-4 h-4" />
-                    <span className="hidden sm:block pt-0.5">Bookings</span>
-                  </Link>
-                  <Link
                     href="/contacts"
                     className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
                       isActive("/contacts")
@@ -125,6 +114,17 @@ export default function Header() {
                   >
                     <ContactRound className="w-4 h-4" />
                     <span className="hidden sm:block pt-0.5">Contacts</span>
+                  </Link>
+                  <Link
+                    href="/bookings"
+                    className={`flex items-center gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-semibold transition-all duration-300 ${
+                      isActive("/bookings")
+                        ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)]"
+                        : "text-foreground/60 hover:bg-foreground/5 hover:text-foreground"
+                    }`}
+                  >
+                    <Calendar className="w-4 h-4" />
+                    <span className="hidden sm:block pt-0.5">Bookings</span>
                   </Link>
                   <Link
                     href="/services"

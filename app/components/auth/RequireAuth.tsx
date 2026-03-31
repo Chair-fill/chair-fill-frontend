@@ -25,7 +25,9 @@ function getRedirectForProgress(
   demo: boolean,
 ): string {
   if (demo) return "/contacts";
-  if (progress == null) return "/signup";
+  // If progress is null, we are likely waiting for it to load.
+  // Default to "/" (Home/Dashboard) to allow the app to stabilize.
+  if (progress == null) return "/";
   if (progress.has_subscribed === true) return "/contacts";
   if (progress.is_technician !== true) return ONBOARDING_BARBER_ACCOUNT;
   return ONBOARDING_CHOOSE_PLAN;
@@ -61,14 +63,24 @@ export default function RequireAuth({ children }: RequireAuthProps) {
 
     if (user && isProgressLoading) return;
 
-    // Don't redirect if we are on a public route or home,
-    // UNLESS it's a route that should be strictly for logged-out guests (like login/signup),
-    // but here we just want to avoid redirecting AWAY from /book/* or /
-    if (pathname === "/" || pathname.startsWith("/book/")) {
+    // If logged in and on a public route (like /login or /signup),
+    // redirect to the desired dashboard/onboarding path.
+    if (publicRoute) {
+       // If publicRoute is just "/" (Home), it's already handled by desiredPath logic below.
+       // For /login or /signup, we move them to their dashboard.
+       if (pathname === "/login" || pathname === "/signup") {
+         router.replace(desiredPath === "/" ? "/contacts" : desiredPath);
+       }
+       return;
+    }
+
+    // Don't redirect if we are on home - it will show the dashboard component already.
+    if (pathname === "/") {
       return;
     }
 
-    if (desiredPath !== "/contacts" && pathname !== desiredPath) {
+    // Enforce onboarding steps for logged-in users.
+    if (desiredPath !== "/" && desiredPath !== "/contacts" && pathname !== desiredPath) {
       router.replace(desiredPath);
     }
   }, [
