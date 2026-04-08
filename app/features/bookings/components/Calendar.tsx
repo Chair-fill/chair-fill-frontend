@@ -37,29 +37,38 @@ export default function Calendar({ selectedDate, onDateSelect, bookingDates = []
       days.push(<div key={`empty-${i}`} className="h-10 sm:h-12" />);
     }
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     for (let d = 1; d <= totalDays; d++) {
       const date = new Date(year, month, d);
-      const dateString = date.toISOString().split('T')[0];
+      // Build local YYYY-MM-DD (not UTC) so the key matches the page's
+      // local-bucketed bookingDates / blockedDates lists.
+      const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
       const isSelected = date.toDateString() === selectedDate.toDateString();
       const hasBookings = bookingDates.includes(dateString);
       const isBlocked = blockedDates.includes(dateString);
-      const isToday = date.toDateString() === new Date().toDateString();
+      const isToday = date.toDateString() === today.toDateString();
+      const isPast = date < today;
 
       days.push(
         <button
           key={d}
           onClick={() => onDateSelect(date)}
+          disabled={isPast}
           className={`relative h-10 sm:h-12 w-full rounded-xl flex items-center justify-center text-sm font-medium transition-all ${
             isSelected
               ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105 z-10"
-              : isBlocked
-                ? "bg-red-500/10 text-red-500/60 border border-red-500/20"
-                : "text-foreground hover:bg-white/5"
+              : isPast
+                ? "text-foreground/30 cursor-not-allowed"
+                : isBlocked
+                  ? "bg-red-500/10 text-red-500/60 border border-red-500/20"
+                  : "text-foreground hover:bg-white/5"
           } ${isToday && !isSelected ? "border border-primary/40 text-primary" : ""}`}
         >
           {d}
           {hasBookings && !isSelected && !isBlocked && (
-            <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+            <span className={`absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${isPast ? "bg-foreground/30" : "bg-primary"}`} />
           )}
           {isBlocked && !isSelected && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">

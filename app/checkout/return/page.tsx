@@ -19,15 +19,15 @@ function CheckoutReturnContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!sessionId) {
-      setStatus('error');
-      setError('No session ID provided.');
-      return;
-    }
-
     let cancelled = false;
 
     async function checkSession() {
+      if (!sessionId) {
+        if (cancelled) return;
+        setStatus('error');
+        setError('No session ID provided.');
+        return;
+      }
       try {
         const { data } = await api.get<{ status?: string; planId?: string }>(
           `${API.PAYMENT.SESSION_STATUS}?session_id=${encodeURIComponent(sessionId!)}`

@@ -198,30 +198,33 @@ export default function ContactsList() {
         )}
 
         {contactsWithPhone.length > 0 && (
-          <div className="flex items-center gap-2 mb-3 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">
-              Select contacts for blast:
-            </span>
+          <div className="mb-3 text-sm">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-zinc-600 dark:text-zinc-400">
+                Select contacts for blast
+                {selectedContactsWithPhone.length > 0 && (
+                  <span className="ml-1 text-zinc-500">
+                    ({selectedContactsWithPhone.length} selected)
+                  </span>
+                )}
+              </span>
+              {selectedContactsWithPhone.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearOutreachSelection}
+                  className="font-medium text-zinc-600 dark:text-zinc-400 hover:underline shrink-0"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
             <button
               type="button"
               onClick={selectAllWithPhone}
-              className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+              className="mt-2 inline-flex items-center font-medium text-blue-600 dark:text-blue-400 hover:underline"
             >
               Select all with phone ({contactsWithPhone.length})
             </button>
-            <span className="text-zinc-400">|</span>
-            <button
-              type="button"
-              onClick={clearOutreachSelection}
-              className="font-medium text-zinc-600 dark:text-zinc-400 hover:underline"
-            >
-              Clear selection
-            </button>
-            {selectedContactsWithPhone.length > 0 && (
-              <span className="text-zinc-500">
-                ({selectedContactsWithPhone.length} selected)
-              </span>
-            )}
           </div>
         )}
 
@@ -242,6 +245,7 @@ export default function ContactsList() {
                       type="checkbox"
                       id={`mobile-${contact.id}`}
                       checked={isSelected}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) => {
                         e.stopPropagation();
                         if (hasPhone) toggleSelect(contact.id);
@@ -344,6 +348,7 @@ export default function ContactsList() {
                         type="checkbox"
                         id={`table-${contact.id}`}
                         checked={isSelected}
+                        onClick={(e) => e.stopPropagation()}
                         onChange={(e) => {
                           e.stopPropagation();
                           if (hasPhone) toggleSelect(contact.id);

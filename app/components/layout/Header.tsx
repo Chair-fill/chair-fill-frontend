@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -24,18 +24,23 @@ import { formatDisplayName } from "@/lib/utils/format";
 import { isDemoMode } from "@/lib/demo";
 import AuthenticatedAvatar from "@/app/components/ui/AuthenticatedAvatar";
 
+// Subscribe noop — demo flag changes only on full reload, so we don't need
+// active subscription. Using useSyncExternalStore lets us defer the
+// localStorage read until after mount without violating the
+// react-hooks/set-state-in-effect rule.
+const subscribeNoop = () => () => {};
+
 export default function Header() {
   const pathname = usePathname();
   const { user, logout } = useUser();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showDemoBadge, setShowDemoBadge] = useState(false);
+  const showDemoBadge = useSyncExternalStore(
+    subscribeNoop,
+    () => isDemoMode(),
+    () => false,
+  );
   const menuRef = useRef<HTMLDivElement>(null);
   const isPublic = isPublicRoute(pathname);
-
-  // Only show demo badge after mount to avoid hydration mismatch (isDemoMode uses localStorage)
-  useEffect(() => {
-    setShowDemoBadge(isDemoMode());
-  }, []);
 
   const isActive = (path: string) => {
     return pathname === path;
@@ -61,10 +66,14 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Close menu on route change
-  useEffect(() => {
-    setIsMenuOpen(false);
-  }, [pathname]);
+  // Close menu on route change. Comparing the latest pathname against the
+  // last one we saw lets us reset state during render — React's recommended
+  // alternative to a useEffect-based "adjust state when a prop changes".
+  const [previousPathname, setPreviousPathname] = useState(pathname);
+  if (previousPathname !== pathname) {
+    setPreviousPathname(pathname);
+    if (isMenuOpen) setIsMenuOpen(false);
+  }
 
   return (
     <div className="sticky top-4 z-50 px-4 sm:px-6 lg:px-8 flex justify-center w-full pb-4 pointer-events-none">

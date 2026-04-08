@@ -1,4 +1,5 @@
 import { api } from "../api-client";
+import type { AxiosResponse } from "axios";
 import { API } from "../constants/api";
 import { ThreadQueryResponse, MessageStreamResponse, ChatMessage } from "../types/chat";
 
@@ -17,23 +18,41 @@ export async function queryThreads(params: {
   return api.get<ThreadQueryResponse>(`${API.THREADS.QUERY}?${query.toString()}`);
 }
 
-export async function streamMessages(threadId: string, params: {
-  provider?: string;
-  page_size?: number;
-  cursor?: string;
-  from?: string;
-  to?: string;
-}) {
+export async function streamMessages(
+  threadId: string,
+  params: {
+    provider?: string;
+    page_size?: number;
+    cursor?: string;
+    from?: string;
+    to?: string;
+  },
+): Promise<AxiosResponse<MessageStreamResponse>> {
   const query = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined) query.append(key, String(value));
   });
 
-  const response = await api.get<any>(`${API.THREADS.STREAM(threadId)}?${query.toString()}`);
-  
+  interface RawStreamItem {
+    data?: {
+      guid?: string;
+      originalROWID?: string | number;
+      isFromMe?: boolean;
+      text?: string;
+      dateCreated?: number | string;
+    };
+  }
+  interface RawStreamResponse {
+    data?: RawStreamItem[];
+  }
+
+  const response = await api.get<RawStreamResponse>(
+    `${API.THREADS.STREAM(threadId)}?${query.toString()}`,
+  );
+
   // Transform the response data to match ChatMessage interface
   if (response.data && Array.isArray(response.data.data)) {
-    const mappedMessages: ChatMessage[] = response.data.data.map((item: any) => {
+    const mappedMessages: ChatMessage[] = response.data.data.map((item) => {
       const msgData = item.data || {};
       return {
         id: msgData.guid || msgData.originalROWID?.toString() || Math.random().toString(),
@@ -52,10 +71,10 @@ export async function streamMessages(threadId: string, params: {
       ...response,
       data: {
         ...response.data,
-        data: mappedMessages
-      }
-    };
+        data: mappedMessages,
+      },
+    } as unknown as AxiosResponse<MessageStreamResponse>;
   }
 
-  return response;
+  return response as unknown as AxiosResponse<MessageStreamResponse>;
 }

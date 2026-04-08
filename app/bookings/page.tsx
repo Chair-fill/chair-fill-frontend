@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import Calendar from "@/app/features/bookings/components/Calendar";
 import BookingList from "@/app/features/bookings/components/BookingList";
 import BookingModal from "@/app/features/bookings/components/BookingModal";
@@ -8,82 +8,75 @@ import AddBookingModal from "@/app/features/bookings/components/AddBookingModal"
 import AvailabilityModal from "@/app/features/bookings/components/AvailabilityModal";
 import { Booking } from "@/lib/types/booking";
 import { useTechnician } from "@/app/providers/TechnicianProvider";
-import { Share2, Plus, Check, Clock } from "lucide-react";
-
-// Mock data generator
-const generateMockBookings = (): Booking[] => {
-  const today = new Date();
-  const bookings: Booking[] = [
-    {
-      id: "1",
-      clientName: "John Doe",
-      serviceName: "Skin Fade",
-      startTime: new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate(),
-        10,
-        0,
-      ).toISOString(),
-      endTime: new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate(),
-        11,
-        0,
-      ).toISOString(),
-      status: "confirmed",
-      price: 35,
-    },
-    {
-      id: "2",
-      clientName: "Jane Smith",
-      serviceName: "Full Service",
-      startTime: new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate(),
-        11,
-        30,
-      ).toISOString(),
-      endTime: new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate(),
-        13,
-        0,
-      ).toISOString(),
-      status: "confirmed",
-      price: 65,
-    },
-  ];
-  return bookings;
-};
+import { listBookings } from "@/lib/api/bookings";
+import { bookingEntityToBooking } from "@/lib/api/booking-mapper";
+import { Share2, Plus, Check, Clock, Loader2 } from "lucide-react";
 
 export default function BookingsPage() {
   const { technician, updateTechnician } = useTechnician();
+  const technicianId = technician?.technician_id ?? technician?.id ?? "";
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [extraBookings, setExtraBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [bookingsError, setBookingsError] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const allBookings = useMemo(() => {
-    return [...generateMockBookings(), ...extraBookings];
-  }, [extraBookings]);
+  const refreshBookings = useCallback(async () => {
+    if (!technicianId) {
+      setBookings([]);
+      return;
+    }
+    setBookingsLoading(true);
+    setBookingsError("");
+    try {
+      // Backend requires from_date as a string. Default to ~60 days back so the
+      // calendar can show recent history alongside upcoming appointments.
+      const since = new Date();
+      since.setDate(since.getDate() - 60);
+      const fromDate = since.toISOString().split("T")[0];
+      const result = await listBookings({
+        technician_id: technicianId,
+        from_date: fromDate,
+        page_size: 200,
+      });
+      setBookings(result.bookings.map(bookingEntityToBooking));
+    } catch (err) {
+      setBookingsError(err instanceof Error ? err.message : "Failed to load bookings.");
+      setBookings([]);
+    } finally {
+      setBookingsLoading(false);
+    }
+  }, [technicianId]);
 
-  const selectedDateString = selectedDate.toISOString().split("T")[0];
+  useEffect(() => {
+    refreshBookings();
+  }, [refreshBookings]);
+
+  const allBookings = bookings;
+
+  // Format a Date as YYYY-MM-DD in the *local* timezone. Avoids the off-by-one
+  // bug from .toISOString() which converts local-midnight to a different UTC day.
+  const toLocalDateString = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  const selectedDateString = toLocalDateString(selectedDate);
 
   const bookingsForSelectedDate = useMemo(() => {
-    return allBookings.filter((b) =>
-      b.startTime.startsWith(selectedDateString),
+    return allBookings.filter(
+      (b) => toLocalDateString(new Date(b.startTime)) === selectedDateString,
     );
   }, [allBookings, selectedDateString]);
 
   const bookingDates = useMemo(() => {
     return Array.from(
-      new Set(allBookings.map((b) => b.startTime.split("T")[0])),
+      new Set(allBookings.map((b) => toLocalDateString(new Date(b.startTime)))),
     );
   }, [allBookings]);
 
@@ -109,7 +102,8 @@ export default function BookingsPage() {
   };
 
   const handleShareLink = () => {
-    const link = `${window.location.origin}/book/barber-id`; // Placeholder
+    if (!technicianId) return;
+    const link = `${window.location.origin}/book/${technicianId}`;
     navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -132,7 +126,8 @@ export default function BookingsPage() {
             <div className="flex flex-row items-center justify-end gap-2 w-full sm:w-auto mt-10">
               <button
                 onClick={handleShareLink}
-                className="flex items-center justify-center p-3 sm:px-4 sm:py-2 bg-white/5 border border-white/10 rounded-full text-foreground hover:bg-white/10 transition-all active:scale-95 transition-all"
+                disabled={!technicianId}
+                className="flex items-center justify-center p-3 sm:px-4 sm:py-2 bg-white/5 border border-white/10 rounded-full text-foreground hover:bg-white/10 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label={copied ? "Copied Link" : "Share Link"}
               >
                 {copied ? (
@@ -167,6 +162,12 @@ export default function BookingsPage() {
             </div>
           </div>
 
+          {bookingsError && (
+            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-500">
+              {bookingsError}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 -mt-4">
             <div className="lg:col-span-12 xl:col-span-5 space-y-6">
               <Calendar
@@ -176,38 +177,26 @@ export default function BookingsPage() {
                 blockedDates={technician?.blocked_dates}
               />
 
-              <div className="bg-card rounded-2xl border border-border p-6 shadow-xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                  <Share2 className="w-32 h-32" />
-                </div>
-                <h3 className="font-bold text-foreground mb-4">Quick Stats</h3>
-                <div className="grid grid-cols-2 gap-4 relative z-10">
-                  <div className="p-4 bg-white/5 rounded-xl border border-white/5">
-                    <p className="text-xs font-medium text-foreground/40 uppercase tracking-wider mb-1">
-                      Weekly Revenue
-                    </p>
-                    <p className="text-2xl font-bold text-primary">$420</p>
-                  </div>
-                  <div className="p-4 bg-white/5 rounded-xl border border-white/5">
-                    <p className="text-xs font-medium text-foreground/40 uppercase tracking-wider mb-1">
-                      New Clients
-                    </p>
-                    <p className="text-2xl font-bold text-foreground">12</p>
-                  </div>
-                </div>
-              </div>
             </div>
 
             <div className="hidden lg:block lg:col-span-12 xl:col-span-7">
               <div className="bg-card rounded-2xl border border-border p-6 min-h-[500px] shadow-xl">
-                <BookingList
-                  bookings={bookingsForSelectedDate}
-                  selectedDate={selectedDate}
-                  isBlocked={technician?.blocked_dates?.includes(
-                    selectedDateString,
-                  )}
-                  onToggleBlock={handleToggleBlockDay}
-                />
+                {bookingsLoading ? (
+                  <div className="flex items-center justify-center h-64 text-foreground/60">
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    Loading bookings...
+                  </div>
+                ) : (
+                  <BookingList
+                    bookings={bookingsForSelectedDate}
+                    selectedDate={selectedDate}
+                    isBlocked={technician?.blocked_dates?.includes(
+                      selectedDateString,
+                    )}
+                    onToggleBlock={handleToggleBlockDay}
+                    onBookingForfeited={refreshBookings}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -219,13 +208,14 @@ export default function BookingsPage() {
         onClose={() => setIsModalOpen(false)}
         bookings={bookingsForSelectedDate}
         selectedDate={selectedDate}
+        onBookingForfeited={refreshBookings}
       />
 
       <AddBookingModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         selectedDate={selectedDate}
-        onAdd={(booking) => setExtraBookings([...extraBookings, booking])}
+        onCreated={refreshBookings}
       />
 
       <AvailabilityModal

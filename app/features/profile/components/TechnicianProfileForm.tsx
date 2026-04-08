@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTechnician } from "@/app/providers/TechnicianProvider";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { User, MapPin, Loader2, CheckCircle2 } from "lucide-react";
@@ -24,18 +24,22 @@ export default function TechnicianProfileForm() {
 
   const country = "United States";
 
-  useEffect(() => {
-    if (technician) {
-      setNickName(
-        String(technician.nick_name ?? technician.full_name ?? "").trim(),
-      );
-      const addr = technician.address as
-        | { street?: string; country?: string; state?: string }
-        | undefined;
-      setWorkAddress(addr?.street ?? "");
-      setState(addr?.state ?? "");
-    }
-  }, [technician]);
+  // Reset local form state whenever a fresh technician profile arrives.
+  // React's recommended pattern: compare a previous-value state against the
+  // latest prop and conditionally call setState during render.
+  const [previousTechnician, setPreviousTechnician] =
+    useState<typeof technician>(null);
+  if (technician && technician !== previousTechnician) {
+    setPreviousTechnician(technician);
+    const addr = technician.address as
+      | { street?: string; country?: string; state?: string }
+      | undefined;
+    setNickName(
+      String(technician.nick_name ?? technician.full_name ?? "").trim(),
+    );
+    setWorkAddress(addr?.street ?? "");
+    setState(addr?.state ?? "");
+  }
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -162,7 +166,7 @@ export default function TechnicianProfileForm() {
             value={state}
             onChange={handleChange}
             required
-            className="w-full py-2.5 pl-10 pr-4 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            className={INPUT_PLAIN}
           >
             <option value="">Select your state</option>
             {US_STATES.map((s) => (

@@ -20,29 +20,44 @@ interface AuthenticatedAvatarProps {
 export default function AuthenticatedAvatar({ src, alt, className, fallback }: AuthenticatedAvatarProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [error, setError] = useState(false);
-
-  useEffect(() => {
-    if (!src?.trim()) {
-      setImageUrl(null);
-      setError(false);
-      return;
-    }
+  // Reset on src change synchronously during render so the old image isn't
+  // shown briefly while the effect is fetching the new signed URL.
+  const [previousSrc, setPreviousSrc] = useState<typeof src>(src);
+  if (previousSrc !== src) {
+    setPreviousSrc(src);
     setImageUrl(null);
     setError(false);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!src?.trim()) {
+      return;
+    }
     api
       .get<{ url?: string; data?: { url?: string } }>(src)
       .then((res) => {
+        if (cancelled) return;
         const data = res.data;
         const url = typeof data?.url === 'string' ? data.url : (data as { data?: { url?: string } })?.data?.url;
-        if (!url) return;
+        if (!url) {
+          setImageUrl(null);
+          setError(false);
+          return;
+        }
         // If parent passed cache-bust param (e.g. _=timestamp), append as fragment so img src is unique (avoids showing stale cache)
         const cacheBust = src.includes('_=') ? src.split('_=')[1].split('&')[0] : null;
         setImageUrl(cacheBust ? `${url}#${cacheBust}` : url);
+        setError(false);
       })
       .catch(() => {
+        if (cancelled) return;
         setError(true);
         setImageUrl(null);
       });
+    return () => {
+      cancelled = true;
+    };
   }, [src]);
 
   if (imageUrl && !error) return <img src={imageUrl} alt={alt} className={className} />;

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Scissors, User, MapPin } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useTechnician } from "@/app/providers/TechnicianProvider";
 import { useProgress } from "@/app/providers/ProgressProvider";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -14,8 +14,6 @@ import { ONBOARDING_CHOOSE_PLAN } from "@/lib/auth";
 import { US_STATES } from "@/lib/constants/us-states";
 import {
   FORM_LABEL,
-  INPUT_LEFT_ICON,
-  INPUT_ICON_LEFT,
   INPUT_PLAIN,
   BTN_PRIMARY,
 } from "@/lib/constants/ui";
@@ -86,9 +84,6 @@ export default function BarberAccountPage() {
   return (
     <AuthLayout className="onboarding-barber-page">
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-zinc-100 dark:bg-zinc-800 mb-4">
-          <Scissors className="w-7 h-7 text-zinc-600 dark:text-zinc-400" />
-        </div>
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
           Create your barber account
         </h1>
@@ -107,42 +102,36 @@ export default function BarberAccountPage() {
                 (optional)
               </span>
             </label>
-            <div className="relative">
-              <User className={INPUT_ICON_LEFT} />
-              <input
-                id="nickName"
-                name="nickName"
-                type="text"
-                value={nickName}
-                onChange={(e) => {
-                  setNickName(e.target.value);
-                  setError("");
-                }}
-                placeholder="How clients know you"
-                className={`${INPUT_LEFT_ICON} placeholder:text-zinc-400`}
-              />
-            </div>
+            <input
+              id="nickName"
+              name="nickName"
+              type="text"
+              value={nickName}
+              onChange={(e) => {
+                setNickName(e.target.value);
+                setError("");
+              }}
+              placeholder="How clients know you"
+              className={`${INPUT_PLAIN} placeholder:text-zinc-400`}
+            />
           </div>
           <div>
             <label htmlFor="workAddress" className={FORM_LABEL}>
               Work address
             </label>
-            <div className="relative">
-              <MapPin className={INPUT_ICON_LEFT} />
-              <input
-                id="workAddress"
-                name="workAddress"
-                type="text"
-                autoComplete="street-address"
-                value={workAddress}
-                onChange={(e) => {
-                  setWorkAddress(e.target.value);
-                  setError("");
-                }}
-                placeholder="Work address"
-                className={`${INPUT_LEFT_ICON} placeholder:text-zinc-400`}
-              />
-            </div>
+            <input
+              id="workAddress"
+              name="workAddress"
+              type="text"
+              autoComplete="street-address"
+              value={workAddress}
+              onChange={(e) => {
+                setWorkAddress(e.target.value);
+                setError("");
+              }}
+              placeholder="Work address"
+              className={`${INPUT_PLAIN} placeholder:text-zinc-400`}
+            />
           </div>
           <div>
             <label htmlFor="country" className={FORM_LABEL}>
@@ -170,7 +159,7 @@ export default function BarberAccountPage() {
                 setError("");
               }}
               required
-              className="w-full py-2.5 pl-10 pr-4 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              className={INPUT_PLAIN}
             >
               <option value="">Select your state</option>
               {US_STATES.map((s) => (

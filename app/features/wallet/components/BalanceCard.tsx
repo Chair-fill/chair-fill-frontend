@@ -1,7 +1,12 @@
 "use client";
 
-import { Wallet, ArrowUpRight, Clock, DollarSign } from "lucide-react";
+import { Wallet, ArrowUpRight, Clock, DollarSign, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
+import { useBalanceVisibility, BALANCE_MASK } from "@/lib/hooks/use-balance-visibility";
+
+function formatMoney(n: number): string {
+  return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+}
 
 interface BalanceCardProps {
   balance: number;
@@ -11,6 +16,8 @@ interface BalanceCardProps {
 
 export default function BalanceCard({ balance, pending, totalEarned }: BalanceCardProps) {
   const [showPayoutModal, setShowPayoutModal] = useState(false);
+  const { hidden, toggle: toggleHidden } = useBalanceVisibility();
+  const masked = BALANCE_MASK;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -21,16 +28,31 @@ export default function BalanceCard({ balance, pending, totalEarned }: BalanceCa
         </div>
         
         <div className="relative z-10 space-y-8 text-primary-foreground">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
-              <DollarSign className="w-5 h-5" />
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
+                <DollarSign className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-bold tracking-wider uppercase opacity-80">Available Balance</span>
             </div>
-            <span className="text-sm font-bold tracking-wider uppercase opacity-80">Available Balance</span>
+            <button
+              type="button"
+              onClick={toggleHidden}
+              aria-label={hidden ? "Show balance" : "Hide balance"}
+              aria-pressed={hidden}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md transition-colors"
+            >
+              {hidden ? (
+                <Eye className="w-5 h-5" />
+              ) : (
+                <EyeOff className="w-5 h-5" />
+              )}
+            </button>
           </div>
-          
+
           <div>
             <h2 className="text-5xl sm:text-6xl font-black tracking-tight">
-              ${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              {hidden ? masked : formatMoney(balance)}
             </h2>
             <p className="mt-2 text-sm font-medium opacity-70 flex items-center gap-2">
               <Clock className="w-4 h-4" /> 
@@ -57,7 +79,7 @@ export default function BalanceCard({ balance, pending, totalEarned }: BalanceCa
           <div>
             <p className="text-xs font-bold text-foreground/40 uppercase tracking-widest mb-1">Pending</p>
             <h3 className="text-2xl font-bold text-foreground">
-              ${pending.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              {hidden ? masked : formatMoney(pending)}
             </h3>
           </div>
         </div>
@@ -69,7 +91,7 @@ export default function BalanceCard({ balance, pending, totalEarned }: BalanceCa
           <div>
             <p className="text-xs font-bold text-foreground/40 uppercase tracking-widest mb-1">Total Earned</p>
             <h3 className="text-2xl font-bold text-foreground">
-              ${totalEarned.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              {hidden ? masked : formatMoney(totalEarned)}
             </h3>
           </div>
         </div>

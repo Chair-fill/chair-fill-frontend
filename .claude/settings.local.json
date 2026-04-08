@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep:*)",
+      "Bash(npx tsc:*)",
+      "Bash(ls C:/Users/user/Desktop/chairfill/chair-fill-frontend/.env*)",
+      "Bash(npx next:*)",
+      "Bash(npx eslint:*)",
+      "Bash(grep -E \"\\\\.tsx?$\")",
+      "Bash(grep -E \"\\(\\\\.tsx?$|error\\)\")",
+      "Bash(curl -s \"https://api.chairfill.co/api/v1/technician/TCH-01KNM35T33RMFA0M34CG18P79P\")",
+      "Bash(curl -s \"https://api.chairfill.co/api/v1/availability/me?technician_id=TCH-01KNM35T33RMFA0M34CG18P79P\")"
+    ]
+  }
+}

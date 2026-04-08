@@ -2,16 +2,38 @@
 
 import { Booking } from "@/lib/types/booking";
 import { format } from "date-fns";
-import { Clock, User, ClipboardList, TrendingUp } from "lucide-react";
+import { Clock, ClipboardList, TrendingUp, X, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { forfeitBooking } from "@/lib/api/bookings";
+import { getApiErrorMessage } from "@/lib/api-client";
 
 interface BookingListProps {
   bookings: Booking[];
   selectedDate: Date;
   isBlocked?: boolean;
   onToggleBlock?: () => void;
+  /** Called after a booking has been forfeited so the parent can refresh. */
+  onBookingForfeited?: () => void | Promise<void>;
 }
 
-export default function BookingList({ bookings, selectedDate, isBlocked = false, onToggleBlock }: BookingListProps) {
+export default function BookingList({ bookings, selectedDate, isBlocked = false, onToggleBlock, onBookingForfeited }: BookingListProps) {
+  const [forfeitingId, setForfeitingId] = useState<string | null>(null);
+  const [forfeitError, setForfeitError] = useState("");
+
+  const handleForfeit = async (id: string) => {
+    if (!window.confirm("Cancel this booking? This cannot be undone.")) return;
+    setForfeitingId(id);
+    setForfeitError("");
+    try {
+      await forfeitBooking(id);
+      await onBookingForfeited?.();
+    } catch (err) {
+      setForfeitError(getApiErrorMessage(err));
+    } finally {
+      setForfeitingId(null);
+    }
+  };
+
   const sortedBookings = [...bookings].sort((a, b) => 
     new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
   );
@@ -58,6 +80,12 @@ export default function BookingList({ bookings, selectedDate, isBlocked = false,
         </div>
       )}
 
+      {forfeitError && (
+        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-500">
+          {forfeitError}
+        </div>
+      )}
+
       {sortedBookings.length === 0 ? (
         <div className="bg-card rounded-2xl border border-border p-12 text-center">
           <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -96,13 +124,31 @@ export default function BookingList({ bookings, selectedDate, isBlocked = false,
                   </div>
                 </div>
               </div>
-              <div className="text-right">
-                {booking.price && (
-                  <p className="font-bold text-foreground">${booking.price}</p>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  {booking.price && (
+                    <p className="font-bold text-foreground">${booking.price}</p>
+                  )}
+                  <p className="text-xs font-medium uppercase tracking-wider text-foreground/40 mt-1">
+                    {booking.status}
+                  </p>
+                </div>
+                {booking.status !== "cancelled" && (
+                  <button
+                    type="button"
+                    onClick={() => handleForfeit(booking.sourceId ?? booking.id)}
+                    disabled={forfeitingId !== null}
+                    className="p-2 rounded-lg text-foreground/40 hover:text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label={`Cancel booking for ${booking.clientName}`}
+                    title="Cancel booking"
+                  >
+                    {forfeitingId === (booking.sourceId ?? booking.id) ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <X className="w-4 h-4" />
+                    )}
+                  </button>
                 )}
-                <p className="text-xs font-medium uppercase tracking-wider text-foreground/40 mt-1">
-                  {booking.status}
-                </p>
               </div>
             </div>
           ))}

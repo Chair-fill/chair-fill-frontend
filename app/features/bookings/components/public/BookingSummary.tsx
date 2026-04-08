@@ -4,44 +4,59 @@ import { usePublicBooking } from "@/app/providers/PublicBookingProvider";
 import { format } from "date-fns";
 import { Calendar, Clock, DollarSign, User, Mail, Phone, ShieldCheck, ArrowLeft } from "lucide-react";
 import { useState } from "react";
-import { api } from "@/lib/api-client";
-import { API } from "@/lib/constants/api";
+import { useParams } from "next/navigation";
+import { createBooking } from "@/lib/api/bookings";
 import { getApiErrorMessage } from "@/lib/api-client";
 
 export default function BookingSummary() {
-  const { 
-    selectedService, 
-    selectedDate, 
-    selectedTime, 
-    guestInfo, 
+  const params = useParams();
+  const barberId = (params?.barberId as string) ?? "";
+  const {
+    selectedService,
+    selectedDate,
+    selectedTime,
+    guestInfo,
     setStep,
-    resetBooking 
+    resetBooking
   } = usePublicBooking();
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleConfirm = async () => {
-    if (!selectedService || !selectedDate || !selectedTime) return;
+    if (!selectedService || !selectedDate || !selectedTime || !barberId) return;
 
     setIsSubmitting(true);
     setError(null);
 
     try {
-      const startTime = `${format(selectedDate, "yyyy-MM-dd")}T${selectedTime}:00`;
-      
-      await api.post(API.BOOKING.CREATE_GUEST, {
-        offering_id: selectedService.offering_id,
-        start_time: startTime,
-        guest_info: {
-          first_name: guestInfo.firstName,
-          last_name: guestInfo.lastName,
-          email: guestInfo.email,
-          phone: guestInfo.phone
-        }
+      const [hours, minutes] = selectedTime.split(":").map(Number);
+      const start = new Date(selectedDate);
+      start.setHours(hours || 0, minutes || 0, 0, 0);
+
+      const fullname = [guestInfo.firstName, guestInfo.lastName]
+        .filter((s) => s && s.trim())
+        .join(" ")
+        .trim();
+
+      const offeringId = selectedService.id ?? selectedService.offering_id;
+      const result = await createBooking(barberId, {
+        services: [{ id: offeringId, units: 1 }],
+        client: {
+          fullname,
+          email: guestInfo.email || undefined,
+          phone_number: guestInfo.phone || undefined,
+        },
+        date: start.toISOString(),
       });
 
+      // If the backend created a Stripe Checkout session, take the user there.
+      const url = result?.checkout_session?.url;
+      if (typeof url === "string" && url) {
+        window.location.href = url;
+        return;
+      }
       setIsSuccess(true);
     } catch (err) {
       setError(getApiErrorMessage(err));
@@ -59,7 +74,7 @@ export default function BookingSummary() {
         <div className="space-y-2">
           <h2 className="text-4xl font-black text-zinc-50 tracking-tight">Booking Confirmed!</h2>
           <p className="text-zinc-500 font-medium max-w-xs mx-auto text-lg pt-2">
-            Your appointment has been successfully scheduled. You'll receive a confirmation email shortly.
+            Your appointment has been successfully scheduled. You&apos;ll receive a confirmation email shortly.
           </p>
         </div>
         <button

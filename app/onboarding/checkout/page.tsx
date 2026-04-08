@@ -196,7 +196,7 @@ function OnboardingCheckoutContent() {
           Checkout and pay
         </h1>
         <p className="mt-3 text-foreground/70 text-base max-w-md mx-auto">
-          You'll complete payment on Stripe. Click below to continue.
+          You&apos;ll complete payment on Stripe. Click below to continue.
         </p>
       </div>
 

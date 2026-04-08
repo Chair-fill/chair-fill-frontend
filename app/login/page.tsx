@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Mail, Lock, Loader2, ArrowLeft } from "lucide-react";
+import { Mail, Lock, Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useUser } from "@/app/providers/UserProvider";
 import { api, getApiErrorMessage } from "@/lib/api-client";
 import { API } from "@/lib/constants/api";
@@ -15,7 +15,9 @@ import FormSuccess from "@/app/components/ui/FormSuccess";
 import {
   FORM_LABEL,
   INPUT_LEFT_ICON,
+  INPUT_LEFT_RIGHT_ICON,
   INPUT_ICON_LEFT,
+  INPUT_ICON_RIGHT,
   INPUT_PLAIN,
   BTN_PRIMARY,
   BTN_SECONDARY,
@@ -68,6 +70,7 @@ export default function LoginPage() {
   const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [verifyToken, setVerifyToken] = useState("");
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
@@ -189,6 +192,8 @@ export default function LoginPage() {
                   id="email"
                   name="email"
                   type="email"
+                  inputMode="email"
+                  autoComplete="username"
                   required
                   value={email}
                   onChange={(e) => {
@@ -221,7 +226,8 @@ export default function LoginPage() {
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => {
@@ -229,8 +235,20 @@ export default function LoginPage() {
                     setError("");
                   }}
                   placeholder="••••••••"
-                  className={INPUT_LEFT_ICON}
+                  className={INPUT_LEFT_RIGHT_ICON}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((p) => !p)}
+                  className={INPUT_ICON_RIGHT}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
             </div>
 

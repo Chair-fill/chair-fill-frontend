@@ -7,6 +7,9 @@ export interface Booking {
   status: 'confirmed' | 'pending' | 'cancelled';
   price?: number;
   notes?: string;
+  /** Optional: present when sourced from the backend (used for forfeit/update calls). */
+  sourceId?: string;
+  paymentStatus?: string;
 }
 
 export interface DayBookings {

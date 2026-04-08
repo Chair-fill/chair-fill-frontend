@@ -2,24 +2,28 @@ import { api } from '@/lib/api-client';
 import { API } from '@/lib/constants/api';
 import { getApiErrorMessage } from '@/lib/api-client';
 
-/** API offering (from list or get). */
+/** API offering (from list or get). Backend returns price as a decimal string (e.g. "20.00"). */
 export interface Offering {
   id: string;
   name: string;
-  price: number;
+  /** Decimal string from backend (e.g. "20.00") — also accepts number for safety. */
+  price: string | number;
   duration: number;
   description?: string;
   technician_id?: string;
   shop_id?: string;
-  premium_hours?: { slots?: { from: string; to: string; price?: number }[] };
+  premium_hours?: { slots?: { from: string; to: string; price?: string | number }[] } | null;
   promo?: {
     discount?: number;
     enabled?: boolean;
     expiry?: string;
-    price?: number;
+    price?: string | number;
     from?: string;
     to?: string;
-  };
+  } | null;
+  promo_enabled?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /** Create offering body (POST /offerings). */
@@ -80,6 +84,15 @@ function normalizeListResponse(data: unknown): Offering[] {
   return [];
 }
 
+/** Unwrap { statusCode, status, data: T, message } envelope returned by single-resource endpoints. */
+function unwrapResource(data: unknown): Offering {
+  if (data && typeof data === 'object') {
+    const inner = (data as { data?: unknown }).data;
+    if (inner && typeof inner === 'object') return inner as Offering;
+  }
+  return data as Offering;
+}
+
 /**
  * List offerings. GET /offerings/list?technician_id=...
  */
@@ -118,8 +131,8 @@ export async function createOffering(body: CreateOfferingBody): Promise<Offering
     };
     if (body.shop_id) payload.shop_id = body.shop_id;
     if (body.promo) payload.promo = body.promo;
-    const { data } = await api.post<Offering>(API.OFFERINGS.CREATE, payload);
-    return data as Offering;
+    const { data } = await api.post<unknown>(API.OFFERINGS.CREATE, payload);
+    return unwrapResource(data);
   } catch (err) {
     const message = getApiErrorMessage(err);
     throw new Error(message);
@@ -131,8 +144,8 @@ export async function createOffering(body: CreateOfferingBody): Promise<Offering
  */
 export async function updateOffering(body: UpdateOfferingBody): Promise<Offering> {
   try {
-    const { data } = await api.put<Offering>(API.OFFERINGS.UPDATE, body);
-    return data as Offering;
+    const { data } = await api.put<unknown>(API.OFFERINGS.UPDATE, body);
+    return unwrapResource(data);
   } catch (err) {
     const message = getApiErrorMessage(err);
     throw new Error(message);

@@ -6,6 +6,7 @@ import { api } from "@/lib/api-client";
 import { API } from "@/lib/constants/api";
 import { Technician } from "@/app/providers/TechnicianProvider";
 import { Offering } from "@/lib/types/offering";
+import { getAvailability } from "@/lib/api/availability";
 import PageLoader from "@/app/components/ui/PageLoader";
 import { PublicBookingProvider, usePublicBooking } from "@/app/providers/PublicBookingProvider";
 import BarberProfileHeader from "@/app/features/bookings/components/public/BarberProfileHeader";
@@ -115,17 +116,28 @@ export default function PublicBookingPage() {
       }
 
       try {
-        const [techRes, offeringsRes] = await Promise.all([
+        const [techRes, offeringsRes, availabilityRes] = await Promise.all([
           api.get(API.TECHNICIAN.GET_PUBLIC(barberId)),
-          api.get(`${API.OFFERINGS.LIST}?technician_id=${barberId}`)
+          api.get(`${API.OFFERINGS.LIST}?technician_id=${barberId}`),
+          // Public endpoint — no JWT required.
+          getAvailability({ technician_id: barberId }).catch(() => null),
         ]);
 
         // Handle NestJS data wrapper if present
-        const techData = techRes.data.data || techRes.data;
-        const offeringsData = offeringsRes.data.data || offeringsRes.data;
+        const techData = (techRes.data as { data?: Technician }).data ?? (techRes.data as Technician);
+        const offeringsData = (offeringsRes.data as { data?: Offering[] }).data ?? (offeringsRes.data as Offering[]);
 
-        setTechnician(techData);
-        setOfferings(offeringsData);
+        // Merge fresh availability into the technician profile if the
+        // dedicated endpoint returned something usable.
+        const merged: Technician = {
+          ...techData,
+          availability:
+            (availabilityRes as { weekdays?: unknown; availability?: unknown } | null)?.weekdays as Technician["availability"]
+            ?? techData?.availability,
+        };
+
+        setTechnician(merged);
+        setOfferings(Array.isArray(offeringsData) ? offeringsData : []);
       } catch (err) {
         console.error("Booking page error:", err);
         setError("Could not load barber profile. Please check the link and try again.");

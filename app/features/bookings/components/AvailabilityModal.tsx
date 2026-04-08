@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { X, Clock, Loader2, CheckCircle2 } from "lucide-react";
 import { useTechnician, DaySchedule, Availability } from "@/app/providers/TechnicianProvider";
-import { BTN_PRIMARY_INLINE } from "@/lib/constants/ui";
 import { getApiErrorMessage } from "@/lib/api-client";
+import { getAvailability, updateAvailability, type Weekday } from "@/lib/api/availability";
 
 interface AvailabilityModalProps {
   isOpen: boolean;
@@ -37,18 +37,55 @@ const INITIAL_AVAILABILITY: Availability = {
   sunday: { ...DEFAULT_SCHEDULE, isOpen: false },
 };
 
+
 export default function AvailabilityModal({ isOpen, onClose }: AvailabilityModalProps) {
-  const { technician, updateTechnician, isTechnicianLoading } = useTechnician();
+  const { technician, refetchTechnician, isTechnicianLoading } = useTechnician();
+  const technicianId = technician?.technician_id ?? technician?.id ?? "";
   const [availability, setAvailability] = useState<Availability>(INITIAL_AVAILABILITY);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  // Hydrate the form when the modal opens. GET /availability/me (no date)
+  // returns the full per-weekday schedule under data.availability.weekdays.
   useEffect(() => {
-    if (technician?.availability) {
-      setAvailability(technician.availability);
-    }
-  }, [technician]);
+    if (!isOpen || !technicianId) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await getAvailability({ technician_id: technicianId });
+        if (cancelled) return;
+        const weekdays = res?.availability?.weekdays ?? {};
+        const next: Availability = { ...INITIAL_AVAILABILITY };
+        for (const day of DAYS) {
+          const entry = weekdays[day];
+          if (!entry) {
+            next[day] = { ...DEFAULT_SCHEDULE, isOpen: day !== "sunday" };
+            continue;
+          }
+          // Backend marks "closed" by storing 00:00–00:00.
+          const isClosed =
+            !entry.open_time ||
+            !entry.close_time ||
+            (entry.open_time === "00:00" && entry.close_time === "00:00");
+          next[day] = {
+            isOpen: !isClosed,
+            from: isClosed ? DEFAULT_SCHEDULE.from : entry.open_time,
+            to: isClosed ? DEFAULT_SCHEDULE.to : entry.close_time,
+          };
+        }
+        setAvailability(next);
+      } catch {
+        // Leave the form on its defaults if the fetch fails — the user can
+        // still edit and re-save.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, technicianId]);
 
   const handleToggleDay = (day: typeof DAYS[number]) => {
     setAvailability((prev) => ({
@@ -84,7 +121,28 @@ export default function AvailabilityModal({ isOpen, onClose }: AvailabilityModal
     setSaving(true);
 
     try {
-      await updateTechnician({ availability });
+      // Persist the per-day weekly schedule via the dedicated endpoint:
+      // one PUT /availability/update per weekday using period: "day_of_week".
+      // Closed days are sent as a zero-length window (00:00 - 00:00) so the
+      // backend stores the closure rather than ignoring it.
+      if (!technicianId) {
+        throw new Error("Technician profile not loaded yet.");
+      }
+      for (const day of DAYS) {
+        const schedule = availability[day];
+        const dayWindow: [string, string] = schedule.isOpen
+          ? [schedule.from, schedule.to]
+          : ["00:00", "00:00"];
+        await updateAvailability({
+          technician_id: technicianId,
+          period: "day_of_week",
+          weekday: day as Weekday,
+          availableTime: dayWindow,
+        });
+      }
+      // Refetch the technician profile so any other surfaces that read it
+      // (e.g. the calendar) pick up the change on next render.
+      await refetchTechnician().catch(() => {});
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);

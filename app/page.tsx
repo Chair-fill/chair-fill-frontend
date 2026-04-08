@@ -122,7 +122,7 @@ export default function HomePage() {
               <div className="mt-8 p-4 bg-primary/5 rounded-xl border border-primary/10">
                 <p className="text-xs font-bold text-primary mb-1 uppercase tracking-wider">Insight</p>
                 <p className="text-xs text-foreground/80 leading-relaxed font-medium">
-                  Your "Skin Fade" bookings are up 15% this week. Consider promoting it as a featured service.
+                  Your &quot;Skin Fade&quot; bookings are up 15% this week. Consider promoting it as a featured service.
                 </p>
               </div>
             </div>

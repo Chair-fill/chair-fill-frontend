@@ -78,8 +78,10 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       const raw = data as ProgressApiResponse;
       const prog = (raw?.data ?? data) as Progress | undefined;
       setProgress(prog && typeof prog === 'object' ? prog : null);
-    } catch (err: any) {
-      if (err.response?.status === 404) {
+    } catch (err) {
+      const status = (err as { response?: { status?: number } } | undefined)
+        ?.response?.status;
+      if (status === 404) {
         setProgress(null);
       } else {
         setProgress({ is_technician: false, has_subscribed: false });

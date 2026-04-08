@@ -29,6 +29,19 @@ export interface Availability {
   sunday: DaySchedule;
 }
 
+/** Wallet embedded on technician/shop responses (e.g. /technician/me, booking responses). */
+export interface TechnicianWallet {
+  wallet_id: string;
+  /** Decimal string from backend, e.g. "0.00" */
+  balance: string | number;
+  total_credit?: string | number;
+  total_debit?: string | number;
+  wallet_pin_changed?: boolean;
+  frozen?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 /** Minimal technician shape - backend may return more */
 export interface Technician {
   id?: string;
@@ -42,6 +55,7 @@ export interface Technician {
   availability?: Availability;
   blocked_dates?: string[]; // YYYY-MM-DD
   avatar_url?: string;
+  wallet?: TechnicianWallet | null;
   [key: string]: unknown;
 }
 

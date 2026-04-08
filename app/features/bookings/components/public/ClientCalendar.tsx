@@ -31,13 +31,17 @@ export default function ClientCalendar({ availability, blockedDates = [] }: Clie
 
   const isDayAvailable = (date: Date) => {
     if (isBefore(date, startOfDay(new Date()))) return false;
-    
+
     const dateString = format(date, "yyyy-MM-dd");
     if (blockedDates.includes(dateString)) return false;
-    
+
+    // Per-day weekly schedule, if the backend gave us one. Treat as
+    // "open by default" — only fail closed when there's an explicit
+    // entry for the day that says isOpen === false.
     const dayName = format(date, "eeee").toLowerCase() as keyof Availability;
-    if (availability && !availability[dayName]?.isOpen) return false;
-    
+    const day = availability?.[dayName];
+    if (day && day.isOpen === false) return false;
+
     return true;
   };
 

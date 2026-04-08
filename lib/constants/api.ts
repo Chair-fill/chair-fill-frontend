@@ -40,12 +40,52 @@ export const API = {
     LITE: '/technician/lite',
     /** GET - Get technician profile for current user (JWT) */
     ME: '/technician/me',
-    /** GET - Publicly get technician details by ID/slug */
-    GET_PUBLIC: (id: string) => `/technician/public/${encodeURIComponent(id)}`,
+    /** GET - Publicly get technician details by ID/slug. Path: /technician/:id (no JWT) */
+    GET_PUBLIC: (id: string) => `/technician/${encodeURIComponent(id)}`,
   },
   BOOKING: {
     /** POST - Create a guest booking. Body: service_id, start_time, guest_info: { first_name, last_name, email, phone } */
     CREATE_GUEST: '/booking/guest',
+    /** POST - Create booking for entity. Path: /booking/:eid/book. Body: { data: { services, client, location?, date, slot_id? } } */
+    BOOK: (eid: string) => `/booking/${encodeURIComponent(eid)}/book`,
+    /** PUT - Update booking. Path: /booking/:bookingId/update. Body: { data: { date?, ... } } */
+    UPDATE: (bookingId: string) => `/booking/${encodeURIComponent(bookingId)}/update`,
+    /** DELETE - Forfeit booking. Path: /booking/:bookingId/forfeit */
+    FORFEIT: (bookingId: string) => `/booking/${encodeURIComponent(bookingId)}/forfeit`,
+    /** GET - List bookings. Query: technician_id?|shop_id?, from_date?, to_date?, page_size?, cursor? */
+    LIST: '/booking/list',
+  },
+  /** Availability endpoints. */
+  AVAILABILITY: {
+    /** GET - Get availability for technician/shop. Query: technician_id?|shop_id?, date? (no JWT) */
+    ME: '/availability/me',
+    /** PUT - Update availability. Body: { technician_id?|shop_id?, availableTime, period, date?, weekday?, off_times? } (JWT) */
+    UPDATE: '/availability/update',
+  },
+  /** Calendar endpoints. */
+  CALENDAR: {
+    /** GET - Get calendar for current user. Query: technician_id?|shop_id? (JWT) */
+    ME: '/calendar/me',
+  },
+  /** Slots endpoints. */
+  SLOTS: {
+    /** GET - Get slots. Query: technician_id?|shop_id? (mutually exclusive) (JWT) */
+    ME: '/slots/me',
+  },
+  /** Admin wallet endpoints. */
+  ADMIN_WALLET: {
+    /** GET - List all user wallets */
+    USERS: '/admin/wallet/users',
+    /** POST - Reset wallet PIN. Path: /admin/wallet/reset-pin/:uid */
+    RESET_PIN: (uid: string) => `/admin/wallet/reset-pin/${encodeURIComponent(uid)}`,
+    /** POST - Credit user wallet. Path: /admin/wallet/user/:user_id/credit. Body: { amount, narration } */
+    CREDIT: (userId: string) => `/admin/wallet/user/${encodeURIComponent(userId)}/credit`,
+    /** POST - Debit user wallet. Path: /admin/wallet/user/:user_id/debit. Body: { amount, narration } */
+    DEBIT: (userId: string) => `/admin/wallet/user/${encodeURIComponent(userId)}/debit`,
+    /** GET - Get a specific user's wallet. Path: /admin/wallet/:user_id/user */
+    GET_USER: (userId: string) => `/admin/wallet/${encodeURIComponent(userId)}/user`,
+    /** POST - Freeze a wallet. Body: { wallet_id?, user_id?, frozen? } */
+    FREEZE: '/admin/wallet/freeze',
   },
   PROGRESS: {
     /** GET - Get onboarding progress for current user (JWT). Returns has_subscribed, is_technician, timeline, owner. */

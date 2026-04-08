@@ -47,15 +47,29 @@ function formatDuration(value: string): string {
 }
 
 /** Map API offering to BarberService for UI. */
+interface PremiumSlot {
+  from?: string;
+  to?: string;
+  price?: string | number;
+}
+
+interface PromoBlock {
+  enabled?: boolean;
+  from?: string;
+  to?: string;
+  price?: string | number;
+}
+
 function offeringToService(o: {
   id: string;
   name: string;
-  price: number;
+  price: string | number;
   duration: number;
   description?: string;
-  premium_hours?: { slots?: unknown[] };
-  promo?: { enabled?: boolean };
+  premium_hours?: { slots?: PremiumSlot[] } | null;
+  promo?: PromoBlock | null;
 }): BarberService {
+  const slot = o.premium_hours?.slots?.[0];
   return {
     id: o.id,
     name: o.name,
@@ -64,16 +78,15 @@ function offeringToService(o: {
     description: o.description ?? undefined,
     premiumHours:
       !!o.premium_hours &&
-      (Array.isArray((o.premium_hours as { slots?: unknown[] }).slots)
-        ? (o.premium_hours as { slots: unknown[] }).slots.length >= 0
-        : true),
+      Array.isArray(o.premium_hours.slots) &&
+      o.premium_hours.slots.length > 0,
     offerPromotion: !!o.promo?.enabled,
-    premiumFrom: (o.premium_hours as any)?.slots?.[0]?.from,
-    premiumTo: (o.premium_hours as any)?.slots?.[0]?.to,
-    premiumPrice: (o.premium_hours as any)?.slots?.[0]?.price !== undefined ? String((o.premium_hours as any).slots[0].price) : undefined,
-    promoFrom: (o.promo as any)?.from,
-    promoTo: (o.promo as any)?.to,
-    promoPrice: (o.promo as any)?.price !== undefined ? String((o.promo as any).price) : undefined,
+    premiumFrom: slot?.from,
+    premiumTo: slot?.to,
+    premiumPrice: slot?.price !== undefined ? String(slot.price) : undefined,
+    promoFrom: o.promo?.from,
+    promoTo: o.promo?.to,
+    promoPrice: o.promo?.price !== undefined ? String(o.promo.price) : undefined,
   };
 }
 
@@ -789,12 +802,32 @@ export default function ServicesPage() {
                               <div className="mt-1.5 flex flex-wrap gap-1.5">
                                 {s.premiumHours && (
                                   <span className="inline-flex items-center rounded-md bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-200">
-                                    Premium hours
+                                    Premium
+                                    {s.premiumFrom && s.premiumTo && (
+                                      <span className="ml-1 font-normal">
+                                        {s.premiumFrom}–{s.premiumTo}
+                                      </span>
+                                    )}
+                                    {s.premiumPrice && (
+                                      <span className="ml-1 font-semibold">
+                                        · {formatPriceDisplay(s.premiumPrice)}
+                                      </span>
+                                    )}
                                   </span>
                                 )}
                                 {s.offerPromotion && (
                                   <span className="inline-flex items-center rounded-md bg-green-50 dark:bg-green-900/20 px-2 py-0.5 text-xs font-medium text-green-800 dark:text-green-200">
-                                    Promotion
+                                    Promo
+                                    {s.promoFrom && s.promoTo && (
+                                      <span className="ml-1 font-normal">
+                                        {s.promoFrom}–{s.promoTo}
+                                      </span>
+                                    )}
+                                    {s.promoPrice && (
+                                      <span className="ml-1 font-semibold">
+                                        · {formatPriceDisplay(s.promoPrice)}
+                                      </span>
+                                    )}
                                   </span>
                                 )}
                               </div>
@@ -842,7 +875,7 @@ export default function ServicesPage() {
           {/* Mobile-only modal: Add/Edit service form */}
           <div className="sm:hidden">
             {mobileModalOpen && (
-              <div className="fixed inset-0 z-50 flex flex-col bg-background">
+              <div className="fixed inset-0 z-[60] flex flex-col bg-background">
                 <div className="flex items-center justify-between shrink-0 px-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
                   <button
                     type="button"
@@ -857,7 +890,17 @@ export default function ServicesPage() {
                   <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
                     {editingId ? "Edit service" : "Add service"}
                   </h2>
-                  <div className="w-14" />
+                  <button
+                    type="submit"
+                    form="mobile-service-form"
+                    disabled={
+                      saving || !name.trim() || !toNumericPrice(price)
+                    }
+                    className="text-sm font-semibold text-primary disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+                  >
+                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {saving ? "Saving" : "Save"}
+                  </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
                   {formError && (
@@ -869,6 +912,7 @@ export default function ServicesPage() {
                     </p>
                   )}
                   <form
+                    id="mobile-service-form"
                     onSubmit={(e) =>
                       handleAddOrUpdate(e, () => setMobileModalOpen(false))
                     }
@@ -1082,39 +1126,6 @@ export default function ServicesPage() {
                         </div>
                       </div>
                     )}
-                    <div className="flex gap-2 pt-2">
-                      {editingId && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            clearForm();
-                            setMobileModalOpen(false);
-                          }}
-                          className="flex-1 flex items-center justify-center p-3 rounded-full text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800"
-                          aria-label="Cancel"
-                        >
-                          <ChevronDown className="w-5 h-5 rotate-180 sm:rotate-0" />
-                          <span className="hidden sm:inline ml-2 text-sm font-medium">Cancel</span>
-                        </button>
-                      )}
-                        <button
-                          type="submit"
-                          disabled={
-                            saving || !name.trim() || !toNumericPrice(price)
-                          }
-                          className="flex-1 inline-flex items-center justify-center p-3 rounded-full bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
-                          aria-label={editingId ? "Update service" : "Add service"}
-                        >
-                          {saving ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                          ) : (
-                            <Plus className={`w-5 h-5 ${editingId ? "rotate-45" : ""}`} />
-                          )}
-                          <span className="hidden sm:inline ml-2 text-sm font-bold">
-                            {editingId ? "Update service" : "Add service"}
-                          </span>
-                        </button>
-                    </div>
                   </form>
                 </div>
               </div>

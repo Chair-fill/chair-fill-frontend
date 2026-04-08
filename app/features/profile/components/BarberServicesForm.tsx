@@ -246,6 +246,40 @@ export default function BarberServicesForm({ hideList = false }: BarberServicesF
                 {s.description && (
                   <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{s.description}</p>
                 )}
+                {(s.premiumHours || s.offerPromotion) && (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {s.premiumHours && (
+                      <span className="inline-flex items-center rounded-md bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-200">
+                        Premium
+                        {s.premiumFrom && s.premiumTo && (
+                          <span className="ml-1 font-normal">
+                            {s.premiumFrom}–{s.premiumTo}
+                          </span>
+                        )}
+                        {s.premiumPrice && (
+                          <span className="ml-1 font-semibold">
+                            · {formatPriceDisplay(s.premiumPrice)}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    {s.offerPromotion && (
+                      <span className="inline-flex items-center rounded-md bg-green-50 dark:bg-green-900/20 px-2 py-0.5 text-xs font-medium text-green-800 dark:text-green-200">
+                        Promo
+                        {s.promoFrom && s.promoTo && (
+                          <span className="ml-1 font-normal">
+                            {s.promoFrom}–{s.promoTo}
+                          </span>
+                        )}
+                        {s.promoPrice && (
+                          <span className="ml-1 font-semibold">
+                            · {formatPriceDisplay(s.promoPrice)}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <button
                 type="button"

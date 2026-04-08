@@ -9,6 +9,7 @@ interface BookingModalProps {
   onClose: () => void;
   bookings: Booking[];
   selectedDate: Date;
+  onBookingForfeited?: () => void | Promise<void>;
 }
 
 export default function BookingModal({
@@ -16,23 +17,22 @@ export default function BookingModal({
   onClose,
   bookings,
   selectedDate,
+  onBookingForfeited,
 }: BookingModalProps) {
   const [shouldRender, setShouldRender] = useState(isOpen);
-  const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+  // Animating out = currently rendered but parent flipped isOpen to false.
+  const isAnimatingOut = shouldRender && !isOpen;
+
+  // Sync shouldRender when isOpen flips to true via render-time state update.
+  if (isOpen && !shouldRender) {
+    setShouldRender(true);
+  }
 
   useEffect(() => {
-    if (isOpen) {
-      setShouldRender(true);
-      setIsAnimatingOut(false);
-    } else {
-      setIsAnimatingOut(true);
-      const timer = setTimeout(() => {
-        setShouldRender(false);
-        setIsAnimatingOut(false);
-      }, 400); // Match animation duration
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
+    if (isOpen || !shouldRender) return;
+    const timer = setTimeout(() => setShouldRender(false), 400);
+    return () => clearTimeout(timer);
+  }, [isOpen, shouldRender]);
 
   useModalKeyboard(isOpen, onClose);
   useModalScrollLock(isOpen);
@@ -63,7 +63,11 @@ export default function BookingModal({
         </div>
 
         <div className="p-4 max-h-[70vh] overflow-y-auto pb-24">
-          <BookingList bookings={bookings} selectedDate={selectedDate} />
+          <BookingList
+            bookings={bookings}
+            selectedDate={selectedDate}
+            onBookingForfeited={onBookingForfeited}
+          />
         </div>
       </div>
     </div>
