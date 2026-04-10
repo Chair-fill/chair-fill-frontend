@@ -3,12 +3,22 @@
 import { useState, useEffect } from "react";
 import { X, Calendar, User, Mail, Phone, Clock, Loader2 } from "lucide-react";
 import { useModalKeyboard, useModalScrollLock } from "@/lib/hooks/use-modal";
-import { useTechnician } from "@/app/providers/TechnicianProvider";
+import { useTechnician, type Availability } from "@/app/providers/TechnicianProvider";
 import { useContacts } from "@/app/providers/ContactsProvider";
 import { listOfferings, type Offering } from "@/lib/api/offerings";
 import { createBooking } from "@/lib/api/bookings";
 import { createContact } from "@/lib/api/contacts";
 import { getApiErrorMessage } from "@/lib/api-client";
+
+const DAY_INDEX_TO_NAME: Record<number, keyof Availability> = {
+  0: "sunday",
+  1: "monday",
+  2: "tuesday",
+  3: "wednesday",
+  4: "thursday",
+  5: "friday",
+  6: "saturday",
+};
 
 interface AddBookingModalProps {
   isOpen: boolean;
@@ -16,6 +26,15 @@ interface AddBookingModalProps {
   /** Called after a booking has been successfully created so the parent can refresh. */
   onCreated?: () => void | Promise<void>;
   selectedDate: Date;
+  availability?: Availability;
+}
+
+/** Format HH:mm to 12-hour display (e.g. "09:00" → "9:00 AM"). */
+function to12Hour(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, "0")} ${suffix}`;
 }
 
 /** Format Date + HH:mm string into an ISO datetime string. */
@@ -31,6 +50,7 @@ export default function AddBookingModal({
   onClose,
   onCreated,
   selectedDate,
+  availability,
 }: AddBookingModalProps) {
   const { technician } = useTechnician();
   const { contacts, refetchContactList } = useContacts();
@@ -102,6 +122,22 @@ export default function AddBookingModal({
       cancelled = true;
     };
   }, [isOpen, technicianId, contacts]);
+
+  // Derive the working-hours window for the currently selected date
+  const dayName = DAY_INDEX_TO_NAME[selectedDate.getDay()];
+  const daySchedule = availability?.[dayName];
+  const minTime = daySchedule?.isOpen ? daySchedule.from : undefined;
+  const maxTime = daySchedule?.isOpen ? daySchedule.to : undefined;
+
+  // Clamp the default time into working hours when the selected date changes
+  useEffect(() => {
+    if (!minTime || !maxTime) return;
+    setFormData((prev) => {
+      if (prev.time < minTime) return { ...prev, time: minTime };
+      if (prev.time > maxTime) return { ...prev, time: maxTime };
+      return prev;
+    });
+  }, [selectedDate, minTime, maxTime]);
 
   useModalKeyboard(isOpen, onClose);
   useModalScrollLock(isOpen);
@@ -254,7 +290,7 @@ export default function AddBookingModal({
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/20 pointer-events-none" />
                 <select
                   required
-                  className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all [&>option]:bg-zinc-800 [&>option]:text-zinc-50"
                   value={formData.contactId}
                   onChange={(e) => setFormData({ ...formData, contactId: e.target.value })}
                   disabled={contacts.length === 0}
@@ -317,7 +353,7 @@ export default function AddBookingModal({
               <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/20 pointer-events-none" />
               <select
                 required
-                className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all [&>option]:bg-zinc-800 [&>option]:text-zinc-50"
                 value={formData.offeringId}
                 onChange={(e) => setFormData({ ...formData, offeringId: e.target.value })}
                 disabled={loadingMeta || offerings.length === 0}
@@ -344,11 +380,18 @@ export default function AddBookingModal({
               <input
                 required
                 type="time"
+                min={minTime}
+                max={maxTime}
                 className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all [color-scheme:dark]"
                 value={formData.time}
                 onChange={(e) => setFormData({ ...formData, time: e.target.value })}
               />
             </div>
+            {minTime && maxTime && (
+              <p className="text-[11px] text-foreground/40 ml-1">
+                Working hours: {to12Hour(minTime)} – {to12Hour(maxTime)}
+              </p>
+            )}
           </div>
 
           <div className="pt-4 flex gap-3">

@@ -24,7 +24,7 @@ export default function ServiceSelection({ offerings }: ServiceSelectionProps) {
       </div>
 
       <div className="grid gap-4">
-        {offerings.sort((a, b) => a.price - b.price).map((offering) => (
+        {[...offerings].sort((a, b) => Number(a.price) - Number(b.price)).map((offering) => (
           <button
             key={offering.id}
             onClick={() => handleSelect(offering)}

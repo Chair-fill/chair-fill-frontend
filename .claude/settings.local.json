@@ -9,7 +9,19 @@
       "Bash(grep -E \"\\\\.tsx?$\")",
       "Bash(grep -E \"\\(\\\\.tsx?$|error\\)\")",
       "Bash(curl -s \"https://api.chairfill.co/api/v1/technician/TCH-01KNM35T33RMFA0M34CG18P79P\")",
-      "Bash(curl -s \"https://api.chairfill.co/api/v1/availability/me?technician_id=TCH-01KNM35T33RMFA0M34CG18P79P\")"
+      "Bash(curl -s \"https://api.chairfill.co/api/v1/availability/me?technician_id=TCH-01KNM35T33RMFA0M34CG18P79P\")",
+      "Bash(curl -s \"https://api.chairfill.co/api/v1/offerings/list?technician_id=TCH-01KNM35T33RMFA0M34CG18P79P\")",
+      "Bash(curl -s \"https://api.chairfill.co/api/v1/offerings/list\" -H \"Content-Type: application/json\" -d '{\"technician_id\":\"TCH-01KNM35T33RMFA0M34CG18P79P\"}')",
+      "Bash(curl -s -G \"https://api.chairfill.co/api/v1/offerings/list\" --data-urlencode \"technician_id=TCH-01KNM35T33RMFA0M34CG18P79P\" --data-urlencode \"page_size=100\")",
+      "Bash(curl -s \"https://api.chairfill.co/api/v1/offerings?technician_id=TCH-01KNM35T33RMFA0M34CG18P79P\")",
+      "Bash(curl -s \"https://api.chairfill.co/api/v1/offerings/public?technician_id=TCH-01KNM35T33RMFA0M34CG18P79P\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\('data',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\(0,'utf8'\\)\\); console.log\\(Object.keys\\(d.data||{}\\).join\\(', '\\)\\)\")",
+      "Bash(curl -s \"https://api.chairfill.co/api/v1/calendar/me?technician_id=TCH-01KNM35T33RMFA0M34CG18P79P\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\(0,'utf8'\\)\\); console.log\\(JSON.stringify\\(d, null, 2\\).slice\\(0, 3000\\)\\)\")",
+      "Bash(curl -s \"https://api.chairfill.co/api/v1/offerings/list?technician_id=TCH-01KNM35T33RMFA0M34CG18P79P&page_size=100\" -H \"Authorization: Bearer test\")",
+      "Bash(curl -sv \"https://api.chairfill.co/api/v1/offerings/list?technician_id=TCH-01KNM35T33RMFA0M34CG18P79P\")",
+      "Bash(curl -s \"https://api.chairfill.co/api/v1/offerings/list/TCH-01KNM35T33RMFA0M34CG18P79P\")"
     ]
   }
 }

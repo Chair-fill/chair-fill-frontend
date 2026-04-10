@@ -50,6 +50,8 @@ export const API = {
     BOOK: (eid: string) => `/booking/${encodeURIComponent(eid)}/book`,
     /** PUT - Update booking. Path: /booking/:bookingId/update. Body: { data: { date?, ... } } */
     UPDATE: (bookingId: string) => `/booking/${encodeURIComponent(bookingId)}/update`,
+    /** GET - Pay for booking. Opens payment checkout. Path: /booking/pay/:bookingId */
+    PAY: (bookingId: string) => `/booking/pay/${encodeURIComponent(bookingId)}`,
     /** DELETE - Forfeit booking. Path: /booking/:bookingId/forfeit */
     FORFEIT: (bookingId: string) => `/booking/${encodeURIComponent(bookingId)}/forfeit`,
     /** GET - List bookings. Query: technician_id?|shop_id?, from_date?, to_date?, page_size?, cursor? */

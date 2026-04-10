@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { API } from "@/lib/constants/api";
-import { Technician } from "@/app/providers/TechnicianProvider";
+import { Technician, Availability, DaySchedule } from "@/app/providers/TechnicianProvider";
+import { listOfferings } from "@/lib/api/offerings";
 import { Offering } from "@/lib/types/offering";
-import { getAvailability } from "@/lib/api/availability";
+import { getAvailability, type Weekday, type WeekdayWindow } from "@/lib/api/availability";
 import PageLoader from "@/app/components/ui/PageLoader";
 import { PublicBookingProvider, usePublicBooking } from "@/app/providers/PublicBookingProvider";
 import BarberProfileHeader from "@/app/features/bookings/components/public/BarberProfileHeader";
@@ -116,24 +117,50 @@ export default function PublicBookingPage() {
       }
 
       try {
-        const [techRes, offeringsRes, availabilityRes] = await Promise.all([
+        const [techRes, offeringsData, availabilityRes] = await Promise.all([
           api.get(API.TECHNICIAN.GET_PUBLIC(barberId)),
-          api.get(`${API.OFFERINGS.LIST}?technician_id=${barberId}`),
-          // Public endpoint — no JWT required.
+          listOfferings({ technician_id: barberId }).catch((err) => {
+            console.error("Failed to load offerings:", err);
+            return []; // Fallback to empty list so page still loads profile
+          }),
           getAvailability({ technician_id: barberId }).catch(() => null),
         ]);
 
-        // Handle NestJS data wrapper if present
+        // Handle NestJS data wrapper
         const techData = (techRes.data as { data?: Technician }).data ?? (techRes.data as Technician);
-        const offeringsData = (offeringsRes.data as { data?: Offering[] }).data ?? (offeringsRes.data as Offering[]);
 
-        // Merge fresh availability into the technician profile if the
-        // dedicated endpoint returned something usable.
+        // Normalize the availability response into the per-day UI shape
+        // that ClientCalendar + TimeSelection expect: { monday: { isOpen, from, to }, ... }
+        const WEEKDAYS: Weekday[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+        const weekdays = availabilityRes?.availability?.weekdays;
+        const fallbackOpen = availabilityRes?.availability?.open_time ?? "09:00";
+        const fallbackClose = availabilityRes?.availability?.close_time ?? "18:00";
+
+        const normalizedAvailability: Availability = {} as Availability;
+        for (const day of WEEKDAYS) {
+          const entry = weekdays?.[day] as WeekdayWindow | undefined;
+          if (entry) {
+            const isClosed =
+              !entry.open_time ||
+              !entry.close_time ||
+              (entry.open_time === "00:00" && entry.close_time === "00:00");
+            normalizedAvailability[day] = {
+              isOpen: !isClosed,
+              from: isClosed ? fallbackOpen : entry.open_time,
+              to: isClosed ? fallbackClose : entry.close_time,
+            } as DaySchedule;
+          } else {
+            normalizedAvailability[day] = {
+              isOpen: day !== "sunday",
+              from: fallbackOpen,
+              to: fallbackClose,
+            } as DaySchedule;
+          }
+        }
+
         const merged: Technician = {
           ...techData,
-          availability:
-            (availabilityRes as { weekdays?: unknown; availability?: unknown } | null)?.weekdays as Technician["availability"]
-            ?? techData?.availability,
+          availability: normalizedAvailability,
         };
 
         setTechnician(merged);

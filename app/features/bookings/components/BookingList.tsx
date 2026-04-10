@@ -4,7 +4,7 @@ import { Booking } from "@/lib/types/booking";
 import { format } from "date-fns";
 import { Clock, ClipboardList, TrendingUp, X, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { forfeitBooking } from "@/lib/api/bookings";
+import { forfeitBooking, updateBooking } from "@/lib/api/bookings";
 import { getApiErrorMessage } from "@/lib/api-client";
 
 interface BookingListProps {
@@ -18,7 +18,23 @@ interface BookingListProps {
 
 export default function BookingList({ bookings, selectedDate, isBlocked = false, onToggleBlock, onBookingForfeited }: BookingListProps) {
   const [forfeitingId, setForfeitingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [forfeitError, setForfeitError] = useState("");
+
+  const handleToggleStatus = async (booking: Booking) => {
+    const id = booking.sourceId ?? booking.id;
+    const newStatus = booking.status === "pending" ? "paid" : "pending";
+    setTogglingId(id);
+    setForfeitError("");
+    try {
+      await updateBooking(id, { payment_status: newStatus });
+      await onBookingForfeited?.();
+    } catch (err) {
+      setForfeitError(getApiErrorMessage(err));
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   const handleForfeit = async (id: string) => {
     if (!window.confirm("Cancel this booking? This cannot be undone.")) return;
@@ -106,11 +122,8 @@ export default function BookingList({ bookings, selectedDate, isBlocked = false,
                   <span className="text-xs font-bold leading-none">{format(new Date(booking.startTime), "HH:mm")}</span>
                 </div>
                 <div>
-                  <h4 className="font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
+                  <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">
                     {booking.clientName}
-                    {booking.status === 'confirmed' && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    )}
                   </h4>
                   <div className="flex items-center gap-3 mt-1 text-sm text-foreground/60">
                     <span className="flex items-center gap-1">
@@ -125,13 +138,38 @@ export default function BookingList({ bookings, selectedDate, isBlocked = false,
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="text-right">
+                <div className="flex flex-col items-end gap-1">
                   {booking.price && (
                     <p className="font-bold text-foreground">${booking.price}</p>
                   )}
-                  <p className="text-xs font-medium uppercase tracking-wider text-foreground/40 mt-1">
-                    {booking.status}
-                  </p>
+                  {booking.status !== "cancelled" ? (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleStatus(booking)}
+                      disabled={togglingId !== null}
+                      className="group/toggle flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={booking.status === "pending" ? "Mark as paid" : "Mark as pending"}
+                    >
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                        booking.status === "confirmed" ? "text-green-500" : "text-yellow-500"
+                      }`}>
+                        {togglingId === (booking.sourceId ?? booking.id)
+                          ? "..."
+                          : booking.status === "confirmed" ? "Paid" : "Pending"}
+                      </span>
+                      <div className={`relative w-8 h-[18px] rounded-full transition-colors ${
+                        booking.status === "confirmed" ? "bg-green-500" : "bg-zinc-600"
+                      }`}>
+                        <div className={`absolute top-[3px] w-3 h-3 rounded-full bg-white transition-all ${
+                          booking.status === "confirmed" ? "left-[14px]" : "left-[3px]"
+                        }`} />
+                      </div>
+                    </button>
+                  ) : (
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border bg-red-500/10 text-red-500 border-red-500/20">
+                      Cancelled
+                    </span>
+                  )}
                 </div>
                 {booking.status !== "cancelled" && (
                   <button

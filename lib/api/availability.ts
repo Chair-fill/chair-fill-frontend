@@ -12,13 +12,11 @@ export type Weekday =
   | 'saturday'
   | 'sunday';
 
-/** GET /availability/me query params (one of technician_id / shop_id required). */
-export interface GetAvailabilityParams {
-  technician_id?: string;
-  shop_id?: string;
+/** GET /availability/me query params. Either technician_id or shop_id is required. */
+export type GetAvailabilityParams = {
   /** YYYY-MM-DD */
   date?: string;
-}
+} & ({ technician_id: string; shop_id?: string } | { shop_id: string; technician_id?: string });
 
 /** Per-day window the backend stores under `weekdays.{day}`. */
 export interface WeekdayWindow {
@@ -88,6 +86,11 @@ export async function getAvailability(
     if (params.technician_id) search.set('technician_id', params.technician_id);
     if (params.shop_id) search.set('shop_id', params.shop_id);
     if (params.date) search.set('date', params.date);
+    
+    if (!params.technician_id && !params.shop_id) {
+      throw new Error('Either technician_id or shop_id is required to get availability.');
+    }
+
     const query = search.toString();
     const url = query ? `${API.AVAILABILITY.ME}?${query}` : API.AVAILABILITY.ME;
     const { data } = await api.get<unknown>(url);

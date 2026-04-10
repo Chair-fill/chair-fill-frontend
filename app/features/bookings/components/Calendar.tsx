@@ -2,15 +2,27 @@
 
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import type { Availability } from "@/app/providers/TechnicianProvider";
+
+const DAY_INDEX_TO_NAME: Record<number, keyof Availability> = {
+  0: "sunday",
+  1: "monday",
+  2: "tuesday",
+  3: "wednesday",
+  4: "thursday",
+  5: "friday",
+  6: "saturday",
+};
 
 interface CalendarProps {
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
   bookingDates?: string[]; // Array of YYYY-MM-DD strings
   blockedDates?: string[]; // Array of YYYY-MM-DD strings
+  availability?: Availability;
 }
 
-export default function Calendar({ selectedDate, onDateSelect, bookingDates = [], blockedDates = [] }: CalendarProps) {
+export default function Calendar({ selectedDate, onDateSelect, bookingDates = [], blockedDates = [], availability }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
 
   const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
@@ -50,17 +62,19 @@ export default function Calendar({ selectedDate, onDateSelect, bookingDates = []
       const isBlocked = blockedDates.includes(dateString);
       const isToday = date.toDateString() === today.toDateString();
       const isPast = date < today;
+      const dayName = DAY_INDEX_TO_NAME[date.getDay()];
+      const isClosed = availability?.[dayName]?.isOpen === false;
 
       days.push(
         <button
           key={d}
           onClick={() => onDateSelect(date)}
-          disabled={isPast}
+          disabled={isPast || isClosed}
           className={`relative h-10 sm:h-12 w-full rounded-xl flex items-center justify-center text-sm font-medium transition-all ${
             isSelected
               ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105 z-10"
-              : isPast
-                ? "text-foreground/30 cursor-not-allowed"
+              : isPast || isClosed
+                ? "text-foreground/20 cursor-not-allowed"
                 : isBlocked
                   ? "bg-red-500/10 text-red-500/60 border border-red-500/20"
                   : "text-foreground hover:bg-white/5"

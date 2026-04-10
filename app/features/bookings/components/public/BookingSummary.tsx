@@ -6,7 +6,8 @@ import { Calendar, Clock, DollarSign, User, Mail, Phone, ShieldCheck, ArrowLeft 
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { createBooking } from "@/lib/api/bookings";
-import { getApiErrorMessage } from "@/lib/api-client";
+import { api, getApiErrorMessage } from "@/lib/api-client";
+import { API } from "@/lib/constants/api";
 
 export default function BookingSummary() {
   const params = useParams();
@@ -47,16 +48,30 @@ export default function BookingSummary() {
           fullname,
           email: guestInfo.email || undefined,
           phone_number: guestInfo.phone || undefined,
+          contact_id: "",
         },
         date: start.toISOString(),
       });
 
-      // If the backend created a Stripe Checkout session, take the user there.
-      const url = result?.checkout_session?.url;
-      if (typeof url === "string" && url) {
-        window.location.href = url;
+      // Try to get a payment URL from the booking response or the pay endpoint
+      const bookingId = result?.booking?.id;
+      let checkoutUrl = result?.checkout_session?.url;
+
+      if (!checkoutUrl && bookingId) {
+        try {
+          const { data } = await api.get<unknown>(`${API.BOOKING.PAY(bookingId)}`);
+          const payRes = data as { url?: string; data?: { url?: string } };
+          checkoutUrl = payRes?.url ?? payRes?.data?.url;
+        } catch {
+          // Payment endpoint may not be available — skip to success
+        }
+      }
+
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
         return;
       }
+
       setIsSuccess(true);
     } catch (err) {
       setError(getApiErrorMessage(err));

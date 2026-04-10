@@ -90,6 +90,7 @@ export interface UpdateBookingData {
   services?: BookingServiceInput[];
   slot_id?: string;
   location?: BookingLocationInput;
+  payment_status?: string;
 }
 
 /** GET /booking/list query params. Use one of technician_id / shop_id. */
@@ -147,6 +148,7 @@ export async function updateBooking(
     if (updateData.services !== undefined) payload.services = updateData.services;
     if (updateData.slot_id !== undefined) payload.slot_id = updateData.slot_id;
     if (updateData.location !== undefined) payload.location = updateData.location;
+    if (updateData.payment_status !== undefined) payload.payment_status = updateData.payment_status;
     const { data } = await api.put<unknown>(API.BOOKING.UPDATE(bookingId), { data: payload });
     return unwrap<BookingEntity>(data);
   } catch (err) {
