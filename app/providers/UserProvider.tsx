@@ -428,10 +428,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
     setIsLoading(true);
     try {
-      const { data } = await api.post<{ user?: UserProfile; token?: string }>(API.AUTH.SIGNIN, {
+      const { data: raw } = await api.post<{ user?: UserProfile; token?: string; data?: { user?: UserProfile; token?: string } }>(API.AUTH.SIGNIN, {
         field: email.trim().toLowerCase(),
         password,
       });
+      // Unwrap NestJS { data: { user, token } } envelope if present
+      const inner = (raw as { data?: { user?: UserProfile; token?: string } }).data;
+      const data = inner && typeof inner === 'object' && ('token' in inner || 'user' in inner) ? inner : raw;
       const profile = (data as { user?: UserProfile }).user ?? data;
       const token = (data as { token?: string }).token;
       if (profile && typeof profile === 'object' && token) {
@@ -454,11 +457,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (isDemoMode()) return;
     setIsLoading(true);
     try {
-      const { data } = await api.post<{ user?: UserProfile; token?: string }>(API.AUTH.SIGNIN, {
+      const { data: raw } = await api.post<{ user?: UserProfile; token?: string; data?: { user?: UserProfile; token?: string } }>(API.AUTH.SIGNIN, {
         field: email.trim().toLowerCase(),
         token: verifyToken,
         otp,
       });
+      const inner = (raw as { data?: { user?: UserProfile; token?: string } }).data;
+      const data = inner && typeof inner === 'object' && ('token' in inner || 'user' in inner) ? inner : raw;
       const profile = (data as { user?: UserProfile }).user ?? data;
       const token = (data as { token?: string }).token;
       if (token) setToken(token);
@@ -502,8 +507,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
           imessage_contact: data.imessageContact,
         }),
       };
-      const { data: res } = await api.post<{ user?: UserProfile; token?: string }>(API.AUTH.SIGNUP, body);
-      const profile = res?.user ?? res;
+      const { data: rawRes } = await api.post<{ user?: UserProfile; token?: string; data?: { user?: UserProfile; token?: string } }>(API.AUTH.SIGNUP, body);
+      const innerRes = (rawRes as { data?: { user?: UserProfile; token?: string } }).data;
+      const res = innerRes && typeof innerRes === 'object' && ('token' in innerRes || 'user' in innerRes) ? innerRes : rawRes;
+      const profile = (res as { user?: UserProfile }).user ?? res;
       const token = (res as { token?: string })?.token;
       if (token) setToken(token);
       if (profile && typeof profile === 'object') {

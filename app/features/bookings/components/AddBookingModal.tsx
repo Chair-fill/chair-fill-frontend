@@ -219,7 +219,7 @@ export default function AddBookingModal({
     <div className={`fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4 ${isAnimatingOut ? "animate-fade-out" : "animate-fade-in"}`}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
       <div
-        className={`relative bg-card rounded-t-3xl sm:rounded-2xl border-t sm:border border-border shadow-2xl w-full max-w-md overflow-hidden ${
+        className={`relative bg-card rounded-none border-t sm:border border-border shadow-2xl w-full max-w-md overflow-hidden ${
           isAnimatingOut ? "animate-slide-down" : "animate-slide-up"
         }`}
         onClick={(e) => e.stopPropagation()}

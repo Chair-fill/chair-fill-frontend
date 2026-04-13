@@ -133,6 +133,7 @@ export function TechnicianProvider({ children }: { children: ReactNode }) {
           ...tech,
           id: id ?? tech.id,
           technician_id: tech.technician_id ?? id,
+          availability: tech.availability,
         });
       } else if (raw && typeof raw === "object") {
         const topLevelId =

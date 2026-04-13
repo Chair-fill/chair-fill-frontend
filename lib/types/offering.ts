@@ -9,7 +9,7 @@ export interface Offering {
   description?: string;
   technician_id?: string;
   shop_id?: string;
-  premium_hours?: boolean | { slots?: unknown[] };
-  promo?: boolean | { enabled?: boolean };
+  premium_hours?: boolean | { slots?: unknown[] } | null;
+  promo?: boolean | { enabled?: boolean } | null;
   promo_enabled?: boolean;
 }

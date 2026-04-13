@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import type { Availability } from "@/app/providers/TechnicianProvider";
 
 const DAY_INDEX_TO_NAME: Record<number, keyof Availability> = {
@@ -20,9 +20,10 @@ interface CalendarProps {
   bookingDates?: string[]; // Array of YYYY-MM-DD strings
   blockedDates?: string[]; // Array of YYYY-MM-DD strings
   availability?: Availability;
+  isLoading?: boolean;
 }
 
-export default function Calendar({ selectedDate, onDateSelect, bookingDates = [], blockedDates = [], availability }: CalendarProps) {
+export default function Calendar({ selectedDate, onDateSelect, bookingDates = [], blockedDates = [], availability, isLoading = false }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
 
   const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
@@ -132,8 +133,16 @@ export default function Calendar({ selectedDate, onDateSelect, bookingDates = []
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
-        {renderDays()}
+      <div className="relative">
+        <div className={`grid grid-cols-7 gap-1 transition-all duration-300 ${isLoading ? "opacity-30 blur-[1px] pointer-events-none" : ""}`}>
+          {renderDays()}
+        </div>
+        
+        {isLoading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/50 rounded-xl z-20 animate-in fade-in duration-300">
+            <Loader2 className="w-6 h-6 text-primary animate-spin" />
+          </div>
+        )}
       </div>
     </div>
   );

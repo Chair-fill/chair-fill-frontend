@@ -1,31 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Clock, Loader2, CheckCircle2 } from "lucide-react";
+import { X, Clock, Loader2, CheckCircle2, Plus, Trash2, CalendarDays } from "lucide-react";
 import { useTechnician, DaySchedule, Availability } from "@/app/providers/TechnicianProvider";
 import { getApiErrorMessage } from "@/lib/api-client";
-import { getAvailability, updateAvailability, type Weekday } from "@/lib/api/availability";
+import { clearWeeklyAvailabilityCache, updateAvailability, type Weekday } from "@/lib/api/availability";
 
 interface AvailabilityModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialAvailability?: Availability;
 }
 
+type Tab = "weekly" | "date-specific";
+
 const DAYS = [
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-  "sunday",
+  "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
 ] as const;
 
-const DEFAULT_SCHEDULE: DaySchedule = {
-  isOpen: true,
-  from: "08:00",
-  to: "20:00",
-};
+const DEFAULT_SCHEDULE: DaySchedule = { isOpen: true, from: "08:00", to: "20:00" };
 
 const INITIAL_AVAILABILITY: Availability = {
   monday: { ...DEFAULT_SCHEDULE },
@@ -37,63 +30,49 @@ const INITIAL_AVAILABILITY: Availability = {
   sunday: { ...DEFAULT_SCHEDULE, isOpen: false },
 };
 
+interface DateOverride {
+  date: string; // YYYY-MM-DD
+  isOpen: boolean;
+  from: string;
+  to: string;
+}
 
-export default function AvailabilityModal({ isOpen, onClose }: AvailabilityModalProps) {
+export default function AvailabilityModal({ isOpen, onClose, initialAvailability }: AvailabilityModalProps) {
   const { technician, refetchTechnician, isTechnicianLoading } = useTechnician();
   const technicianId = technician?.technician_id ?? technician?.id ?? "";
+  const [tab, setTab] = useState<Tab>("weekly");
   const [availability, setAvailability] = useState<Availability>(INITIAL_AVAILABILITY);
+  const [overrides, setOverrides] = useState<DateOverride[]>([]);
+  const [dirtyDays, setDirtyDays] = useState<Set<Weekday>>(new Set());
+  const [dirtyOverrides, setDirtyOverrides] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  // Hydrate the form when the modal opens. GET /availability/me (no date)
-  // returns the full per-weekday schedule under data.availability.weekdays.
   useEffect(() => {
-    if (!isOpen || !technicianId) return;
-    let cancelled = false;
+    if (isOpen && initialAvailability) {
+      setAvailability(initialAvailability);
+    }
+  }, [isOpen, initialAvailability]);
 
-    (async () => {
-      try {
-        const res = await getAvailability({ technician_id: technicianId });
-        if (cancelled) return;
-        const weekdays = res?.availability?.weekdays ?? {};
-        const next: Availability = { ...INITIAL_AVAILABILITY };
-        for (const day of DAYS) {
-          const entry = weekdays[day];
-          if (!entry) {
-            next[day] = { ...DEFAULT_SCHEDULE, isOpen: day !== "sunday" };
-            continue;
-          }
-          // Backend marks "closed" by storing 00:00–00:00.
-          const isClosed =
-            !entry.open_time ||
-            !entry.close_time ||
-            (entry.open_time === "00:00" && entry.close_time === "00:00");
-          next[day] = {
-            isOpen: !isClosed,
-            from: isClosed ? DEFAULT_SCHEDULE.from : entry.open_time,
-            to: isClosed ? DEFAULT_SCHEDULE.to : entry.close_time,
-          };
-        }
-        setAvailability(next);
-      } catch {
-        // Leave the form on its defaults if the fetch fails — the user can
-        // still edit and re-save.
-      }
-    })();
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setError("");
+      setSuccess(false);
+      setDirtyDays(new Set());
+      setDirtyOverrides(new Set());
+    }
+  }, [isOpen]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, technicianId]);
-
+  // ── Weekly handlers ──
   const handleToggleDay = (day: typeof DAYS[number]) => {
     setAvailability((prev) => ({
       ...prev,
       [day]: { ...prev[day], isOpen: !prev[day].isOpen },
     }));
-    setError("");
-    setSuccess(false);
+    setDirtyDays((prev) => new Set(prev).add(day));
+    setError(""); setSuccess(false);
   };
 
   const handleTimeChange = (day: typeof DAYS[number], field: "from" | "to", value: string) => {
@@ -101,53 +80,101 @@ export default function AvailabilityModal({ isOpen, onClose }: AvailabilityModal
       ...prev,
       [day]: { ...prev[day], [field]: value },
     }));
-    setError("");
-    setSuccess(false);
+    setDirtyDays((prev) => new Set(prev).add(day));
+    setError(""); setSuccess(false);
   };
 
   const handleApplyToAll = (sourceDay: typeof DAYS[number]) => {
-    const sourceSchedule = availability[sourceDay];
-    const newAvailability = { ...availability };
-    DAYS.forEach((day) => {
-      newAvailability[day] = { ...sourceSchedule };
-    });
-    setAvailability(newAvailability);
+    const src = availability[sourceDay];
+    const next = { ...availability };
+    DAYS.forEach((d) => { next[d] = { ...src }; });
+    setAvailability(next);
+    setDirtyDays(new Set(DAYS));
   };
 
+  // ── Date-specific handlers ──
+  const addOverride = () => {
+    // Default to tomorrow
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+    // Don't add if this date already exists
+    if (overrides.some((o) => o.date === dateStr)) return;
+    const newOverrides = [...overrides, { date: dateStr, isOpen: true, from: "09:00", to: "17:00" }];
+    setOverrides(newOverrides);
+    setDirtyOverrides((prev) => new Set(prev).add(newOverrides.length - 1));
+    setError(""); setSuccess(false);
+  };
+
+  const removeOverride = (idx: number) => {
+    setOverrides(overrides.filter((_, i) => i !== idx));
+    setError(""); setSuccess(false);
+  };
+
+  const updateOverride = (idx: number, patch: Partial<DateOverride>) => {
+    setOverrides(overrides.map((o, i) => i === idx ? { ...o, ...patch } : o));
+    setDirtyOverrides((prev) => new Set(prev).add(idx));
+    setError(""); setSuccess(false);
+  };
+
+  // ── Save ──
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setSuccess(false);
-    setSaving(true);
+    setError(""); setSuccess(false); setSaving(true);
 
     try {
-      // Persist the per-day weekly schedule via the dedicated endpoint:
-      // one PUT /availability/update per weekday using period: "day_of_week".
-      // Closed days are sent as a zero-length window (00:00 - 00:00) so the
-      // backend stores the closure rather than ignoring it.
-      if (!technicianId) {
-        throw new Error("Technician profile not loaded yet.");
+      if (!technicianId) throw new Error("Technician profile not loaded yet.");
+
+      if (tab === "weekly") {
+        if (dirtyDays.size === 0) {
+          setSuccess(true);
+          setTimeout(() => { setSuccess(false); onClose(); }, 1500);
+          return;
+        }
+
+        // Save weekly schedule: one PUT per weekday with period: "day_of_week", ONLY for dirty days
+        for (const day of Array.from(dirtyDays)) {
+          const schedule = availability[day];
+          const dayWindow: [string, string] = schedule.isOpen
+            ? [schedule.from, schedule.to]
+            : ["00:00", "00:00"];
+          await updateAvailability({
+            technician_id: technicianId,
+            period: "day_of_week",
+            weekday: day as Weekday,
+            availableTime: dayWindow,
+          });
+        }
+      } else {
+        if (dirtyOverrides.size === 0) {
+          setSuccess(true);
+          setTimeout(() => { setSuccess(false); onClose(); }, 1500);
+          return;
+        }
+
+        // Save date-specific overrides: one PUT per date with period: "only_on_day", ONLY for dirty overrides
+        for (const idx of Array.from(dirtyOverrides)) {
+          const override = overrides[idx];
+          if (!override) continue;
+
+          const window: [string, string] = override.isOpen
+            ? [override.from, override.to]
+            : ["00:00", "00:00"];
+          await updateAvailability({
+            technician_id: technicianId,
+            period: "only_on_day",
+            date: override.date,
+            availableTime: window,
+          });
+        }
       }
-      for (const day of DAYS) {
-        const schedule = availability[day];
-        const dayWindow: [string, string] = schedule.isOpen
-          ? [schedule.from, schedule.to]
-          : ["00:00", "00:00"];
-        await updateAvailability({
-          technician_id: technicianId,
-          period: "day_of_week",
-          weekday: day as Weekday,
-          availableTime: dayWindow,
-        });
-      }
-      // Refetch the technician profile so any other surfaces that read it
-      // (e.g. the calendar) pick up the change on next render.
+
       await refetchTechnician().catch(() => {});
+      clearWeeklyAvailabilityCache(technicianId);
+      setDirtyDays(new Set());
+      setDirtyOverrides(new Set());
       setSuccess(true);
-      setTimeout(() => {
-        setSuccess(false);
-        onClose();
-      }, 2000);
+      setTimeout(() => { setSuccess(false); onClose(); }, 2000);
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
@@ -159,7 +186,8 @@ export default function AvailabilityModal({ isOpen, onClose }: AvailabilityModal
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-card w-full max-w-2xl rounded-none sm:rounded-3xl border-t sm:border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+      <div className="bg-card w-full max-w-2xl rounded-none border-t sm:border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+        {/* Header */}
         <div className="flex items-center justify-between p-6 sm:p-8 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="p-2 sm:p-3 bg-primary/10 rounded-2xl">
@@ -167,99 +195,221 @@ export default function AvailabilityModal({ isOpen, onClose }: AvailabilityModal
             </div>
             <div>
               <h2 className="text-xl sm:text-2xl font-bold text-zinc-50 tracking-tight">Working Hours</h2>
-              <p className="text-sm text-zinc-500 font-medium">Set your weekly availability</p>
+              <p className="text-sm text-zinc-500 font-medium">Manage your availability</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/5 rounded-full transition-all group"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-all group">
             <X className="w-6 h-6 text-zinc-500 group-hover:text-zinc-50" />
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="flex border-b border-border">
+          <button
+            type="button"
+            onClick={() => setTab("weekly")}
+            className={`flex-1 py-3 text-sm font-bold transition-all ${
+              tab === "weekly"
+                ? "text-primary border-b-2 border-primary"
+                : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            <span className="flex items-center justify-center gap-2">
+              <Clock className="w-4 h-4" />
+              Weekly Hours
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("date-specific")}
+            className={`flex-1 py-3 text-sm font-bold transition-all ${
+              tab === "date-specific"
+                ? "text-primary border-b-2 border-primary"
+                : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            <span className="flex items-center justify-center gap-2">
+              <CalendarDays className="w-4 h-4" />
+              Date-Specific
+            </span>
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit}>
-          <div className="p-4 sm:p-8 max-h-[70vh] overflow-y-auto space-y-4 scrollbar-hide">
-            {DAYS.map((day) => (
-              <div
-                key={day}
-                className={`p-3 sm:p-4 rounded-3xl border transition-all duration-300 ${
-                  availability[day].isOpen
-                    ? "bg-white/[0.03] border-white/10"
-                    : "bg-black/40 border-white/5 opacity-50 grayscale"
-                }`}
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-                  <div className="flex items-center justify-between w-full sm:w-auto gap-2">
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleDay(day)}
-                        className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 focus:outline-none ring-offset-black focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-                          availability[day].isOpen ? "bg-primary" : "bg-zinc-800"
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${
-                            availability[day].isOpen ? "translate-x-6" : "translate-x-1"
+          <div className="p-4 sm:p-8 max-h-[60vh] overflow-y-auto space-y-4 scrollbar-hide">
+            {tab === "weekly" ? (
+              /* ── Weekly Hours ── */
+              DAYS.map((day) => (
+                <div
+                  key={day}
+                  className={`p-3 sm:p-4 rounded-3xl border transition-all duration-300 ${
+                    availability[day].isOpen
+                      ? "bg-white/[0.03] border-white/10"
+                      : "bg-black/40 border-white/5 opacity-50 grayscale"
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                    <div className="flex items-center justify-between w-full sm:w-auto gap-2">
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDay(day)}
+                          className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 focus:outline-none ring-offset-black focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                            availability[day].isOpen ? "bg-primary" : "bg-zinc-800"
                           }`}
-                        />
-                      </button>
-                      <span className="text-lg font-bold capitalize text-zinc-100 tracking-wide">
-                        {day}
-                      </span>
+                        >
+                          <span
+                            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${
+                              availability[day].isOpen ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                        <span className="text-lg font-bold capitalize text-zinc-100 tracking-wide">
+                          {day}
+                        </span>
+                      </div>
+
+                      {availability[day].isOpen ? (
+                        <button
+                          type="button"
+                          onClick={() => handleApplyToAll(day)}
+                          className="sm:hidden px-3 py-2 text-[10px] uppercase tracking-widest font-black text-primary bg-primary/10 rounded-xl transition-all active:scale-95"
+                        >
+                          Apply to All
+                        </button>
+                      ) : (
+                        <span className="sm:hidden text-xs font-black text-red-500 bg-red-500/10 px-4 py-1.5 rounded-full border border-red-500/20 uppercase tracking-widest">
+                          Closed
+                        </span>
+                      )}
                     </div>
 
                     {availability[day].isOpen ? (
-                      <button
-                        type="button"
-                        onClick={() => handleApplyToAll(day)}
-                        className="sm:hidden px-3 py-2 text-[10px] uppercase tracking-widest font-black text-primary bg-primary/10 rounded-xl transition-all active:scale-95"
-                      >
-                        Apply to All
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-1.5 bg-black/60 rounded-xl p-1 border border-white/5">
+                          <input
+                            type="time"
+                            value={availability[day].from}
+                            onChange={(e) => handleTimeChange(day, "from", e.target.value)}
+                            className="bg-transparent px-3 py-2 text-sm font-bold text-zinc-50 outline-none [color-scheme:dark] min-w-[100px]"
+                          />
+                          <span className="text-zinc-600 font-black text-[10px] uppercase">to</span>
+                          <input
+                            type="time"
+                            value={availability[day].to}
+                            onChange={(e) => handleTimeChange(day, "to", e.target.value)}
+                            className="bg-transparent px-3 py-2 text-sm font-bold text-zinc-50 outline-none [color-scheme:dark] min-w-[100px]"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyToAll(day)}
+                          className="hidden sm:inline-flex px-4 py-2 text-[11px] uppercase tracking-widest font-black text-primary hover:bg-primary/10 rounded-xl transition-all active:scale-95"
+                        >
+                          Apply to All
+                        </button>
+                      </div>
                     ) : (
-                      <span className="sm:hidden text-xs font-black text-red-500 bg-red-500/10 px-4 py-1.5 rounded-full border border-red-500/20 uppercase tracking-widest">
+                      <span className="hidden sm:inline-flex text-xs font-black text-red-500 bg-red-500/10 px-4 py-1.5 rounded-full border border-red-500/20 uppercase tracking-widest">
                         Closed
                       </span>
                     )}
                   </div>
+                </div>
+              ))
+            ) : (
+              /* ── Date-Specific Hours ── */
+              <div className="space-y-4">
+                <p className="text-sm text-zinc-500 font-medium">
+                  Override your weekly hours for specific dates — holidays, special events, or one-off schedule changes.
+                </p>
 
-                  {availability[day].isOpen ? (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="flex items-center gap-1.5 bg-black/60 rounded-xl p-1 border border-white/5 transition-colors">
+                {overrides.length === 0 && (
+                  <div className="p-8 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-2xl">
+                    <CalendarDays className="w-8 h-8 text-zinc-600 mx-auto mb-3" />
+                    <p className="text-zinc-500 font-medium text-sm">No date overrides yet</p>
+                    <p className="text-zinc-600 text-xs mt-1">Add one to customize hours for a specific date</p>
+                  </div>
+                )}
+
+                {overrides.map((override, idx) => (
+                  <div
+                    key={idx}
+                    className={`p-4 rounded-2xl border transition-all ${
+                      override.isOpen
+                        ? "bg-white/[0.03] border-white/10"
+                        : "bg-black/40 border-white/5"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <input
+                        type="date"
+                        value={override.date}
+                        onChange={(e) => updateOverride(idx, { date: e.target.value })}
+                        min={new Date().toISOString().split("T")[0]}
+                        className="bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-sm font-bold text-zinc-50 outline-none [color-scheme:dark]"
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => updateOverride(idx, { isOpen: !override.isOpen })}
+                          className={`relative inline-flex h-6 w-10 items-center rounded-full transition-all duration-300 ${
+                            override.isOpen ? "bg-primary" : "bg-zinc-800"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-300 ${
+                              override.isOpen ? "translate-x-5" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeOverride(idx)}
+                          className="p-1.5 rounded-lg text-zinc-500 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {override.isOpen ? (
+                      <div className="flex items-center gap-1.5 bg-black/60 rounded-xl p-1 border border-white/5 w-fit">
                         <input
                           type="time"
-                          value={availability[day].from}
-                          onChange={(e) => handleTimeChange(day, "from", e.target.value)}
+                          value={override.from}
+                          onChange={(e) => updateOverride(idx, { from: e.target.value })}
                           className="bg-transparent px-3 py-2 text-sm font-bold text-zinc-50 outline-none [color-scheme:dark] min-w-[100px]"
                         />
                         <span className="text-zinc-600 font-black text-[10px] uppercase">to</span>
                         <input
                           type="time"
-                          value={availability[day].to}
-                          onChange={(e) => handleTimeChange(day, "to", e.target.value)}
+                          value={override.to}
+                          onChange={(e) => updateOverride(idx, { to: e.target.value })}
                           className="bg-transparent px-3 py-2 text-sm font-bold text-zinc-50 outline-none [color-scheme:dark] min-w-[100px]"
                         />
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleApplyToAll(day)}
-                        className="hidden sm:inline-flex px-4 py-2 text-[11px] uppercase tracking-widest font-black text-primary hover:bg-primary/10 rounded-xl transition-all active:scale-95"
-                      >
-                        Apply to All
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="hidden sm:inline-flex text-xs font-black text-red-500 bg-red-500/10 px-4 py-1.5 rounded-full border border-red-500/20 uppercase tracking-widest">
-                      Closed
-                    </span>
-                  )}
-                </div>
+                    ) : (
+                      <span className="text-xs font-black text-red-500 bg-red-500/10 px-4 py-1.5 rounded-full border border-red-500/20 uppercase tracking-widest">
+                        Closed for the day
+                      </span>
+                    )}
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={addOverride}
+                  className="w-full py-3 rounded-2xl border border-dashed border-white/10 text-sm font-bold text-zinc-400 hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Date Override
+                </button>
               </div>
-            ))}
+            )}
           </div>
 
+          {/* Footer */}
           <div className="p-6 sm:p-8 border-t border-border bg-black/40 backdrop-blur-md flex flex-col gap-6">
             {error && (
               <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
@@ -269,7 +419,9 @@ export default function AvailabilityModal({ isOpen, onClose }: AvailabilityModal
             {success && (
               <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-500" />
-                <p className="text-sm text-green-500">Working hours updated successfully!</p>
+                <p className="text-sm text-green-500">
+                  {tab === "weekly" ? "Weekly hours updated!" : "Date overrides saved!"}
+                </p>
               </div>
             )}
 
@@ -283,7 +435,7 @@ export default function AvailabilityModal({ isOpen, onClose }: AvailabilityModal
               </button>
               <button
                 type="submit"
-                disabled={saving || isTechnicianLoading}
+                disabled={saving || isTechnicianLoading || (tab === "date-specific" && overrides.length === 0)}
                 className="flex-[2] px-6 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
               >
                 {saving ? (
@@ -291,8 +443,10 @@ export default function AvailabilityModal({ isOpen, onClose }: AvailabilityModal
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Saving...
                   </>
+                ) : tab === "weekly" ? (
+                  "Save Weekly Hours"
                 ) : (
-                  "Save Working Hours"
+                  "Save Date Overrides"
                 )}
               </button>
             </div>

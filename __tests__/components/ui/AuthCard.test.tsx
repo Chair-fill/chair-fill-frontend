@@ -29,7 +29,7 @@ describe('AuthCard', () => {
       </AuthCard>
     );
     const div = container.firstChild as HTMLElement;
-    expect(div.className).toMatch(/rounded-xl/);
+    expect(div.className).toMatch(/rounded-3xl/);
   });
 
   it('applies optional className', () => {

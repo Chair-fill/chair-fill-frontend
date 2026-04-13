@@ -17,8 +17,8 @@ describe('lib/constants/ui', () => {
   });
 
   it('AUTH_CARD contains expected classes', () => {
-    expect(AUTH_CARD).toContain('bg-white');
-    expect(AUTH_CARD).toContain('rounded-lg');
+    expect(AUTH_CARD).toContain('bg-card');
+    expect(AUTH_CARD).toContain('rounded-2xl');
   });
 
   it('FORM_LABEL contains block and text-sm', () => {
@@ -31,8 +31,8 @@ describe('lib/constants/ui', () => {
   });
 
   it('BTN_PRIMARY contains primary button styles', () => {
-    expect(BTN_PRIMARY).toContain('bg-zinc-900');
-    expect(BTN_PRIMARY).toContain('rounded-lg');
+    expect(BTN_PRIMARY).toContain('bg-primary');
+    expect(BTN_PRIMARY).toContain('rounded-full');
   });
 
   it('BTN_SECONDARY contains border styles', () => {

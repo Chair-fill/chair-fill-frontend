@@ -2,6 +2,12 @@ import { api, getApiErrorMessage } from '@/lib/api-client';
 import { API } from '@/lib/constants/api';
 
 /** Period enum for availability updates. */
+export enum AvailabilityUpdatePeriod {
+  ONLY_ON_DAY = 'only_on_day',
+  DAY_OF_WEEK = 'day_of_week',
+  FROM_NOW_HENCE_FORTH = 'from_now_hence_forth',
+}
+
 export type AvailabilityPeriod = 'only_on_day' | 'day_of_week' | 'from_now_hence_forth';
 export type Weekday =
   | 'monday'
@@ -58,13 +64,140 @@ export interface AvailabilityResponse {
   [key: string]: unknown;
 }
 
+/** Response shape from GET /availability/:id/enquire */
+export interface EnquireResponse {
+  available_times: [number, number][];
+  slot_index: number;
+}
+
+/** Convert minutes-from-midnight to "HH:mm" */
+function minutesToHHMM(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/**
+ * Call the enquire endpoint for a single date.
+ * Returns the available_times ranges, or [] on error.
+ */
+export async function enquireDate(
+  technicianId: string,
+  date: Date,
+): Promise<[number, number][]> {
+  try {
+    const now = new Date();
+    const queryDate = new Date(date);
+    
+    // If searching for today, use the current time to get only the remaining slots.
+    // Otherwise, use 00:00:00 (which is typically set by the calendar components).
+    const isToday = now.getFullYear() === queryDate.getFullYear() && 
+                    now.getMonth() === queryDate.getMonth() && 
+                    now.getDate() === queryDate.getDate();
+    
+    if (isToday) {
+      // Use current time to filter for today
+      queryDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
+    } else {
+      // For future dates, use start of the day in UTC (00:00:00.000Z)
+      // We use the local date parts to ensure it refers to the intended calendar day
+      queryDate.setUTCFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+      queryDate.setUTCHours(0, 0, 0, 0);
+    }
+
+    const url = `${API.AVAILABILITY.ENQUIRE(technicianId)}?date=${encodeURIComponent(queryDate.toISOString())}&slot_index=0`;
+    const { data } = await api.get<unknown>(url);
+    const res = data as {
+      data?: { available_times?: [number, number][] };
+      available_times?: [number, number][];
+    };
+    return res?.data?.available_times ?? res?.available_times ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/** Clear the weekly availability cache (call after updating working hours). */
+export function clearWeeklyAvailabilityCache(technicianId?: string): void {
+  if (technicianId) {
+    delete _weeklyCache[technicianId];
+  } else {
+    for (const key of Object.keys(_weeklyCache)) delete _weeklyCache[key];
+  }
+}
+
+// Simple cache to avoid repeated 7-request bursts for the same technician
+const _weeklyCache: Record<string, { data: import('@/app/providers/TechnicianProvider').Availability; ts: number }> = {};
+const CACHE_TTL = 60_000; // 1 minute
+
+/**
+ * Build weekly availability by calling the enquire endpoint for one
+ * representative date per weekday (the next 7 days starting from today).
+ * A day with no available_times is treated as closed.
+ * Results are cached for 1 minute per technician.
+ */
+export async function enquireWeeklyAvailability(
+  technicianId: string,
+): Promise<import('@/app/providers/TechnicianProvider').Availability> {
+  type Avail = import('@/app/providers/TechnicianProvider').Availability;
+  type DS = import('@/app/providers/TechnicianProvider').DaySchedule;
+
+  // Return cached result if fresh
+  const cached = _weeklyCache[technicianId];
+  if (cached && Date.now() - cached.ts < CACHE_TTL) {
+    return cached.data;
+  }
+
+  const DAY_NAMES: Weekday[] = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+
+  // Build 7 dates starting from today
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const dates: Date[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() + i);
+    dates.push(d);
+  }
+
+  // Fetch sequentially to avoid 429 rate limiting
+  const results: [number, number][][] = [];
+  for (const d of dates) {
+    results.push(await enquireDate(technicianId, d));
+  }
+
+  const normalized: Avail = {} as Avail;
+  for (let i = 0; i < 7; i++) {
+    const dayName = DAY_NAMES[dates[i].getDay()];
+    const ranges = results[i];
+    if (ranges.length > 0) {
+      const earliest = ranges[0][0];
+      const latest = ranges[ranges.length - 1][1];
+      normalized[dayName] = {
+        isOpen: true,
+        from: minutesToHHMM(earliest),
+        to: minutesToHHMM(latest),
+      } as DS;
+    } else {
+      normalized[dayName] = {
+        isOpen: false,
+        from: "09:00",
+        to: "18:00",
+      } as DS;
+    }
+  }
+  _weeklyCache[technicianId] = { data: normalized, ts: Date.now() };
+  return normalized;
+}
+
 /** PUT /availability/update body. Provide exactly one of technician_id / shop_id. */
 export interface UpdateAvailabilityBody {
   technician_id?: string;
   shop_id?: string;
   /** [openTime, closeTime] e.g. ["09:00", "17:00"] */
   availableTime: [string, string];
-  period: AvailabilityPeriod;
+  period: AvailabilityPeriod | AvailabilityUpdatePeriod;
   /** YYYY-MM-DD — required when period === 'only_on_day' */
   date?: string;
   /** Required when period === 'day_of_week' */

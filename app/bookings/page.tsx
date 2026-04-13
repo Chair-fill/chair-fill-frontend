@@ -7,10 +7,10 @@ import BookingModal from "@/app/features/bookings/components/BookingModal";
 import AddBookingModal from "@/app/features/bookings/components/AddBookingModal";
 import AvailabilityModal from "@/app/features/bookings/components/AvailabilityModal";
 import { Booking } from "@/lib/types/booking";
-import { useTechnician, type Availability, type DaySchedule } from "@/app/providers/TechnicianProvider";
+import { useTechnician, type Availability } from "@/app/providers/TechnicianProvider";
 import { listBookings } from "@/lib/api/bookings";
 import { bookingEntityToBooking } from "@/lib/api/booking-mapper";
-import { getAvailability, type Weekday, type WeekdayWindow } from "@/lib/api/availability";
+import { enquireWeeklyAvailability } from "@/lib/api/availability";
 import { Share2, Plus, Check, Clock, Loader2 } from "lucide-react";
 
 export default function BookingsPage() {
@@ -24,45 +24,23 @@ export default function BookingsPage() {
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [bookingsError, setBookingsError] = useState("");
   const [copied, setCopied] = useState(false);
-  const [weeklyAvailability, setWeeklyAvailability] = useState<Availability | undefined>(technician?.availability);
+  const [weeklyAvailability, setWeeklyAvailability] = useState<Availability | undefined>();
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
+  // Fetch weekly availability via the enquire endpoint
   const refreshAvailability = useCallback(async () => {
     if (!technicianId) return;
+    setAvailabilityLoading(true);
     try {
-      const res = await getAvailability({ technician_id: technicianId });
-      const WEEKDAYS: Weekday[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
-      const weekdays = res?.availability?.weekdays;
-      const fallbackOpen = res?.availability?.open_time ?? "09:00";
-      const fallbackClose = res?.availability?.close_time ?? "18:00";
-
-      const normalized: Availability = {} as Availability;
-      for (const day of WEEKDAYS) {
-        const entry = weekdays?.[day] as WeekdayWindow | undefined;
-        if (entry) {
-          const isClosed =
-            !entry.open_time ||
-            !entry.close_time ||
-            (entry.open_time === "00:00" && entry.close_time === "00:00");
-          normalized[day] = {
-            isOpen: !isClosed,
-            from: isClosed ? fallbackOpen : entry.open_time,
-            to: isClosed ? fallbackClose : entry.close_time,
-          } as DaySchedule;
-        } else {
-          normalized[day] = {
-            isOpen: day !== "sunday",
-            from: fallbackOpen,
-            to: fallbackClose,
-          } as DaySchedule;
-        }
-      }
-      setWeeklyAvailability(normalized);
+      const avail = await enquireWeeklyAvailability(technicianId);
+      setWeeklyAvailability(avail);
     } catch {
-      // keep existing availability on error
+      // keep existing on error
+    } finally {
+      setAvailabilityLoading(false);
     }
   }, [technicianId]);
 
-  // Fetch the barber's weekly working hours from the availability API
   useEffect(() => {
     refreshAvailability();
   }, [refreshAvailability]);
@@ -144,10 +122,20 @@ export default function BookingsPage() {
     }
   };
 
-  const handleShareLink = () => {
+  const handleShareLink = async () => {
     if (!technicianId) return;
     const link = `${window.location.origin}/book/${technicianId}`;
-    navigator.clipboard.writeText(link);
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch {
+      // Fallback for non-HTTPS or denied permission
+      const input = document.createElement("input");
+      input.value = link;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -219,6 +207,7 @@ export default function BookingsPage() {
                 bookingDates={bookingDates}
                 blockedDates={technician?.blocked_dates}
                 availability={weeklyAvailability}
+                isLoading={availabilityLoading}
               />
 
             </div>
@@ -265,6 +254,7 @@ export default function BookingsPage() {
 
       <AvailabilityModal
         isOpen={isAvailabilityModalOpen}
+        initialAvailability={weeklyAvailability}
         onClose={() => {
           setIsAvailabilityModalOpen(false);
           refreshAvailability();

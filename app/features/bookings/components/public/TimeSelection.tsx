@@ -1,88 +1,87 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import { format, addMinutes, parse, isBefore, isAfter, isToday } from "date-fns";
+import { useState, useEffect } from "react";
+import { format, isToday, isAfter } from "date-fns";
 import { Clock, Loader2 } from "lucide-react";
 import { usePublicBooking } from "@/app/providers/PublicBookingProvider";
 import { useParams } from "next/navigation";
-import { Availability } from "@/app/providers/TechnicianProvider";
-import { getAvailability } from "@/lib/api/availability";
+import { enquireDate } from "@/lib/api/availability";
 
-interface TimeSelectionProps {
-  availability?: Availability;
+/** Format "HH:mm" to 12-hour display (e.g. "14:30" → "2:30 PM") */
+function formatTime12h(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, "0")} ${suffix}`;
 }
 
-export default function TimeSelection({ availability }: TimeSelectionProps) {
+/** Convert minutes-from-midnight to "HH:mm" */
+function minutesToHHMM(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/**
+ * Expand an array of [startMin, endMin] ranges into 30-minute slot strings.
+ * Filters out past slots if the date is today.
+ */
+function rangesToSlots(ranges: [number, number][], date: Date, duration: number): string[] {
+  const slots: string[] = [];
+  const now = new Date();
+
+  for (const [start, end] of ranges) {
+    let current = start;
+    while (current + duration <= end) {
+      const time = minutesToHHMM(current);
+      if (isToday(date)) {
+        const slotDate = new Date(date);
+        slotDate.setHours(Math.floor(current / 60), current % 60, 0, 0);
+        if (isAfter(slotDate, now)) {
+          slots.push(time);
+        }
+      } else {
+        slots.push(time);
+      }
+      current += 30;
+    }
+  }
+
+  return slots;
+}
+
+export default function TimeSelection() {
   const params = useParams();
   const barberId = (params?.barberId as string) ?? "";
   const { selectedDate, selectedTime, setSelectedTime, selectedService, setStep } = usePublicBooking();
-  const [apiSlots, setApiSlots] = useState<string[] | null>(null);
+  const [slots, setSlots] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
-  // Fetch date-specific availability from the backend when a date is selected
+  // Fetch date-specific available time windows from the enquire endpoint
   useEffect(() => {
-    if (!selectedDate || !barberId) {
-      setApiSlots(null);
+    if (!selectedDate || !barberId || !selectedService) {
+      setSlots([]);
       return;
     }
 
     let cancelled = false;
     setLoadingSlots(true);
-    setApiSlots(null);
+    setSlots([]);
 
-    const dateStr = format(selectedDate, "yyyy-MM-dd");
-    getAvailability({ technician_id: barberId, date: dateStr })
-      .then((res) => {
+    enquireDate(barberId, selectedDate)
+      .then((ranges) => {
         if (cancelled) return;
-        const slots = res?.available_slots ?? res?.availability?.available_slots;
-        if (Array.isArray(slots) && slots.length > 0) {
-          setApiSlots(slots);
-        } else {
-          setApiSlots(null);
-        }
+        setSlots(rangesToSlots(ranges, selectedDate, selectedService.duration));
       })
       .catch(() => {
-        if (!cancelled) setApiSlots(null);
+        if (!cancelled) setSlots([]);
       })
       .finally(() => {
         if (!cancelled) setLoadingSlots(false);
       });
 
     return () => { cancelled = true; };
-  }, [selectedDate, barberId]);
-
-  // Generate slots from the weekly schedule as a fallback
-  const fallbackSlots = useMemo(() => {
-    if (!selectedDate || !availability || !selectedService) return [];
-
-    const dayName = format(selectedDate, "eeee").toLowerCase() as keyof Availability;
-    const daySchedule = availability[dayName];
-
-    if (!daySchedule || !daySchedule.isOpen) return [];
-
-    const startTime = parse(daySchedule.from, "HH:mm", selectedDate);
-    const endTime = parse(daySchedule.to, "HH:mm", selectedDate);
-    const duration = selectedService.duration;
-
-    const timeSlots: string[] = [];
-    let current = startTime;
-
-    while (isBefore(current, addMinutes(endTime, -duration)) || current.getTime() === addMinutes(endTime, -duration).getTime()) {
-      if (isToday(selectedDate)) {
-        if (isAfter(current, new Date())) {
-          timeSlots.push(format(current, "HH:mm"));
-        }
-      } else {
-        timeSlots.push(format(current, "HH:mm"));
-      }
-      current = addMinutes(current, 30);
-    }
-
-    return timeSlots;
-  }, [selectedDate, availability, selectedService]);
-
-  // Use API slots when available, otherwise fall back to generated slots
-  const slots = apiSlots ?? fallbackSlots;
+  }, [selectedDate, barberId, selectedService]);
 
   const handleSelect = (time: string) => {
     setSelectedTime(time);
@@ -122,7 +121,7 @@ export default function TimeSelection({ availability }: TimeSelectionProps) {
                     : "bg-white/[0.03] border-white/10 text-zinc-300 hover:border-white/20 hover:bg-white/10 active:scale-95"
                 }`}
               >
-                {format(parse(time, "HH:mm", new Date()), "h:mm a")}
+                {formatTime12h(time)}
               </button>
             );
           })}
