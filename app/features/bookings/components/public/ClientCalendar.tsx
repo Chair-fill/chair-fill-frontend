@@ -1,20 +1,31 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isBefore, startOfDay, getDay } from "date-fns";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { usePublicBooking } from "@/app/providers/PublicBookingProvider";
 import { Availability } from "@/app/providers/TechnicianProvider";
+import type { CalendarDailyEntry } from "@/lib/api/calendar";
 
 interface ClientCalendarProps {
+  technicianId?: string;
   availability?: Availability;
+  dailyEntries?: Record<string, CalendarDailyEntry>;
   blockedDates?: string[];
   isLoading?: boolean;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export default function ClientCalendar({ availability, blockedDates = [], isLoading = false }: ClientCalendarProps) {
+const EMPTY_ARRAY: string[] = [];
+
+export default function ClientCalendar({ 
+  technicianId, 
+  availability, 
+  dailyEntries = {},
+  blockedDates = EMPTY_ARRAY, 
+  isLoading = false 
+}: ClientCalendarProps) {
   const { selectedDate, setSelectedDate } = usePublicBooking();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -22,13 +33,11 @@ export default function ClientCalendar({ availability, blockedDates = [], isLoad
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
     const daysInMonth = eachDayOfInterval({ start, end });
-    
-    // Pad start of month
     const startDay = getDay(start);
     const padding = Array(startDay).fill(null);
-    
     return [...padding, ...daysInMonth];
   }, [currentMonth]);
+
 
   const isDayAvailable = (date: Date) => {
     if (isBefore(date, startOfDay(new Date()))) return false;
@@ -36,9 +45,14 @@ export default function ClientCalendar({ availability, blockedDates = [], isLoad
     const dateString = format(date, "yyyy-MM-dd");
     if (blockedDates.includes(dateString)) return false;
 
-    // Per-day weekly schedule, if the backend gave us one. Treat as
-    // "open by default" — only fail closed when there's an explicit
-    // entry for the day that says isOpen === false.
+    // Date-specific override check
+    const dailyEntry = dailyEntries[dateString];
+    if (dailyEntry) {
+      const isClosed = dailyEntry.open_time === "00:00" && dailyEntry.close_time === "00:00";
+      if (isClosed) return false;
+    }
+
+    // Per-day weekly schedule fallback
     const dayName = format(date, "eeee").toLowerCase() as keyof Availability;
     const day = availability?.[dayName];
     if (day && day.isOpen === false) return false;
@@ -112,6 +126,7 @@ export default function ClientCalendar({ availability, blockedDates = [], isLoad
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/80">Updating Availability</p>
           </div>
         )}
+
       </div>
 
       {!selectedDate && (

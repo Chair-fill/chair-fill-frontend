@@ -68,50 +68,97 @@ export interface AvailabilityResponse {
 export interface EnquireResponse {
   available_times: [number, number][];
   slot_index: number;
+  working_hours?: {
+    timezone: string;
+    date: string;
+    weekday: string;
+    open_time: string;
+    close_time: string;
+    off_times?: [string, string][];
+    time_of_day?: {
+      morning: boolean;
+      afternoon: boolean;
+      evening: boolean;
+    };
+  };
 }
 
-/** Convert minutes-from-midnight to "HH:mm" */
-function minutesToHHMM(mins: number): string {
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+// Simple in-memory cache for enquire results to avoid duplicate fetches
+const _enquireCache: Record<string, { data: [number, number][]; ts: number }> = {};
+const ENQUIRE_CACHE_TTL = 60_000; // 1 minute
+
+/** Clear the enquire cache (call after the barber updates working hours). */
+export function clearEnquireCache(technicianId?: string): void {
+  if (technicianId) {
+    for (const key of Object.keys(_enquireCache)) {
+      if (key.startsWith(`${technicianId}:`)) delete _enquireCache[key];
+    }
+  } else {
+    for (const key of Object.keys(_enquireCache)) delete _enquireCache[key];
+  }
+}
+
+/** Local date key (YYYY-MM-DD) for caching — avoids UTC off-by-one. */
+function dateKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 /**
  * Call the enquire endpoint for a single date.
  * Returns the available_times ranges, or [] on error.
+ * Cached per (technicianId, local date) for 1 minute.
+ *
+ * @param startTime HH:mm — the working-hours start for this day. When provided,
+ *   the query date's time is set to this (not midnight) so the backend treats
+ *   the query as starting at the open time. For today, the current time is
+ *   used instead when it's after the start time.
  */
 export async function enquireDate(
   technicianId: string,
   date: Date,
+  startTime?: string,
 ): Promise<[number, number][]> {
+  const cacheKey = `${technicianId}:${dateKey(date)}`;
+  const cached = _enquireCache[cacheKey];
+  if (cached && Date.now() - cached.ts < ENQUIRE_CACHE_TTL) {
+    return cached.data;
+  }
+
   try {
     const now = new Date();
     const queryDate = new Date(date);
-    
-    // If searching for today, use the current time to get only the remaining slots.
-    // Otherwise, use 00:00:00 (which is typically set by the calendar components).
-    const isToday = now.getFullYear() === queryDate.getFullYear() && 
-                    now.getMonth() === queryDate.getMonth() && 
+
+    const isToday = now.getFullYear() === queryDate.getFullYear() &&
+                    now.getMonth() === queryDate.getMonth() &&
                     now.getDate() === queryDate.getDate();
-    
+
+    const [startH, startM] = (startTime ?? "00:00").split(":").map(Number);
+
     if (isToday) {
-      // Use current time to filter for today
-      queryDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
+      const startMins = startH * 60 + startM;
+      const nowMins = now.getHours() * 60 + now.getMinutes();
+      if (nowMins >= startMins) {
+        queryDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
+      } else {
+        queryDate.setHours(startH, startM, 0, 0);
+      }
     } else {
-      // For future dates, use start of the day in UTC (00:00:00.000Z)
-      // We use the local date parts to ensure it refers to the intended calendar day
       queryDate.setUTCFullYear(date.getFullYear(), date.getMonth(), date.getDate());
-      queryDate.setUTCHours(0, 0, 0, 0);
+      queryDate.setUTCHours(startH, startM, 0, 0);
     }
 
-    const url = `${API.AVAILABILITY.ENQUIRE(technicianId)}?date=${encodeURIComponent(queryDate.toISOString())}&slot_index=0`;
+    const url = `${API.AVAILABILITY.ENQUIRE(technicianId)}?date=${queryDate.toISOString()}&slot_index=0`;
     const { data } = await api.get<unknown>(url);
     const res = data as {
       data?: { available_times?: [number, number][] };
       available_times?: [number, number][];
     };
-    return res?.data?.available_times ?? res?.available_times ?? [];
+    const ranges = res?.data?.available_times ?? res?.available_times ?? [];
+    _enquireCache[cacheKey] = { data: ranges, ts: Date.now() };
+    return ranges;
   } catch {
     return [];
   }
@@ -131,63 +178,64 @@ const _weeklyCache: Record<string, { data: import('@/app/providers/TechnicianPro
 const CACHE_TTL = 60_000; // 1 minute
 
 /**
- * Build weekly availability by calling the enquire endpoint for one
- * representative date per weekday (the next 7 days starting from today).
- * A day with no available_times is treated as closed.
- * Results are cached for 1 minute per technician.
+ * Fetch the barber's weekly hours via GET /availability/me.
+ * Returns the normalized per-day open/close schedule.
+ * Results are cached for 1 minute per technician (per date if provided).
  */
-export async function enquireWeeklyAvailability(
+export async function fetchWeeklyAvailability(
   technicianId: string,
+  date?: string,
 ): Promise<import('@/app/providers/TechnicianProvider').Availability> {
   type Avail = import('@/app/providers/TechnicianProvider').Availability;
   type DS = import('@/app/providers/TechnicianProvider').DaySchedule;
 
   // Return cached result if fresh
-  const cached = _weeklyCache[technicianId];
+  const cacheKey = date ? `${technicianId}:${date}` : technicianId;
+  const cached = _weeklyCache[cacheKey];
   if (cached && Date.now() - cached.ts < CACHE_TTL) {
     return cached.data;
   }
 
-  const DAY_NAMES: Weekday[] = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const WEEKDAYS_ORDER: Weekday[] = [
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+  ];
 
-  // Build 7 dates starting from today
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const res = await getAvailability({ technician_id: technicianId, date });
 
-  const dates: Date[] = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() + i);
-    dates.push(d);
-  }
+  // The weekdays object may be at the top level (after NestJS unwrap) or nested under `availability`
+  const r = res as Record<string, unknown>;
+  const avail = (r.availability && typeof r.availability === 'object'
+    ? r.availability
+    : null) as Record<string, unknown> | null;
+  const weekdays = (r.weekdays as Partial<Record<Weekday, WeekdayWindow>> | undefined) ??
+    (avail?.weekdays as Partial<Record<Weekday, WeekdayWindow>> | undefined);
 
-  // Fetch sequentially to avoid 429 rate limiting
-  const results: [number, number][][] = [];
-  for (const d of dates) {
-    results.push(await enquireDate(technicianId, d));
-  }
+  const fallbackOpen = (r.open_time as string | undefined) ??
+    (avail?.open_time as string | undefined) ?? "09:00";
+  const fallbackClose = (r.close_time as string | undefined) ??
+    (avail?.close_time as string | undefined) ?? "18:00";
 
   const normalized: Avail = {} as Avail;
-  for (let i = 0; i < 7; i++) {
-    const dayName = DAY_NAMES[dates[i].getDay()];
-    const ranges = results[i];
-    if (ranges.length > 0) {
-      const earliest = ranges[0][0];
-      const latest = ranges[ranges.length - 1][1];
-      normalized[dayName] = {
-        isOpen: true,
-        from: minutesToHHMM(earliest),
-        to: minutesToHHMM(latest),
+  for (const day of WEEKDAYS_ORDER) {
+    const entry = weekdays?.[day];
+    if (entry && entry.open_time && entry.close_time) {
+      const isClosed = entry.open_time === "00:00" && entry.close_time === "00:00";
+      normalized[day] = {
+        isOpen: !isClosed,
+        from: isClosed ? fallbackOpen : entry.open_time,
+        to: isClosed ? fallbackClose : entry.close_time,
       } as DS;
     } else {
-      normalized[dayName] = {
+      // No entry for this day — treat as closed
+      normalized[day] = {
         isOpen: false,
-        from: "09:00",
-        to: "18:00",
+        from: fallbackOpen,
+        to: fallbackClose,
       } as DS;
     }
   }
-  _weeklyCache[technicianId] = { data: normalized, ts: Date.now() };
+
+  _weeklyCache[cacheKey] = { data: normalized, ts: Date.now() };
   return normalized;
 }
 

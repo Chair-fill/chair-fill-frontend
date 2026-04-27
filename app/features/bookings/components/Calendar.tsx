@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import type { Availability } from "@/app/providers/TechnicianProvider";
+import type { CalendarDailyEntry } from "@/lib/api/calendar";
 
 const DAY_INDEX_TO_NAME: Record<number, keyof Availability> = {
   0: "sunday",
@@ -20,10 +21,11 @@ interface CalendarProps {
   bookingDates?: string[]; // Array of YYYY-MM-DD strings
   blockedDates?: string[]; // Array of YYYY-MM-DD strings
   availability?: Availability;
+  dailyEntries?: Record<string, CalendarDailyEntry>;
   isLoading?: boolean;
 }
 
-export default function Calendar({ selectedDate, onDateSelect, bookingDates = [], blockedDates = [], availability, isLoading = false }: CalendarProps) {
+export default function Calendar({ selectedDate, onDateSelect, bookingDates = [], blockedDates = [], availability, dailyEntries = {}, isLoading = false }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
 
   const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
@@ -62,9 +64,14 @@ export default function Calendar({ selectedDate, onDateSelect, bookingDates = []
       const hasBookings = bookingDates.includes(dateString);
       const isBlocked = blockedDates.includes(dateString);
       const isToday = date.toDateString() === today.toDateString();
-      const isPast = date < today;
       const dayName = DAY_INDEX_TO_NAME[date.getDay()];
-      const isClosed = availability?.[dayName]?.isOpen === false;
+      
+      const isPast = date < today;
+      const dailyEntry = dailyEntries[dateString];
+      const isClosed = dailyEntry 
+        ? (dailyEntry.open_time === "00:00" && dailyEntry.close_time === "00:00")
+        : (availability?.[dayName]?.isOpen === false);
+      const isModified = dailyEntry?.availability_modified;
 
       days.push(
         <button
@@ -78,7 +85,9 @@ export default function Calendar({ selectedDate, onDateSelect, bookingDates = []
                 ? "text-foreground/20 cursor-not-allowed"
                 : isBlocked
                   ? "bg-red-500/10 text-red-500/60 border border-red-500/20"
-                  : "text-foreground hover:bg-white/5"
+                  : isModified
+                    ? "bg-primary/5 text-primary border border-primary/20"
+                    : "text-foreground hover:bg-white/5"
           } ${isToday && !isSelected ? "border border-primary/40 text-primary" : ""}`}
         >
           {d}

@@ -4,12 +4,21 @@ import { useState, useEffect } from "react";
 import { X, Clock, Loader2, CheckCircle2, Plus, Trash2, CalendarDays } from "lucide-react";
 import { useTechnician, DaySchedule, Availability } from "@/app/providers/TechnicianProvider";
 import { getApiErrorMessage } from "@/lib/api-client";
-import { clearWeeklyAvailabilityCache, updateAvailability, type Weekday } from "@/lib/api/availability";
+import { clearWeeklyAvailabilityCache, updateAvailability, fetchWeeklyAvailability, getAvailability, type Weekday } from "@/lib/api/availability";
+import type { CalendarDailyEntry } from "@/lib/api/calendar";
 
 interface AvailabilityModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialAvailability?: Availability;
+  dailyEntries?: Record<string, CalendarDailyEntry>;
+}
+
+/** Convert minutes-from-midnight to "HH:mm" */
+function minutesToHHMM(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 type Tab = "weekly" | "date-specific";
@@ -35,9 +44,10 @@ interface DateOverride {
   isOpen: boolean;
   from: string;
   to: string;
+  off_times: [string, string][];
 }
 
-export default function AvailabilityModal({ isOpen, onClose, initialAvailability }: AvailabilityModalProps) {
+export default function AvailabilityModal({ isOpen, onClose, initialAvailability, dailyEntries = {} }: AvailabilityModalProps) {
   const { technician, refetchTechnician, isTechnicianLoading } = useTechnician();
   const technicianId = technician?.technician_id ?? technician?.id ?? "";
   const [tab, setTab] = useState<Tab>("weekly");
@@ -54,6 +64,30 @@ export default function AvailabilityModal({ isOpen, onClose, initialAvailability
       setAvailability(initialAvailability);
     }
   }, [isOpen, initialAvailability]);
+
+  // Pre-fill overrides from calendar data
+  useEffect(() => {
+    if (isOpen && dailyEntries && Object.keys(dailyEntries).length > 0) {
+      const existingOverrides: DateOverride[] = Object.entries(dailyEntries)
+        .filter(([_, entry]) => entry.availability_modified)
+        .map(([date, entry]) => ({
+          date,
+          isOpen: entry.open_time !== "00:00" || entry.close_time !== "00:00",
+          from: entry.open_time === "00:00" && entry.close_time === "00:00" ? "09:00" : entry.open_time,
+          to: entry.open_time === "00:00" && entry.close_time === "00:00" ? "18:00" : entry.close_time,
+          off_times: (entry.availability.off_times || []).map(range => 
+            [minutesToHHMM(range[0]), minutesToHHMM(range[1])] as [string, string]
+          ),
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+      
+      if (existingOverrides.length > 0) {
+        setOverrides(existingOverrides);
+        // We don't mark them as dirty because they are already saved on backend
+        setDirtyOverrides(new Set());
+      }
+    }
+  }, [isOpen, dailyEntries]);
 
   // Reset state when modal closes
   useEffect(() => {
@@ -84,30 +118,75 @@ export default function AvailabilityModal({ isOpen, onClose, initialAvailability
     setError(""); setSuccess(false);
   };
 
-  const handleApplyToAll = (sourceDay: typeof DAYS[number]) => {
-    const src = availability[sourceDay];
-    const next = { ...availability };
-    DAYS.forEach((d) => { next[d] = { ...src }; });
-    setAvailability(next);
-    setDirtyDays(new Set(DAYS));
-  };
 
   // ── Date-specific handlers ──
   const addOverride = () => {
-    // Default to tomorrow
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const dateStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
-    // Don't add if this date already exists
-    if (overrides.some((o) => o.date === dateStr)) return;
-    const newOverrides = [...overrides, { date: dateStr, isOpen: true, from: "09:00", to: "17:00" }];
-    setOverrides(newOverrides);
-    setDirtyOverrides((prev) => new Set(prev).add(newOverrides.length - 1));
-    setError(""); setSuccess(false);
+    const existing = new Set(overrides.map((o) => o.date));
+    const candidate = new Date();
+    candidate.setDate(candidate.getDate() + 1);
+    let dateStr = "";
+    let weekday: Weekday = "monday";
+
+    for (let i = 0; i < 365; i++) {
+      const y = candidate.getFullYear();
+      const m = String(candidate.getMonth() + 1).padStart(2, "0");
+      const d = String(candidate.getDate()).padStart(2, "0");
+      dateStr = `${y}-${m}-${d}`;
+      if (!existing.has(dateStr)) {
+        weekday = DAYS[candidate.getDay() === 0 ? 6 : candidate.getDay() - 1] as Weekday;
+        break;
+      }
+      candidate.setDate(candidate.getDate() + 1);
+    }
+
+    const defaultDay = availability[weekday];
+    const newIdx = overrides.length;
+    setOverrides([
+      ...overrides,
+      {
+        date: dateStr,
+        isOpen: defaultDay.isOpen,
+        from: defaultDay.from,
+        to: defaultDay.to,
+        off_times: [],
+      },
+    ]);
+    setDirtyOverrides((prev) => new Set(prev).add(newIdx));
+    setError("");
+    setSuccess(false);
+  };
+
+  const handleAddOffTime = (idx: number) => {
+    const current = overrides[idx].off_times ?? [];
+    updateOverride(idx, { off_times: [...current, ["12:00", "13:00"]] });
+  };
+
+  const handleRemoveOffTime = (overrideIdx: number, offTimeIdx: number) => {
+    const current = overrides[overrideIdx].off_times ?? [];
+    updateOverride(overrideIdx, {
+      off_times: current.filter((_, i) => i !== offTimeIdx),
+    });
+  };
+
+  const handleOffTimeChange = (overrideIdx: number, offTimeIdx: number, fieldIndex: 0 | 1, value: string) => {
+    const current = overrides[overrideIdx].off_times ?? [];
+    const next = [...current];
+    next[offTimeIdx] = [...next[offTimeIdx]] as [string, string];
+    next[offTimeIdx][fieldIndex] = value;
+    updateOverride(overrideIdx, { off_times: next });
   };
 
   const removeOverride = (idx: number) => {
     setOverrides(overrides.filter((_, i) => i !== idx));
+    // Remap dirty indices: drop the removed idx and shift higher indices down by 1
+    setDirtyOverrides((prev) => {
+      const next = new Set<number>();
+      prev.forEach((d) => {
+        if (d < idx) next.add(d);
+        else if (d > idx) next.add(d - 1);
+      });
+      return next;
+    });
     setError(""); setSuccess(false);
   };
 
@@ -160,11 +239,17 @@ export default function AvailabilityModal({ isOpen, onClose, initialAvailability
           const window: [string, string] = override.isOpen
             ? [override.from, override.to]
             : ["00:00", "00:00"];
+
+          const dateObj = new Date(override.date);
+          const weekday = DAYS[dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1];
+
           await updateAvailability({
             technician_id: technicianId,
             period: "only_on_day",
             date: override.date,
+            weekday: weekday as Weekday,
             availableTime: window,
+            off_times: override.off_times,
           });
         }
       }
@@ -268,20 +353,6 @@ export default function AvailabilityModal({ isOpen, onClose, initialAvailability
                           {day}
                         </span>
                       </div>
-
-                      {availability[day].isOpen ? (
-                        <button
-                          type="button"
-                          onClick={() => handleApplyToAll(day)}
-                          className="sm:hidden px-3 py-2 text-[10px] uppercase tracking-widest font-black text-primary bg-primary/10 rounded-xl transition-all active:scale-95"
-                        >
-                          Apply to All
-                        </button>
-                      ) : (
-                        <span className="sm:hidden text-xs font-black text-red-500 bg-red-500/10 px-4 py-1.5 rounded-full border border-red-500/20 uppercase tracking-widest">
-                          Closed
-                        </span>
-                      )}
                     </div>
 
                     {availability[day].isOpen ? (
@@ -301,16 +372,9 @@ export default function AvailabilityModal({ isOpen, onClose, initialAvailability
                             className="bg-transparent px-3 py-2 text-sm font-bold text-zinc-50 outline-none [color-scheme:dark] min-w-[100px]"
                           />
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleApplyToAll(day)}
-                          className="hidden sm:inline-flex px-4 py-2 text-[11px] uppercase tracking-widest font-black text-primary hover:bg-primary/10 rounded-xl transition-all active:scale-95"
-                        >
-                          Apply to All
-                        </button>
                       </div>
                     ) : (
-                      <span className="hidden sm:inline-flex text-xs font-black text-red-500 bg-red-500/10 px-4 py-1.5 rounded-full border border-red-500/20 uppercase tracking-widest">
+                      <span className="text-xs font-black text-red-500 bg-red-500/10 px-4 py-1.5 rounded-full border border-red-500/20 uppercase tracking-widest">
                         Closed
                       </span>
                     )}
@@ -374,20 +438,68 @@ export default function AvailabilityModal({ isOpen, onClose, initialAvailability
                     </div>
 
                     {override.isOpen ? (
-                      <div className="flex items-center gap-1.5 bg-black/60 rounded-xl p-1 border border-white/5 w-fit">
-                        <input
-                          type="time"
-                          value={override.from}
-                          onChange={(e) => updateOverride(idx, { from: e.target.value })}
-                          className="bg-transparent px-3 py-2 text-sm font-bold text-zinc-50 outline-none [color-scheme:dark] min-w-[100px]"
-                        />
-                        <span className="text-zinc-600 font-black text-[10px] uppercase">to</span>
-                        <input
-                          type="time"
-                          value={override.to}
-                          onChange={(e) => updateOverride(idx, { to: e.target.value })}
-                          className="bg-transparent px-3 py-2 text-sm font-bold text-zinc-50 outline-none [color-scheme:dark] min-w-[100px]"
-                        />
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-1.5 bg-black/60 rounded-xl p-1 border border-white/5 w-fit">
+                          <input
+                            type="time"
+                            value={override.from}
+                            onChange={(e) => updateOverride(idx, { from: e.target.value })}
+                            className="bg-transparent px-3 py-2 text-sm font-bold text-zinc-50 outline-none [color-scheme:dark] min-w-[100px]"
+                          />
+                          <span className="text-zinc-600 font-black text-[10px] uppercase">to</span>
+                          <input
+                            type="time"
+                            value={override.to}
+                            onChange={(e) => updateOverride(idx, { to: e.target.value })}
+                            className="bg-transparent px-3 py-2 text-sm font-bold text-zinc-50 outline-none [color-scheme:dark] min-w-[100px]"
+                          />
+                        </div>
+
+                        {/* Off-times management */}
+                        <div className="space-y-3 pt-2 border-t border-white/5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] uppercase tracking-widest font-black text-zinc-500">Disabled Time Ranges</span>
+                            <button
+                              type="button"
+                              onClick={() => handleAddOffTime(idx)}
+                              className="text-[10px] uppercase tracking-widest font-black text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+                            >
+                              <Plus className="w-3 h-3" /> Add Range
+                            </button>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            {override.off_times?.map((offTime, offIdx) => (
+                              <div key={offIdx} className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5 bg-black/40 rounded-lg p-1 border border-white/5 w-fit">
+                                  <input
+                                    type="time"
+                                    value={offTime[0]}
+                                    onChange={(e) => handleOffTimeChange(idx, offIdx, 0, e.target.value)}
+                                    className="bg-transparent px-2 py-1 text-xs font-bold text-zinc-300 outline-none [color-scheme:dark] min-w-[80px]"
+                                  />
+                                  <span className="text-zinc-700 font-black text-[8px] uppercase">to</span>
+                                  <input
+                                    type="time"
+                                    value={offTime[1]}
+                                    onChange={(e) => handleOffTimeChange(idx, offIdx, 1, e.target.value)}
+                                    className="bg-transparent px-2 py-1 text-xs font-bold text-zinc-300 outline-none [color-scheme:dark] min-w-[80px]"
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveOffTime(idx, offIdx)}
+                                  className="p-1.5 rounded-lg text-zinc-600 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                            {(!override.off_times || override.off_times.length === 0) && (
+                              <p className="text-[10px] text-zinc-600 italic">No disabled ranges (e.g. lunch breaks) added.</p>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <span className="text-xs font-black text-red-500 bg-red-500/10 px-4 py-1.5 rounded-full border border-red-500/20 uppercase tracking-widest">

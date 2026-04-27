@@ -6,6 +6,6 @@ import { isOnboardingRoute, isPublicRoute } from '@/lib/auth';
 
 export default function ConditionalBottomNav() {
   const pathname = usePathname();
-  if (pathname === '/complete-registration' || isOnboardingRoute(pathname) || isPublicRoute(pathname)) return null;
+  if (pathname === '/complete-registration' || pathname === '/docs' || isOnboardingRoute(pathname) || isPublicRoute(pathname)) return null;
   return <BottomNav />;
 }

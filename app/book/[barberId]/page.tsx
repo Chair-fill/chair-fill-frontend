@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { API } from "@/lib/constants/api";
 import { Technician } from "@/app/providers/TechnicianProvider";
 import { listOfferings } from "@/lib/api/offerings";
 import { Offering } from "@/lib/types/offering";
-import { enquireWeeklyAvailability } from "@/lib/api/availability";
+import { fetchWeeklyAvailability } from "@/lib/api/availability";
+import { getBooking, BookingEntity } from "@/lib/api/bookings";
+import { getPublicCalendar, CalendarDailyEntry } from "@/lib/api/calendar";
 import PageLoader from "@/app/components/ui/PageLoader";
 import { PublicBookingProvider, usePublicBooking } from "@/app/providers/PublicBookingProvider";
 import BarberProfileHeader from "@/app/features/bookings/components/public/BarberProfileHeader";
@@ -16,17 +18,20 @@ import ClientCalendar from "@/app/features/bookings/components/public/ClientCale
 import TimeSelection from "@/app/features/bookings/components/public/TimeSelection";
 import ClientInfoForm from "@/app/features/bookings/components/public/ClientInfoForm";
 import BookingSummary from "@/app/features/bookings/components/public/BookingSummary";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ShieldCheck } from "lucide-react";
 import { isDemoMode } from "@/lib/demo";
+import { format } from "date-fns";
 
 function BookingFlow({ 
   technician, 
   offerings, 
-  isLoadingAvailability 
+  isLoadingAvailability,
+  calendarEntries
 }: { 
   technician: Technician, 
   offerings: Offering[], 
-  isLoadingAvailability: boolean 
+  isLoadingAvailability: boolean,
+  calendarEntries?: Record<string, CalendarDailyEntry>
 }) {
   const { step, setStep } = usePublicBooking();
 
@@ -67,12 +72,14 @@ function BookingFlow({
               <p className="text-sm text-zinc-500 font-medium">When would you like to come in?</p>
             </div>
             <div className="grid lg:grid-cols-[1fr,360px] gap-8 items-start">
-              <ClientCalendar 
-                availability={technician.availability} 
-                blockedDates={technician.blocked_dates} 
+              <ClientCalendar
+                technicianId={technician.technician_id ?? technician.id}
+                availability={technician.availability}
+                blockedDates={technician.blocked_dates}
                 isLoading={isLoadingAvailability}
+                dailyEntries={calendarEntries}
               />
-              <TimeSelection />
+              <TimeSelection availability={technician.availability} />
             </div>
           </div>
         )}
@@ -83,14 +90,55 @@ function BookingFlow({
   );
 }
 
+function SuccessView({ booking, reset }: { booking: BookingEntity, reset: () => void }) {
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-8 animate-in zoom-in duration-500">
+      <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-primary/20">
+        <ShieldCheck className="w-12 h-12 text-black" />
+      </div>
+      <div className="space-y-2">
+        <h2 className="text-4xl font-black text-zinc-50 tracking-tight">Booking Confirmed!</h2>
+        <p className="text-zinc-500 font-medium max-w-xs mx-auto text-lg pt-2">
+          Your appointment for <span className="text-zinc-300">{format(new Date(booking.start_date), "MMMM do 'at' h:mm a")}</span> has been successfully scheduled.
+        </p>
+      </div>
+      <button
+        onClick={reset}
+        className="px-8 py-4 bg-white/5 border border-white/10 rounded-2xl text-zinc-50 font-bold hover:bg-white/10 transition-all active:scale-95"
+      >
+        Book Another Appointment
+      </button>
+    </div>
+  );
+}
+
 export default function PublicBookingPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const barberId = params.barberId as string;
+  const bookingId = searchParams.get("booking_id");
+
   const [technician, setTechnician] = useState<Technician | null>(null);
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
+  const [calendarEntries, setCalendarEntries] = useState<Record<string, CalendarDailyEntry>>({});
+  const [confirmedBooking, setConfirmedBooking] = useState<BookingEntity | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function checkPayment() {
+      if (!bookingId) return;
+      try {
+        const booking = await getBooking(bookingId);
+        setConfirmedBooking(booking);
+      } catch (err) {
+        console.error("Failed to verify booking:", err);
+      }
+    }
+    checkPayment();
+  }, [bookingId]);
 
   useEffect(() => {
     async function fetchData() {
@@ -127,11 +175,15 @@ export default function PublicBookingPage() {
       }
 
       try {
-        const [techRes, offeringsData] = await Promise.all([
+        const [techRes, offeringsData, calendarRes] = await Promise.all([
           api.get(API.TECHNICIAN.GET_PUBLIC(barberId)),
           listOfferings({ technician_id: barberId }).catch((err) => {
             console.error("Failed to load offerings:", err);
             return [];
+          }),
+          getPublicCalendar(barberId).catch((err) => {
+            console.error("Failed to load public calendar:", err);
+            return null;
           }),
         ]);
 
@@ -140,12 +192,15 @@ export default function PublicBookingPage() {
 
         setTechnician(techData);
         setOfferings(Array.isArray(offeringsData) ? offeringsData : []);
+        if (calendarRes?.daily_entries) {
+          setCalendarEntries(calendarRes.daily_entries);
+        }
         setIsLoading(false);
 
         // Fetch availability windows in the background to show on the calendar
         setIsLoadingAvailability(true);
         try {
-          const weeklyAvail = await enquireWeeklyAvailability(barberId);
+          const weeklyAvail = await fetchWeeklyAvailability(barberId);
           setTechnician(prev => prev ? { ...prev, availability: weeklyAvail } : null);
         } catch (err) {
           console.error("Failed to load weekly availability:", err);
@@ -181,6 +236,20 @@ export default function PublicBookingPage() {
     );
   }
 
+  if (confirmedBooking) {
+    return (
+      <div className="min-h-screen bg-black">
+        <SuccessView 
+          booking={confirmedBooking} 
+          reset={() => {
+            setConfirmedBooking(null);
+            router.replace(`/book/${barberId}`);
+          }} 
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black selection:bg-primary/30">
       <PublicBookingProvider>
@@ -188,6 +257,7 @@ export default function PublicBookingPage() {
           technician={technician} 
           offerings={offerings} 
           isLoadingAvailability={isLoadingAvailability} 
+          calendarEntries={calendarEntries}
         />
       </PublicBookingProvider>
     </div>

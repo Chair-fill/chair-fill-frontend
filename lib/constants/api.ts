@@ -64,7 +64,7 @@ export const API = {
     /** PUT - Update availability. Body: { technician_id?|shop_id?, availableTime, period, date?, weekday?, off_times? } (JWT) */
     UPDATE: '/availability/update',
     /** GET - Enquire available time windows for a date. Path: /availability/times/:id/enquire?date=ISO&slot_index=0 (no JWT) */
-    ENQUIRE: (id: string) => `/availability/times/${encodeURIComponent(id)}/enquire`,
+    ENQUIRE: (id: string) => `/availability/times/${id}/enquire`,
   },
   /** Calendar endpoints. */
   CALENDAR: {

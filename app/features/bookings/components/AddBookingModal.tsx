@@ -8,7 +8,15 @@ import { useContacts } from "@/app/providers/ContactsProvider";
 import { listOfferings, type Offering } from "@/lib/api/offerings";
 import { createBooking } from "@/lib/api/bookings";
 import { createContact } from "@/lib/api/contacts";
+import { enquireDate } from "@/lib/api/availability";
 import { getApiErrorMessage } from "@/lib/api-client";
+
+/** Convert minutes-from-midnight to "HH:mm" */
+function minutesToHHMM(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
 
 const DAY_INDEX_TO_NAME: Record<number, keyof Availability> = {
   0: "sunday",
@@ -72,6 +80,8 @@ export default function AddBookingModal({
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [dateRanges, setDateRanges] = useState<[number, number][] | null>(null);
+  const [loadingDateAvail, setLoadingDateAvail] = useState(false);
 
   const [shouldRender, setShouldRender] = useState(isOpen);
   // Animating out = currently rendered but the parent has flipped isOpen to false.
@@ -123,11 +133,37 @@ export default function AddBookingModal({
     };
   }, [isOpen, technicianId, contacts]);
 
-  // Derive the working-hours window for the currently selected date
+  // Fetch date-specific available windows via /enquire whenever the modal
+  // opens for a new date. This accounts for date overrides and existing bookings.
+  useEffect(() => {
+    if (!isOpen || !technicianId) return;
+    let cancelled = false;
+    setLoadingDateAvail(true);
+    setDateRanges(null);
+    // Pass the weekly working-hours start for this weekday to the enquire endpoint
+    const dayName = DAY_INDEX_TO_NAME[selectedDate.getDay()];
+    const startTime = availability?.[dayName]?.isOpen ? availability[dayName].from : undefined;
+    enquireDate(technicianId, selectedDate, startTime)
+      .then((ranges) => {
+        if (!cancelled) setDateRanges(ranges);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingDateAvail(false);
+      });
+    return () => { cancelled = true; };
+  }, [isOpen, technicianId, selectedDate, availability]);
+
+  // Prefer enquire ranges (date-specific) over weekly availability (fallback).
   const dayName = DAY_INDEX_TO_NAME[selectedDate.getDay()];
   const daySchedule = availability?.[dayName];
-  const minTime = daySchedule?.isOpen ? daySchedule.from : undefined;
-  const maxTime = daySchedule?.isOpen ? daySchedule.to : undefined;
+  const hasDateRanges = dateRanges !== null && dateRanges.length > 0;
+  const minTime = hasDateRanges
+    ? minutesToHHMM(dateRanges[0][0])
+    : daySchedule?.isOpen ? daySchedule.from : undefined;
+  const maxTime = hasDateRanges
+    ? minutesToHHMM(dateRanges[dateRanges.length - 1][1])
+    : daySchedule?.isOpen ? daySchedule.to : undefined;
+  const isDateClosed = dateRanges !== null && dateRanges.length === 0;
 
   // Clamp the default time into working hours when the selected date changes
   useEffect(() => {
@@ -382,16 +418,24 @@ export default function AddBookingModal({
                 type="time"
                 min={minTime}
                 max={maxTime}
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all [color-scheme:dark]"
+                disabled={loadingDateAvail || isDateClosed}
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all [color-scheme:dark] disabled:opacity-50 disabled:cursor-not-allowed"
                 value={formData.time}
                 onChange={(e) => setFormData({ ...formData, time: e.target.value })}
               />
+              {loadingDateAvail && (
+                <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40 animate-spin" />
+              )}
             </div>
-            {minTime && maxTime && (
+            {loadingDateAvail ? (
+              <p className="text-[11px] text-foreground/40 ml-1">Checking availability...</p>
+            ) : isDateClosed ? (
+              <p className="text-[11px] text-red-500 ml-1">Closed on this date</p>
+            ) : minTime && maxTime ? (
               <p className="text-[11px] text-foreground/40 ml-1">
-                Working hours: {to12Hour(minTime)} – {to12Hour(maxTime)}
+                Available: {to12Hour(minTime)} – {to12Hour(maxTime)}
               </p>
-            )}
+            ) : null}
           </div>
 
           <div className="pt-4 flex gap-3">
@@ -405,7 +449,7 @@ export default function AddBookingModal({
             </button>
             <button
               type="submit"
-              disabled={submitting || loadingMeta || !technicianId}
+              disabled={submitting || loadingMeta || !technicianId || loadingDateAvail || isDateClosed}
               className="flex-1 bg-primary hover:opacity-90 text-primary-foreground font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
               {submitting ? (

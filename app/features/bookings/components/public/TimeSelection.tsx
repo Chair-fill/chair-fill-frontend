@@ -1,11 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { format, isToday, isAfter } from "date-fns";
-import { Clock, Loader2 } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { format, isToday, isAfter, parse } from "date-fns";
+import { Clock, Loader2, Sun, Sunset, Moon } from "lucide-react";
 import { usePublicBooking } from "@/app/providers/PublicBookingProvider";
 import { useParams } from "next/navigation";
 import { enquireDate } from "@/lib/api/availability";
+import type { Availability } from "@/app/providers/TechnicianProvider";
+
+const DAY_INDEX_TO_NAME: Record<number, keyof Availability> = {
+  0: "sunday", 1: "monday", 2: "tuesday", 3: "wednesday",
+  4: "thursday", 5: "friday", 6: "saturday",
+};
+
+interface TimeSelectionProps {
+  availability?: Availability;
+}
 
 /** Format "HH:mm" to 12-hour display (e.g. "14:30" → "2:30 PM") */
 function formatTime12h(time: string): string {
@@ -24,7 +34,6 @@ function minutesToHHMM(mins: number): string {
 
 /**
  * Expand an array of [startMin, endMin] ranges into 30-minute slot strings.
- * Filters out past slots if the date is today.
  */
 function rangesToSlots(ranges: [number, number][], date: Date, duration: number): string[] {
   const slots: string[] = [];
@@ -32,6 +41,7 @@ function rangesToSlots(ranges: [number, number][], date: Date, duration: number)
 
   for (const [start, end] of ranges) {
     let current = start;
+    // We use a 30-minute step for the slots picker
     while (current + duration <= end) {
       const time = minutesToHHMM(current);
       if (isToday(date)) {
@@ -50,14 +60,13 @@ function rangesToSlots(ranges: [number, number][], date: Date, duration: number)
   return slots;
 }
 
-export default function TimeSelection() {
+export default function TimeSelection({ availability }: TimeSelectionProps) {
   const params = useParams();
   const barberId = (params?.barberId as string) ?? "";
   const { selectedDate, selectedTime, setSelectedTime, selectedService, setStep } = usePublicBooking();
   const [slots, setSlots] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
-  // Fetch date-specific available time windows from the enquire endpoint
   useEffect(() => {
     if (!selectedDate || !barberId || !selectedService) {
       setSlots([]);
@@ -68,7 +77,10 @@ export default function TimeSelection() {
     setLoadingSlots(true);
     setSlots([]);
 
-    enquireDate(barberId, selectedDate)
+    const dayName = DAY_INDEX_TO_NAME[selectedDate.getDay()];
+    const startTime = availability?.[dayName]?.isOpen ? availability[dayName].from : undefined;
+
+    enquireDate(barberId, selectedDate, startTime)
       .then((ranges) => {
         if (cancelled) return;
         setSlots(rangesToSlots(ranges, selectedDate, selectedService.duration));
@@ -81,7 +93,22 @@ export default function TimeSelection() {
       });
 
     return () => { cancelled = true; };
-  }, [selectedDate, barberId, selectedService]);
+  }, [selectedDate, barberId, selectedService, availability]);
+
+  const groupedSlots = useMemo(() => {
+    const morning: string[] = [];
+    const afternoon: string[] = [];
+    const evening: string[] = [];
+
+    slots.forEach(slot => {
+      const hour = parseInt(slot.split(":")[0]);
+      if (hour < 12) morning.push(slot);
+      else if (hour < 17) afternoon.push(slot);
+      else evening.push(slot);
+    });
+
+    return { morning, afternoon, evening };
+  }, [slots]);
 
   const handleSelect = (time: string) => {
     setSelectedTime(time);
@@ -91,46 +118,104 @@ export default function TimeSelection() {
   if (!selectedDate) return null;
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 h-full flex flex-col">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h2 className="text-2xl font-bold text-zinc-50 tracking-tight">Available Times</h2>
           <p className="text-sm text-zinc-500 font-medium">For {format(selectedDate, "EEEE, MMMM do")}</p>
         </div>
-        <div className="p-2 sm:p-3 bg-primary/10 rounded-2xl">
-          <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+        <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20">
+          <Clock className="w-6 h-6 text-primary" />
         </div>
       </div>
 
-      {loadingSlots ? (
-        <div className="flex items-center justify-center py-12 text-zinc-500 gap-2">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="text-sm font-medium">Loading available times...</span>
-        </div>
-      ) : slots.length > 0 ? (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-          {slots.map((time) => {
-            const selected = selectedTime === time;
-            return (
-              <button
-                key={time}
-                onClick={() => handleSelect(time)}
-                className={`py-4 rounded-2xl text-sm font-bold transition-all duration-300 border ${
-                  selected
-                    ? "bg-primary text-black border-primary shadow-lg shadow-primary/20 scale-105"
-                    : "bg-white/[0.03] border-white/10 text-zinc-300 hover:border-white/20 hover:bg-white/10 active:scale-95"
-                }`}
-              >
-                {formatTime12h(time)}
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="p-12 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-[2.5rem]">
-          <p className="text-zinc-500 font-medium">No available slots for this date.</p>
-        </div>
-      )}
+      <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 -mr-2 space-y-8">
+        {loadingSlots ? (
+          <div className="flex flex-col items-center justify-center py-20 text-zinc-500 gap-4">
+            <Loader2 className="w-10 h-10 animate-spin text-primary/40" />
+            <span className="text-sm font-black uppercase tracking-widest text-primary/60">Finding Slots</span>
+          </div>
+        ) : slots.length > 0 ? (
+          <>
+            {/* Morning */}
+            {groupedSlots.morning.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-zinc-500">
+                  <Sun className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Morning</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2.5">
+                  {groupedSlots.morning.map((time) => (
+                    <TimeButton key={time} time={time} isSelected={selectedTime === time} onSelect={handleSelect} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Afternoon */}
+            {groupedSlots.afternoon.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-zinc-500">
+                  <Sunset className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Afternoon</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2.5">
+                  {groupedSlots.afternoon.map((time) => (
+                    <TimeButton key={time} time={time} isSelected={selectedTime === time} onSelect={handleSelect} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Evening */}
+            {groupedSlots.evening.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-zinc-500">
+                  <Moon className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">Evening</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2.5">
+                  {groupedSlots.evening.map((time) => (
+                    <TimeButton key={time} time={time} isSelected={selectedTime === time} onSelect={handleSelect} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="py-20 px-6 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-[2.5rem]">
+            <p className="text-zinc-500 font-medium">No available slots for this date.</p>
+          </div>
+        )}
+      </div>
+
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+        }
+      `}</style>
     </div>
+  );
+}
+
+function TimeButton({ time, isSelected, onSelect }: { time: string, isSelected: boolean, onSelect: (t: string) => void }) {
+  return (
+    <button
+      onClick={() => onSelect(time)}
+      className={`py-3.5 rounded-xl text-xs font-black transition-all duration-300 border ${
+        isSelected
+          ? "bg-primary text-black border-primary shadow-lg shadow-primary/20 scale-105"
+          : "bg-white/[0.03] border-white/5 text-zinc-400 hover:border-white/10 hover:bg-white/5 active:scale-95"
+      }`}
+    >
+      {formatTime12h(time)}
+    </button>
   );
 }

@@ -168,6 +168,18 @@ export async function forfeitBooking(bookingId: string): Promise<void> {
 }
 
 /**
+ * Get a single booking by ID. GET /booking/:bookingId
+ */
+export async function getBooking(bookingId: string): Promise<BookingEntity> {
+  try {
+    const { data } = await api.get<unknown>(`/booking/${encodeURIComponent(bookingId)}`);
+    return unwrap<BookingEntity>(data);
+  } catch (err) {
+    throw new Error(getApiErrorMessage(err));
+  }
+}
+
+/**
  * List bookings. GET /booking/list?technician_id=...&from_date=...
  */
 export async function listBookings(params: ListBookingsParams): Promise<ListBookingsResult> {

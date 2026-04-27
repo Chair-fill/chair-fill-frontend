@@ -2,24 +2,30 @@
 
 import { Booking } from "@/lib/types/booking";
 import { format } from "date-fns";
-import { Clock, ClipboardList, TrendingUp, X, Loader2 } from "lucide-react";
+import { Clock, ClipboardList, TrendingUp, X, Loader2, CalendarX } from "lucide-react";
 import { useState } from "react";
 import { forfeitBooking, updateBooking } from "@/lib/api/bookings";
 import { getApiErrorMessage } from "@/lib/api-client";
+import type { CalendarDailyEntry } from "@/lib/api/calendar";
 
 interface BookingListProps {
   bookings: Booking[];
   selectedDate: Date;
   isBlocked?: boolean;
+  dailyEntry?: CalendarDailyEntry;
   onToggleBlock?: () => void;
   /** Called after a booking has been forfeited so the parent can refresh. */
   onBookingForfeited?: () => void | Promise<void>;
 }
 
-export default function BookingList({ bookings, selectedDate, isBlocked = false, onToggleBlock, onBookingForfeited }: BookingListProps) {
+export default function BookingList({ bookings, selectedDate, isBlocked = false, dailyEntry, onToggleBlock, onBookingForfeited }: BookingListProps) {
   const [forfeitingId, setForfeitingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [forfeitError, setForfeitError] = useState("");
+
+  const isClosedByOverride = dailyEntry 
+    ? (dailyEntry.open_time === "00:00" && dailyEntry.close_time === "00:00")
+    : false;
 
   const handleToggleStatus = async (booking: Booking) => {
     const id = booking.sourceId ?? booking.id;
@@ -61,9 +67,9 @@ export default function BookingList({ bookings, selectedDate, isBlocked = false,
           <h3 className="text-lg font-bold text-foreground">
             {format(selectedDate, "EEEE, MMMM do")}
           </h3>
-          {isBlocked && (
+          {(isBlocked || isClosedByOverride) && (
             <span className="px-2 py-0.5 bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-wider rounded border border-red-500/20">
-              Blocked
+              {isClosedByOverride ? "Closed (Override)" : "Blocked"}
             </span>
           )}
         </div>
@@ -84,14 +90,24 @@ export default function BookingList({ bookings, selectedDate, isBlocked = false,
         </div>
       </div>
 
-      {isBlocked && (
+      {(isBlocked || isClosedByOverride) && (
         <div className="bg-red-500/5 border border-red-500/10 rounded-2xl p-4 flex items-center gap-3">
           <div className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center shrink-0">
-            <Clock className="w-5 h-5 text-red-500" />
+            {isClosedByOverride ? (
+              <CalendarX className="w-5 h-5 text-red-500" />
+            ) : (
+              <Clock className="w-5 h-5 text-red-500" />
+            )}
           </div>
           <div>
-            <p className="text-sm font-bold text-foreground">This day is blocked</p>
-            <p className="text-xs text-foreground/60">New bookings cannot be made for this date.</p>
+            <p className="text-sm font-bold text-foreground">
+              {isClosedByOverride ? "Closed via date-specific override" : "This day is blocked"}
+            </p>
+            <p className="text-xs text-foreground/60">
+              {isClosedByOverride 
+                ? "You have manually set this date as closed in your working hours." 
+                : "New bookings cannot be made for this date."}
+            </p>
           </div>
         </div>
       )}

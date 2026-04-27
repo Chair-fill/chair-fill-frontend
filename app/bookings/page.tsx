@@ -10,7 +10,8 @@ import { Booking } from "@/lib/types/booking";
 import { useTechnician, type Availability } from "@/app/providers/TechnicianProvider";
 import { listBookings } from "@/lib/api/bookings";
 import { bookingEntityToBooking } from "@/lib/api/booking-mapper";
-import { enquireWeeklyAvailability } from "@/lib/api/availability";
+import { fetchWeeklyAvailability } from "@/lib/api/availability";
+import { getCalendar, type CalendarResponse } from "@/lib/api/calendar";
 import { Share2, Plus, Check, Clock, Loader2 } from "lucide-react";
 
 export default function BookingsPage() {
@@ -25,17 +26,22 @@ export default function BookingsPage() {
   const [bookingsError, setBookingsError] = useState("");
   const [copied, setCopied] = useState(false);
   const [weeklyAvailability, setWeeklyAvailability] = useState<Availability | undefined>();
+  const [calendarData, setCalendarData] = useState<CalendarResponse | undefined>();
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
-  // Fetch weekly availability via the enquire endpoint
+  // Fetch weekly availability via GET /availability/me and calendar via /calendar/me
   const refreshAvailability = useCallback(async () => {
     if (!technicianId) return;
     setAvailabilityLoading(true);
     try {
-      const avail = await enquireWeeklyAvailability(technicianId);
+      const [avail, cal] = await Promise.all([
+        fetchWeeklyAvailability(technicianId),
+        getCalendar({ technician_id: technicianId })
+      ]);
       setWeeklyAvailability(avail);
-    } catch {
-      // keep existing on error
+      setCalendarData(cal);
+    } catch (err) {
+      console.error("Failed to fetch availability or calendar:", err);
     } finally {
       setAvailabilityLoading(false);
     }
@@ -207,6 +213,7 @@ export default function BookingsPage() {
                 bookingDates={bookingDates}
                 blockedDates={technician?.blocked_dates}
                 availability={weeklyAvailability}
+                dailyEntries={calendarData?.daily_entries}
                 isLoading={availabilityLoading}
               />
 
@@ -226,6 +233,7 @@ export default function BookingsPage() {
                     isBlocked={technician?.blocked_dates?.includes(
                       selectedDateString,
                     )}
+                    dailyEntry={calendarData?.daily_entries?.[selectedDateString]}
                     onToggleBlock={handleToggleBlockDay}
                     onBookingForfeited={refreshBookings}
                   />
@@ -255,6 +263,7 @@ export default function BookingsPage() {
       <AvailabilityModal
         isOpen={isAvailabilityModalOpen}
         initialAvailability={weeklyAvailability}
+        dailyEntries={calendarData?.daily_entries}
         onClose={() => {
           setIsAvailabilityModalOpen(false);
           refreshAvailability();
