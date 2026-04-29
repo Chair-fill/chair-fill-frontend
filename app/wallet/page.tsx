@@ -6,6 +6,10 @@ import { Transaction } from "@/lib/types/wallet";
 import { Filter, Loader2, Search, Wallet as WalletIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTechnician } from "@/app/providers/TechnicianProvider";
+import { useUser } from "@/app/providers/UserProvider";
+import { useQuery } from "@tanstack/react-query";
+import { getTransactions } from "@/lib/api/transactions";
+import { getRecentTransactionAnalytics } from "@/lib/api/analytics";
 
 /** Coerce backend decimal string/number to a JS number. Returns 0 on failure. */
 function toAmount(value: string | number | undefined | null): number {
@@ -18,18 +22,30 @@ function toAmount(value: string | number | undefined | null): number {
 export default function WalletPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const { technician, isTechnicianLoading } = useTechnician();
+  const { user } = useUser();
 
   const wallet = technician?.wallet ?? null;
   const balance = toAmount(wallet?.balance);
   const totalCredit = toAmount(wallet?.total_credit);
   const totalDebit = toAmount(wallet?.total_debit);
-  // No transaction-level "pending" yet; surface zero until backend exposes one.
-  const pending = 0;
-  // Total earned = lifetime credits to the wallet.
-  const totalEarned = totalCredit;
 
-  // Backend doesn't expose a transactions list endpoint yet; render an empty list.
-  const transactions: Transaction[] = useMemo(() => [], []);
+  const { data: analyticsData } = useQuery({
+    queryKey: ['analytics', 'recent', user?.id],
+    queryFn: getRecentTransactionAnalytics,
+    enabled: !!user?.id,
+  });
+
+  // Try to use analytics data if it has pending/totalEarned, otherwise fallback to 0/totalCredit
+  const pending = toAmount(analyticsData?.pending) || 0;
+  const totalEarned = toAmount(analyticsData?.total_earned) || totalCredit;
+
+  const { data: transactionsData, isLoading: isTransactionsLoading } = useQuery({
+    queryKey: ['transactions', user?.id],
+    queryFn: () => getTransactions({ owner: user!.id }),
+    enabled: !!user?.id,
+  });
+
+  const transactions: Transaction[] = transactionsData || [];
   const filteredTransactions = transactions.filter((t) =>
     t.description.toLowerCase().includes(searchQuery.toLowerCase()),
   );
@@ -131,7 +147,12 @@ export default function WalletPage() {
           </div>
 
           {/* Transaction List */}
-          {filteredTransactions.length > 0 ? (
+          {isTransactionsLoading ? (
+            <div className="rounded-2xl border border-border bg-card p-10 flex flex-col items-center justify-center text-foreground/60">
+              <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary" />
+              <p className="text-sm font-medium">Loading transactions...</p>
+            </div>
+          ) : filteredTransactions.length > 0 ? (
             <TransactionList transactions={filteredTransactions} />
           ) : (
             <div className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-foreground/60">

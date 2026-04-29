@@ -45,6 +45,7 @@ interface DateOverride {
   from: string;
   to: string;
   off_times: [string, string][];
+  isNew?: boolean;
 }
 
 export default function AvailabilityModal({ isOpen, onClose, initialAvailability, dailyEntries = {} }: AvailabilityModalProps) {
@@ -78,6 +79,7 @@ export default function AvailabilityModal({ isOpen, onClose, initialAvailability
           off_times: (entry.availability.off_times || []).map(range => 
             [minutesToHHMM(range[0]), minutesToHHMM(range[1])] as [string, string]
           ),
+          isNew: false,
         }))
         .sort((a, b) => a.date.localeCompare(b.date));
       
@@ -149,6 +151,7 @@ export default function AvailabilityModal({ isOpen, onClose, initialAvailability
         from: defaultDay.from,
         to: defaultDay.to,
         off_times: [],
+        isNew: true,
       },
     ]);
     setDirtyOverrides((prev) => new Set(prev).add(newIdx));
@@ -410,8 +413,9 @@ export default function AvailabilityModal({ isOpen, onClose, initialAvailability
                         type="date"
                         value={override.date}
                         onChange={(e) => updateOverride(idx, { date: e.target.value })}
-                        min={new Date().toISOString().split("T")[0]}
-                        className="bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-sm font-bold text-zinc-50 outline-none [color-scheme:dark]"
+                        min={override.isNew ? new Date().toISOString().split("T")[0] : undefined}
+                        disabled={!override.isNew}
+                        className="bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-sm font-bold text-zinc-50 outline-none [color-scheme:dark] disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                       <div className="flex items-center gap-2">
                         <button
@@ -427,13 +431,15 @@ export default function AvailabilityModal({ isOpen, onClose, initialAvailability
                             }`}
                           />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => removeOverride(idx)}
-                          className="p-1.5 rounded-lg text-zinc-500 hover:text-red-500 hover:bg-red-500/10 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {override.isNew && (
+                          <button
+                            type="button"
+                            onClick={() => removeOverride(idx)}
+                            className="p-1.5 rounded-lg text-zinc-500 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
 

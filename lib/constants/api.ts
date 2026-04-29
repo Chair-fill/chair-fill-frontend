@@ -157,4 +157,16 @@ export const API = {
     /** GET - Stream messages for a thread. Path: /threads/:id/stream. Query: provider?, page_number?, cursor?, from?, to?, page_size?, lean? */
     STREAM: (id: string) => `/threads/${encodeURIComponent(id)}/stream`,
   },
+  /** Transactions */
+  TRANSACTIONS: {
+    /** GET - List my transactions. Query: cursor, from, to, page_size, owner, category?, status?, mode?, paginate? */
+    LIST: '/transactions/list',
+  },
+  /** Analytics */
+  ANALYTICS: {
+    /** GET - Global transaction stats for a date range. Query: from, to, by (D/M/Y) */
+    TRANSACTIONS_GLOBAL: '/analytics/transactions/global',
+    /** GET - Recent activity derived from global analytics cache */
+    TRANSACTIONS_RECENT: '/analytics/transactions/recent',
+  },
 } as const;

@@ -2,6 +2,9 @@
 
 import { TrendingUp, Users, Calendar, DollarSign, Eye, EyeOff } from "lucide-react";
 import { useBalanceVisibility, BALANCE_MASK } from "@/lib/hooks/use-balance-visibility";
+import { useUser } from "@/app/providers/UserProvider";
+import { useQuery } from "@tanstack/react-query";
+import { getRecentTransactionAnalytics } from "@/lib/api/analytics";
 
 interface MetricProps {
   label: string;
@@ -63,37 +66,64 @@ const Metric = ({ label, value, change, trend, icon: Icon, monetary = false, sho
 };
 
 export default function AnalyticsSummary() {
+  const { user } = useUser();
+
+  const { data: analyticsData } = useQuery({
+    queryKey: ['analytics', 'recent', user?.id],
+    queryFn: getRecentTransactionAnalytics,
+    enabled: !!user?.id,
+  });
+
+  // Helper to format money safely
+  const toAmount = (val: any) => {
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
+  };
+
+  // Extract from analytics if present, else fallback to placeholders
+  const totalRevenue = analyticsData?.total_earned ? `$${toAmount(analyticsData.total_earned).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "$0.00";
+  const revenueChange = analyticsData?.revenue_change ?? "0.0";
+  const revenueTrend = parseFloat(revenueChange) >= 0 ? "up" : "down";
+
+  const totalBookings = analyticsData?.total_bookings ?? "0";
+  const bookingsChange = analyticsData?.bookings_change ?? "0.0";
+  const bookingsTrend = parseFloat(bookingsChange) >= 0 ? "up" : "down";
+
+  const avgBooking = analyticsData?.avg_booking_value ? `$${toAmount(analyticsData.avg_booking_value).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "$0.00";
+  const avgBookingChange = analyticsData?.avg_booking_change ?? "0.0";
+  const avgBookingTrend = parseFloat(avgBookingChange) >= 0 ? "up" : "down";
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <Metric
         label="Total Revenue"
-        value="$4,280.00"
-        change="12.5"
-        trend="up"
+        value={totalRevenue}
+        change={revenueChange.toString()}
+        trend={revenueTrend}
         icon={DollarSign}
         monetary
         showVisibilityToggle
       />
       <Metric
         label="Total Bookings"
-        value="124"
-        change="8.2"
-        trend="up"
+        value={totalBookings.toString()}
+        change={bookingsChange.toString()}
+        trend={bookingsTrend}
         icon={Calendar}
       />
       <Metric
         label="Avg. Booking Value"
-        value="$34.50"
-        change="3.1"
-        trend="down"
+        value={avgBooking}
+        change={avgBookingChange.toString()}
+        trend={avgBookingTrend}
         icon={TrendingUp}
         monetary
       />
       <Metric
         label="Client Retention"
-        value="84%"
-        change="5.4"
-        trend="up"
+        value={analyticsData?.client_retention ? `${analyticsData.client_retention}%` : "0%"}
+        change={analyticsData?.retention_change?.toString() ?? "0.0"}
+        trend={parseFloat(analyticsData?.retention_change ?? "0") >= 0 ? "up" : "down"}
         icon={Users}
       />
     </div>
