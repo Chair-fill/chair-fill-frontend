@@ -10,6 +10,7 @@ import { createBooking } from "@/lib/api/bookings";
 import { createContact } from "@/lib/api/contacts";
 import { enquireDate } from "@/lib/api/availability";
 import { getApiErrorMessage } from "@/lib/api-client";
+import type { CalendarDailyEntry } from "@/lib/api/calendar";
 
 /** Convert minutes-from-midnight to "HH:mm" */
 function minutesToHHMM(mins: number): string {
@@ -35,6 +36,7 @@ interface AddBookingModalProps {
   onCreated?: () => void | Promise<void>;
   selectedDate: Date;
   availability?: Availability;
+  dailyEntries?: Record<string, CalendarDailyEntry>;
 }
 
 /** Format HH:mm to 12-hour display (e.g. "09:00" → "9:00 AM"). */
@@ -59,6 +61,7 @@ export default function AddBookingModal({
   onCreated,
   selectedDate,
   availability,
+  dailyEntries,
 }: AddBookingModalProps) {
   const { technician } = useTechnician();
   const { contacts, refetchContactList } = useContacts();
@@ -140,9 +143,21 @@ export default function AddBookingModal({
     let cancelled = false;
     setLoadingDateAvail(true);
     setDateRanges(null);
-    // Pass the weekly working-hours start for this weekday to the enquire endpoint
+    // Pass the working-hours start for this date to the enquire endpoint.
+    // We check the date-specific override (via dailyEntries) first, falling back to weekly.
+    const y = selectedDate.getFullYear();
+    const m = String(selectedDate.getMonth() + 1).padStart(2, "0");
+    const d = String(selectedDate.getDate()).padStart(2, "0");
+    const dateKey = `${y}-${m}-${d}`;
+    
+    const override = dailyEntries?.[dateKey];
     const dayName = DAY_INDEX_TO_NAME[selectedDate.getDay()];
-    const startTime = availability?.[dayName]?.isOpen ? availability[dayName].from : undefined;
+    const weekly = availability?.[dayName];
+
+    const startTime = (override && override.open_time && override.open_time !== "00:00")
+      ? override.open_time
+      : weekly?.isOpen ? weekly.from : undefined;
+
     enquireDate(technicianId, selectedDate, startTime)
       .then((ranges) => {
         if (!cancelled) setDateRanges(ranges);

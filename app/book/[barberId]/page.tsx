@@ -79,7 +79,10 @@ function BookingFlow({
                 isLoading={isLoadingAvailability}
                 dailyEntries={calendarEntries}
               />
-              <TimeSelection availability={technician.availability} />
+              <TimeSelection 
+                availability={technician.availability} 
+                dailyEntries={calendarEntries}
+              />
             </div>
           </div>
         )}

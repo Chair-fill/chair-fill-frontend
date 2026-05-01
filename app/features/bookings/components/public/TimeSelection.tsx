@@ -7,6 +7,7 @@ import { usePublicBooking } from "@/app/providers/PublicBookingProvider";
 import { useParams } from "next/navigation";
 import { enquireDate } from "@/lib/api/availability";
 import type { Availability } from "@/app/providers/TechnicianProvider";
+import type { CalendarDailyEntry } from "@/lib/api/calendar";
 
 const DAY_INDEX_TO_NAME: Record<number, keyof Availability> = {
   0: "sunday", 1: "monday", 2: "tuesday", 3: "wednesday",
@@ -15,6 +16,7 @@ const DAY_INDEX_TO_NAME: Record<number, keyof Availability> = {
 
 interface TimeSelectionProps {
   availability?: Availability;
+  dailyEntries?: Record<string, CalendarDailyEntry>;
 }
 
 /** Format "HH:mm" to 12-hour display (e.g. "14:30" → "2:30 PM") */
@@ -60,7 +62,7 @@ function rangesToSlots(ranges: [number, number][], date: Date, duration: number)
   return slots;
 }
 
-export default function TimeSelection({ availability }: TimeSelectionProps) {
+export default function TimeSelection({ availability, dailyEntries }: TimeSelectionProps) {
   const params = useParams();
   const barberId = (params?.barberId as string) ?? "";
   const { selectedDate, selectedTime, setSelectedTime, selectedService, setStep } = usePublicBooking();
@@ -77,8 +79,18 @@ export default function TimeSelection({ availability }: TimeSelectionProps) {
     setLoadingSlots(true);
     setSlots([]);
 
+    const y = selectedDate.getFullYear();
+    const m = String(selectedDate.getMonth() + 1).padStart(2, "0");
+    const d = String(selectedDate.getDate()).padStart(2, "0");
+    const dateKey = `${y}-${m}-${d}`;
+
+    const override = dailyEntries?.[dateKey];
     const dayName = DAY_INDEX_TO_NAME[selectedDate.getDay()];
-    const startTime = availability?.[dayName]?.isOpen ? availability[dayName].from : undefined;
+    const weekly = availability?.[dayName];
+
+    const startTime = (override && override.open_time && override.open_time !== "00:00")
+      ? override.open_time
+      : weekly?.isOpen ? weekly.from : undefined;
 
     enquireDate(barberId, selectedDate, startTime)
       .then((ranges) => {

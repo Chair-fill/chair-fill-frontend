@@ -9,7 +9,7 @@ import type { CalendarDailyEntry } from "@/lib/api/calendar";
 
 interface AvailabilityModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose: (didSave?: boolean) => void;
   initialAvailability?: Availability;
   dailyEntries?: Record<string, CalendarDailyEntry>;
 }
@@ -69,8 +69,14 @@ export default function AvailabilityModal({ isOpen, onClose, initialAvailability
   // Pre-fill overrides from calendar data
   useEffect(() => {
     if (isOpen && dailyEntries && Object.keys(dailyEntries).length > 0) {
+      const today = new Date();
+      const y = today.getFullYear();
+      const m = String(today.getMonth() + 1).padStart(2, "0");
+      const d = String(today.getDate()).padStart(2, "0");
+      const todayStr = `${y}-${m}-${d}`;
+
       const existingOverrides: DateOverride[] = Object.entries(dailyEntries)
-        .filter(([_, entry]) => entry.availability_modified)
+        .filter(([date, entry]) => entry.availability_modified && date >= todayStr)
         .map(([date, entry]) => ({
           date,
           isOpen: entry.open_time !== "00:00" || entry.close_time !== "00:00",
@@ -210,7 +216,7 @@ export default function AvailabilityModal({ isOpen, onClose, initialAvailability
       if (tab === "weekly") {
         if (dirtyDays.size === 0) {
           setSuccess(true);
-          setTimeout(() => { setSuccess(false); onClose(); }, 1500);
+          setTimeout(() => { setSuccess(false); onClose(true); }, 1500);
           return;
         }
 
@@ -230,7 +236,7 @@ export default function AvailabilityModal({ isOpen, onClose, initialAvailability
       } else {
         if (dirtyOverrides.size === 0) {
           setSuccess(true);
-          setTimeout(() => { setSuccess(false); onClose(); }, 1500);
+          setTimeout(() => { setSuccess(false); onClose(true); }, 1500);
           return;
         }
 
@@ -262,7 +268,7 @@ export default function AvailabilityModal({ isOpen, onClose, initialAvailability
       setDirtyDays(new Set());
       setDirtyOverrides(new Set());
       setSuccess(true);
-      setTimeout(() => { setSuccess(false); onClose(); }, 2000);
+      setTimeout(() => { setSuccess(false); onClose(true); }, 2000);
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
@@ -286,7 +292,7 @@ export default function AvailabilityModal({ isOpen, onClose, initialAvailability
               <p className="text-sm text-zinc-500 font-medium">Manage your availability</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-all group">
+          <button onClick={() => onClose()} className="p-2 hover:bg-white/5 rounded-full transition-all group">
             <X className="w-6 h-6 text-zinc-500 group-hover:text-zinc-50" />
           </button>
         </div>
@@ -546,7 +552,7 @@ export default function AvailabilityModal({ isOpen, onClose, initialAvailability
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => onClose()}
                 className="flex-1 px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-bold hover:bg-white/10 transition-all"
               >
                 Cancel

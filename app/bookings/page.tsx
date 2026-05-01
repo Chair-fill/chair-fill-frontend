@@ -258,15 +258,16 @@ export default function BookingsPage() {
         selectedDate={selectedDate}
         onCreated={refreshBookings}
         availability={weeklyAvailability}
+        dailyEntries={calendarData?.daily_entries}
       />
 
       <AvailabilityModal
         isOpen={isAvailabilityModalOpen}
         initialAvailability={weeklyAvailability}
         dailyEntries={calendarData?.daily_entries}
-        onClose={() => {
+        onClose={(didSave) => {
           setIsAvailabilityModalOpen(false);
-          refreshAvailability();
+          if (didSave) refreshAvailability();
         }}
       />
     </div>
