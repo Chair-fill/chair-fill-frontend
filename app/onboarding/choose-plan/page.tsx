@@ -50,7 +50,7 @@ export default function OnboardingChoosePlanPage() {
   const [error, setError] = useState("");
   const [didRefetchTechnician, setDidRefetchTechnician] = useState(false);
 
-  const technicianId = technician?.id ?? technician?.technician_id;
+  const technicianId = technician?.technician_id ?? technician?.id;
 
   // Page-level progress check: if already subscribed, go to contacts; else must be technician to be here
   useEffect(() => {

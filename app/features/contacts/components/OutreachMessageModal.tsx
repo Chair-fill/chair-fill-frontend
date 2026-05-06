@@ -26,7 +26,7 @@ export default function OutreachMessageModal({
   onSent,
 }: OutreachMessageModalProps) {
   const { technician } = useTechnician();
-  const technicianId = technician?.id ?? technician?.technician_id ?? "";
+  const technicianId = technician?.technician_id ?? technician?.id ?? "";
   const defaultMessage = FALLBACK_OUTREACH_MESSAGE;
 
   const toSend = selectedContacts.filter((c) => c.phone?.trim());

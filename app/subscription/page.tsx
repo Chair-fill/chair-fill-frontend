@@ -46,7 +46,7 @@ const API_PLAN_TO_STATIC: Record<string, string> = {
 
 export default function SubscriptionPage() {
   const { technician, isTechnicianLoading } = useTechnician();
-  const technicianId = technician?.id ?? technician?.technician_id;
+  const technicianId = technician?.technician_id ?? technician?.id;
   const queryClient = useQueryClient();
 
   const subscriptionQuery = useQuery({

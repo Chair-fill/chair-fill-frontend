@@ -125,7 +125,11 @@ export async function listOfferings(params: ListOfferingsParams): Promise<Offeri
     const normalized = normalizeListResponse(data);
     console.log(`[API] listOfferings result for ${technician_id || shop_id}:`, normalized);
     return normalized;
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.response?.status === 404) {
+      console.log(`[API] listOfferings 404 treated as empty for ${technician_id || shop_id}`);
+      return [];
+    }
     const message = getApiErrorMessage(err);
     throw new Error(message);
   }

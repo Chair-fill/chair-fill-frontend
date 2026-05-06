@@ -37,7 +37,7 @@ export default function BulkOutreachModal({
 }: BulkOutreachModalProps) {
   const { user } = useUser();
   const { technician } = useTechnician();
-  const technicianId = technician?.id ?? technician?.technician_id ?? "";
+  const technicianId = technician?.technician_id ?? technician?.id ?? "";
   const userDefaultEmpty = !user?.defaultOutreachMessage?.trim();
   const defaultMessage =
     user?.defaultOutreachMessage?.trim() || FALLBACK_OUTREACH_MESSAGE;

@@ -32,7 +32,7 @@ export default function OutreachModal({
   onSent,
 }: OutreachModalProps) {
   const { technician } = useTechnician();
-  const technicianId = technician?.id ?? technician?.technician_id ?? "";
+  const technicianId = technician?.technician_id ?? technician?.id ?? "";
   const defaultMessage = FALLBACK_OUTREACH_MESSAGE;
   const [mode, setMode] = useState<"choice" | "customize">("choice");
   const [message, setMessage] = useState(defaultMessage);

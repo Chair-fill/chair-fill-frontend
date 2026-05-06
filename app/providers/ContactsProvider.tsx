@@ -58,7 +58,7 @@ const ContactsContext = createContext<ContactsContextType | undefined>(
 export function ContactsProvider({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const { technician } = useTechnician();
-  const technicianId = technician?.id ?? technician?.technician_id;
+  const technicianId = technician?.technician_id ?? technician?.id;
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasMore, setHasMore] = useState(false);

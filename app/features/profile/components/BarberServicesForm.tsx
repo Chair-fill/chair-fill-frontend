@@ -5,6 +5,8 @@ import { useTechnician } from '@/app/providers/TechnicianProvider';
 import { Plus, Trash2, ClipboardList, Loader2, CheckCircle2 } from 'lucide-react';
 import { INPUT_PLAIN, BTN_PRIMARY_INLINE } from '@/lib/constants/ui';
 import { FORM_LABEL } from '@/lib/constants/ui';
+import { listOfferings, createOffering, updateOffering, deleteOffering } from '@/lib/api/offerings';
+import { isDemoMode } from '@/lib/demo';
 
 const STORAGE_KEY_PREFIX = 'chairfill_barber_services_';
 
@@ -99,12 +101,46 @@ export default function BarberServicesForm({ hideList = false }: BarberServicesF
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [addError, setAddError] = useState('');
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
 
   const technicianId = technician?.technician_id ?? technician?.id ?? '';
 
   const load = useCallback(() => {
-    if (technicianId) setServices(loadServices(technicianId));
-    else setServices([]);
+    if (technicianId) {
+      setServices(loadServices(technicianId));
+      
+      if (!isDemoMode() && typeof sessionStorage !== 'undefined') {
+        const syncKey = `chairfill_services_synced_${technicianId}`;
+        if (!sessionStorage.getItem(syncKey)) {
+          listOfferings({ technician_id: technicianId })
+            .then(offerings => {
+              const mapped: BarberService[] = offerings.map(o => ({
+                id: o.id,
+                name: o.name,
+                price: String(o.price),
+                duration: o.duration ? String(o.duration) : undefined,
+                description: o.description,
+                premiumHours: !!o.premium_hours,
+                offerPromotion: !!o.promo,
+                premiumFrom: o.premium_hours?.slots?.[0]?.from,
+                premiumTo: o.premium_hours?.slots?.[0]?.to,
+                premiumPrice: o.premium_hours?.slots?.[0]?.price ? String(o.premium_hours.slots[0].price) : undefined,
+                promoFrom: o.promo?.from,
+                promoTo: o.promo?.to,
+                promoPrice: o.promo?.price ? String(o.promo.price) : undefined,
+              }));
+              setServices(mapped);
+              saveServices(technicianId, mapped);
+              sessionStorage.setItem(syncKey, 'true');
+            })
+            .catch(err => {
+              console.error("Failed to sync services from backend:", err);
+            });
+        }
+      }
+    } else {
+      setServices([]);
+    }
   }, [technicianId]);
 
   useEffect(() => {
@@ -137,6 +173,9 @@ export default function BarberServicesForm({ hideList = false }: BarberServicesF
 
   const handleRemove = (id: string) => {
     setServices((prev) => prev.filter((s) => s.id !== id));
+    if (!id.startsWith('svc-')) {
+      setDeletedIds((prev) => [...prev, id]);
+    }
   };
 
   const handleSaveServices = async () => {
@@ -149,10 +188,65 @@ export default function BarberServicesForm({ hideList = false }: BarberServicesF
     setAddError('');
     setSaving(true);
     setSaveSuccess(false);
+    
+    saveServices(technicianId, services);
+    
     try {
-      saveServices(technicianId, services);
+      if (!isDemoMode()) {
+        for (const id of deletedIds) {
+          await deleteOffering(id).catch(console.error);
+        }
+        
+        for (const svc of services) {
+          const numericPrice = parseFloat(svc.price);
+          const duration = svc.duration ? parseInt(svc.duration, 10) : 30;
+          
+          if (svc.id.startsWith('svc-')) {
+            await createOffering({
+              technician_id: technicianId,
+              name: svc.name,
+              price: numericPrice,
+              duration,
+              description: svc.description,
+            });
+          } else {
+            await updateOffering({
+              offering_id: svc.id,
+              name: svc.name,
+              price: numericPrice,
+              duration,
+              description: svc.description,
+            });
+          }
+        }
+        
+        const offerings = await listOfferings({ technician_id: technicianId });
+        const mapped: BarberService[] = offerings.map(o => ({
+          id: o.id,
+          name: o.name,
+          price: String(o.price),
+          duration: o.duration ? String(o.duration) : undefined,
+          description: o.description,
+          premiumHours: !!o.premium_hours,
+          offerPromotion: !!o.promo,
+          premiumFrom: o.premium_hours?.slots?.[0]?.from,
+          premiumTo: o.premium_hours?.slots?.[0]?.to,
+          premiumPrice: o.premium_hours?.slots?.[0]?.price ? String(o.premium_hours.slots[0].price) : undefined,
+          promoFrom: o.promo?.from,
+          promoTo: o.promo?.to,
+          promoPrice: o.promo?.price ? String(o.promo.price) : undefined,
+        }));
+        
+        setServices(mapped);
+        saveServices(technicianId, mapped);
+        setDeletedIds([]);
+      }
+      
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error("Failed to save services to backend:", err);
+      setAddError(err instanceof Error ? err.message : "Failed to sync services with backend.");
     } finally {
       setSaving(false);
     }

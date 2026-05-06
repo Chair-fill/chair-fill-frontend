@@ -61,7 +61,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
 
   const VALID_PLANS: SubscriptionPlan[] = ['independent', 'professional', 'shop-owner'];
-  const technicianId = technician?.id ?? technician?.technician_id;
+  const technicianId = technician?.technician_id ?? technician?.id;
 
   const refetchSubscription = useCallback(async () => {
     if (isDemoMode()) return;

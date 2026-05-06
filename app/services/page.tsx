@@ -7,6 +7,8 @@ import PageLoader from "@/app/components/ui/PageLoader";
 import {
   formatPriceDisplay,
   toNumericPrice,
+  loadServices,
+  saveServices,
   type BarberService,
 } from "@/app/features/profile/components/BarberServicesForm";
 import {
@@ -15,6 +17,7 @@ import {
   updateOffering,
   deleteOffering,
 } from "@/lib/api/offerings";
+import { isDemoMode } from "@/lib/demo";
 import {
   Plus,
   Pencil,
@@ -120,26 +123,46 @@ export default function ServicesPage() {
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   const [confirmRemoveName, setConfirmRemoveName] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (forceSync = false) => {
     if (!technicianId) {
       setServices([]);
       setListLoading(false);
       return;
     }
-    setListLoading(true);
+
+    const localServices = loadServices(technicianId);
+    if (localServices.length > 0) {
+      setServices(localServices);
+      setListLoading(false);
+    } else {
+      setListLoading(true);
+    }
+
     setListError("");
-    try {
-      const offerings = await listOfferings({
-        technician_id: technicianId,
-        page_size: 100,
-      });
-      setServices(offerings.map(offeringToService));
-    } catch (err) {
-      setListError(
-        err instanceof Error ? err.message : "Failed to load services.",
-      );
-      setServices([]);
-    } finally {
+    const syncKey = `chairfill_services_synced_${technicianId}`;
+    const needsSync = forceSync || (!isDemoMode() && typeof sessionStorage !== 'undefined' && !sessionStorage.getItem(syncKey));
+
+    if (needsSync) {
+      try {
+        const offerings = await listOfferings({
+          technician_id: technicianId,
+          page_size: 100,
+        });
+        const mapped = offerings.map(offeringToService);
+        setServices(mapped);
+        saveServices(technicianId, mapped);
+        if (!forceSync && typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem(syncKey, 'true');
+        }
+      } catch (err) {
+        setListError(
+          err instanceof Error ? err.message : "Failed to load services.",
+        );
+        if (localServices.length === 0) setServices([]);
+      } finally {
+        setListLoading(false);
+      }
+    } else {
       setListLoading(false);
     }
   }, [technicianId]);
@@ -249,7 +272,7 @@ export default function ServicesPage() {
           promo: promoPayload,
         });
       }
-      await load();
+      await load(true);
       clearForm();
       setSuccessMessage(editingId ? "Service updated." : "Service added.");
       onSuccess?.();
@@ -298,7 +321,7 @@ export default function ServicesPage() {
       setListError("");
       try {
         await deleteOffering(id);
-        await load();
+        await load(true);
         setSuccessMessage("Service removed.");
       } catch (err) {
         setListError(
@@ -673,7 +696,7 @@ export default function ServicesPage() {
                     type="button"
                     onClick={() => {
                       setListError("");
-                      load();
+                      load(true);
                     }}
                     className="text-sm font-medium text-zinc-900 dark:text-zinc-50 hover:underline shrink-0"
                   >
