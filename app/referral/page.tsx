@@ -6,7 +6,7 @@ import { ReferralEntry } from "@/lib/types/referral";
 import { useUser } from "@/app/providers/UserProvider";
 import Link from "next/link";
 import { ArrowLeft, Copy, Link2, Share2, MessageSquare } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /* ─── Helpers ─────────────────────────────────────────────────── */
 
@@ -128,6 +128,12 @@ export default function ReferralPage() {
   const { user } = useUser();
   const { msg: toastMsg, show: showToast } = useToast();
   const [codeCopied, setCodeCopied] = useState(false);
+  const [canNativeShare, setCanNativeShare] = useState(false);
+
+  // Detect native share support client-side only (avoids SSR navigator access)
+  useEffect(() => {
+    setCanNativeShare(typeof navigator !== "undefined" && "share" in navigator);
+  }, []);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["referrals", "me", user?.id],
@@ -315,7 +321,7 @@ export default function ReferralPage() {
               <Link2 className="w-4 h-4 shrink-0" />
               Copy message
             </button>
-            {typeof navigator !== "undefined" && navigator.share && (
+            {canNativeShare && (
               <button
                 onClick={nativeShare}
                 disabled={!code}
