@@ -102,7 +102,7 @@ export default function WalletPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-card rounded-2xl border border-border p-5">
                 <p className="text-xs font-bold text-foreground/40 uppercase tracking-widest mb-1">
-                  Lifetime Credits
+                  Total Earned
                 </p>
                 <p className="text-xl font-bold text-foreground">
                   ${totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -110,7 +110,7 @@ export default function WalletPage() {
               </div>
               <div className="bg-card rounded-2xl border border-border p-5">
                 <p className="text-xs font-bold text-foreground/40 uppercase tracking-widest mb-1">
-                  Lifetime Debits
+                  Total Paid Out
                 </p>
                 <p className="text-xl font-bold text-foreground">
                   ${totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -126,20 +126,20 @@ export default function WalletPage() {
               <input
                 type="text"
                 placeholder="Search transactions..."
-                className="w-full bg-card border border-border rounded-full py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+                className="w-full bg-card border border-border rounded-full py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transi[...]
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <button
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-card border border-border rounded-full text-sm font-bold text-foreground/60 hover:text-foreground transition-all active:scale-95 shadow-sm"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-card border border-border rounded-full text-sm font-bold text-foreground/60 hover:text-foregro[...]
               >
                 <Filter className="w-4 h-4" />
                 Filter
               </button>
               <button
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-card border border-border rounded-full text-sm font-bold text-foreground/60 hover:text-foreground transition-all active:scale-95 shadow-sm"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-card border border-border rounded-full text-sm font-bold text-foreground/60 hover:text-foregro[...]
               >
                 Export CSV
               </button>
