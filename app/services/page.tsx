@@ -1,1162 +1,650 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useTechnician } from "@/app/providers/TechnicianProvider";
-import { useProgress } from "@/app/providers/ProgressProvider";
-import PageLoader from "@/app/components/ui/PageLoader";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSubscription } from "@/app/providers/SubscriptionProvider";
+import type { SubscriptionPlan, PlanDetails } from "@/lib/types/subscription";
 import {
-  formatPriceDisplay,
-  toNumericPrice,
-  loadServices,
-  saveServices,
-  type BarberService,
-} from "@/app/features/profile/components/BarberServicesForm";
-import {
-  listOfferings,
-  createOffering,
-  updateOffering,
-  deleteOffering,
-} from "@/lib/api/offerings";
-import { isDemoMode } from "@/lib/demo";
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  ClipboardList,
+  Check,
+  CreditCard,
+  Calendar,
+  RefreshCw,
   Loader2,
-  ChevronDown,
-  CheckCircle2,
+  Zap,
+  Crown,
+  Building2,
+  AlertCircle,
+  Trash2,
 } from "lucide-react";
-import { FORM_LABEL } from "@/lib/constants/ui";
-import RichText from "@/app/components/ui/RichText";
-import { useModalKeyboard, useModalScrollLock } from "@/lib/hooks/use-modal";
+import { api } from "@/lib/api-client";
+import { getApiErrorMessage } from "@/lib/api-client";
+import { API } from "@/lib/constants/api";
+import { isDemoMode } from "@/lib/demo";
+import { useTechnician } from "@/app/providers/TechnicianProvider";
+import {
+  fetchCurrentSubscription,
+  SUBSCRIPTION_QUERY_KEY,
+} from "@/lib/api/subscription";
+import { SUBSCRIPTION_PLANS } from "@/lib/constants/subscription";
+import SubscriptionPaymentModal from "@/app/features/subscription/components/SubscriptionPaymentModal";
+import PageLoader from "@/app/components/ui/PageLoader";
 
-const INPUT_BASE =
-  "w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50 text-sm";
-
-const DURATION_OPTIONS = [
-  { value: "", label: "Select duration" },
-  { value: "15", label: "15 min" },
-  { value: "30", label: "30 min" },
-  { value: "45", label: "45 min" },
-  { value: "60", label: "1 hour" },
-  { value: "90", label: "1 hr 30 min" },
-  { value: "120", label: "2 hours" },
-];
-
-function formatDuration(value: string): string {
-  const opt = DURATION_OPTIONS.find((o) => o.value === value);
-  return opt ? opt.label : value ? `${value} min` : "—";
-}
-
-/** Map API offering to BarberService for UI. */
-interface PremiumSlot {
-  from?: string;
-  to?: string;
-  price?: string | number;
-}
-
-interface PromoBlock {
-  enabled?: boolean;
-  from?: string;
-  to?: string;
-  price?: string | number;
-}
-
-function offeringToService(o: {
+/** Plan shape from GET plans/list?provider=stripe - use data.price_id */
+interface ApiPlan {
   id: string;
-  name: string;
-  price: string | number;
-  duration: number;
-  description?: string;
-  premium_hours?: { slots?: PremiumSlot[] } | null;
-  promo?: PromoBlock | null;
-}): BarberService {
-  const slot = o.premium_hours?.slots?.[0];
-  return {
-    id: o.id,
-    name: o.name,
-    price: String(o.price),
-    duration: String(o.duration),
-    description: o.description ?? undefined,
-    premiumHours:
-      !!o.premium_hours &&
-      Array.isArray(o.premium_hours.slots) &&
-      o.premium_hours.slots.length > 0,
-    offerPromotion: !!o.promo?.enabled,
-    premiumFrom: slot?.from,
-    premiumTo: slot?.to,
-    premiumPrice: slot?.price !== undefined ? String(slot.price) : undefined,
-    promoFrom: o.promo?.from,
-    promoTo: o.promo?.to,
-    promoPrice: o.promo?.price !== undefined ? String(o.promo.price) : undefined,
-  };
+  name?: string;
+  price_id?: string;
+  data?: { price_id?: string };
+  [key: string]: unknown;
 }
 
-export default function ServicesPage() {
-  const { technician, isTechnicianLoading, refetchTechnician } =
-    useTechnician();
-  const { progress } = useProgress();
-  const technicianId = technician?.technician_id ?? technician?.id ?? "";
+const API_PLAN_TO_STATIC: Record<string, string> = {
+  INDEPENDENT: "independent",
+  PROFESSIONAL: "professional",
+  SHOP_OWNER: "shop-owner",
+};
 
-  const [services, setServices] = useState<BarberService[]>([]);
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [duration, setDuration] = useState("");
-  const [description, setDescription] = useState("");
-  const [premiumHours, setPremiumHours] = useState(false);
-  const [premiumFrom, setPremiumFrom] = useState("19:00");
-  const [premiumTo, setPremiumTo] = useState("21:00");
-  const [premiumPrice, setPremiumPrice] = useState("");
-  const [offerPromotion, setOfferPromotion] = useState(false);
-  const [promoFrom, setPromoFrom] = useState("11:00");
-  const [promoTo, setPromoTo] = useState("13:00");
-  const [promoPrice, setPromoPrice] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState("");
-  const [mobileModalOpen, setMobileModalOpen] = useState(false);
-  const [listLoading, setListLoading] = useState(true);
-  const [listError, setListError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
-  const [confirmRemoveName, setConfirmRemoveName] = useState("");
+export default function SubscriptionPage() {
+  const { technician, isTechnicianLoading } = useTechnician();
+  const technicianId = technician?.technician_id ?? technician?.id;
+  const queryClient = useQueryClient();
 
-  const load = useCallback(async (forceSync = false) => {
-    if (!technicianId) {
-      setServices([]);
-      setListLoading(false);
+  const subscriptionQuery = useQuery({
+    queryKey: [...SUBSCRIPTION_QUERY_KEY, technicianId ?? ""],
+    queryFn: () => fetchCurrentSubscription(technicianId!),
+    enabled: !!technicianId && !isDemoMode(),
+  });
+
+  const {
+    subscription: subscriptionFromProvider,
+    subscribe,
+    cancelSubscription,
+    updateSubscription,
+    toggleAutoRenew,
+    isLoading: providerLoading,
+    subscriptionError: providerError,
+  } = useSubscription();
+
+  const displaySubscription = isDemoMode()
+    ? subscriptionFromProvider
+    : (subscriptionQuery.data ?? subscriptionFromProvider);
+
+  const [displayPlans, setDisplayPlans] =
+    useState<PlanDetails[]>(SUBSCRIPTION_PLANS);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(!isDemoMode());
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [planToPurchase, setPlanToPurchase] = useState<PlanDetails | null>(
+    null,
+  );
+  const [subscribingPlanId, setSubscribingPlanId] = useState<string | null>(
+    null,
+  );
+  const [subscribeError, setSubscribeError] = useState<string | null>(null);
+
+  const currentPlan = displaySubscription
+    ? displayPlans.find((p) => p.id === displaySubscription.plan)
+    : null;
+  const isActive = displaySubscription?.status === "active";
+  const isCancelled = displaySubscription?.status === "cancelled";
+  const isLoading = providerLoading || subscriptionQuery.isLoading;
+  const subscriptionError = subscriptionQuery.error
+    ? "Could not load subscription."
+    : providerError;
+  const refetchSubscription = () => subscriptionQuery.refetch();
+
+  // Keep loading until we have technician, subscription, and plans data (or error)
+  const isPageLoading =
+    isTechnicianLoading ||
+    isLoadingPlans ||
+    (!isDemoMode() && (!technicianId || subscriptionQuery.isPending));
+
+  // Fetch plans with price_id from API (same as /onboarding/choose-plan)
+  useEffect(() => {
+    if (isDemoMode()) {
+      setDisplayPlans(SUBSCRIPTION_PLANS);
+      setIsLoadingPlans(false);
       return;
     }
+    let cancelled = false;
+    async function fetchPlans() {
+      setIsLoadingPlans(true);
 
-    const localServices = loadServices(technicianId);
-    if (localServices.length > 0) {
-      setServices(localServices);
-      setListLoading(false);
-    } else {
-      setListLoading(true);
-    }
-
-    setListError("");
-    const syncKey = `chairfill_services_synced_${technicianId}`;
-    const needsSync = forceSync || (!isDemoMode() && typeof sessionStorage !== 'undefined' && !sessionStorage.getItem(syncKey));
-
-    if (needsSync) {
-      try {
-        const offerings = await listOfferings({
-          technician_id: technicianId,
-          page_size: 100,
-        });
-        const mapped = offerings.map(offeringToService);
-        setServices(mapped);
-        saveServices(technicianId, mapped);
-        if (!forceSync && typeof sessionStorage !== 'undefined') {
-          sessionStorage.setItem(syncKey, 'true');
+      // Try to load from session storage first
+      const cachedPlans = sessionStorage.getItem(
+        "chairfill_subscription_plans",
+      );
+      if (cachedPlans) {
+        try {
+          const parsed = JSON.parse(cachedPlans);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setDisplayPlans(parsed);
+            setIsLoadingPlans(false);
+            return;
+          }
+        } catch (e) {
+          // Ignore parse errors and fetch fresh
+          console.warn("Failed to parse cached subscription plans", e);
         }
-      } catch (err) {
-        setListError(
-          err instanceof Error ? err.message : "Failed to load services.",
-        );
-        if (localServices.length === 0) setServices([]);
-      } finally {
-        setListLoading(false);
       }
-    } else {
-      setListLoading(false);
+
+      try {
+        const { data } = await api.get<ApiPlan[] | { data?: ApiPlan[] }>(
+          `${API.PLANS.LIST}?provider=stripe`,
+        );
+        const raw = Array.isArray(data)
+          ? data
+          : (data as { data?: ApiPlan[] })?.data;
+        const apiPlans: ApiPlan[] = Array.isArray(raw) ? raw : [];
+        if (cancelled) return;
+        const merged: PlanDetails[] = SUBSCRIPTION_PLANS.map((p) => {
+          const apiPlan = apiPlans.find((a) => {
+            const apiKey = String(a.name || a.id).toUpperCase();
+            const staticId = API_PLAN_TO_STATIC[apiKey] ?? p.id;
+            return staticId === p.id;
+          });
+          const priceId = apiPlan
+            ? (apiPlan.data?.price_id ?? apiPlan.price_id)
+            : p.price_id;
+          return { ...p, price_id: priceId ?? p.price_id };
+        });
+
+        // Cache the merged result
+        sessionStorage.setItem(
+          "chairfill_subscription_plans",
+          JSON.stringify(merged),
+        );
+        setDisplayPlans(merged);
+      } catch {
+        if (!cancelled) setDisplayPlans(SUBSCRIPTION_PLANS);
+      } finally {
+        if (!cancelled) setIsLoadingPlans(false);
+      }
     }
-  }, [technicianId]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  // Clear success message after delay
-  useEffect(() => {
-    if (!successMessage) return;
-    const t = setTimeout(() => setSuccessMessage(""), 3000);
-    return () => clearTimeout(t);
-  }, [successMessage]);
-
-  const clearForm = useCallback(() => {
-    setName("");
-    setPrice("");
-    setDuration("");
-    setDescription("");
-    setPremiumHours(false);
-    setPremiumFrom("19:00");
-    setPremiumTo("21:00");
-    setPremiumPrice("");
-    setOfferPromotion(false);
-    setPromoFrom("11:00");
-    setPromoTo("13:00");
-    setPromoPrice("");
-    setEditingId(null);
-    setFormError("");
+    fetchPlans();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleAddOrUpdate = async (
-    e: React.FormEvent,
-    onSuccess?: () => void,
-  ) => {
-    e.preventDefault();
-    setFormError("");
-    const trimmedName = name.trim();
-    const numericPrice = toNumericPrice(price);
-    if (!trimmedName) {
-      setFormError("Service name is required.");
-      return;
-    }
-    if (!numericPrice) {
-      setFormError("Price is required. Use numbers only (e.g. 25 or 25.50).");
-      return;
-    }
-    const priceNum = parseFloat(numericPrice);
-    const durationNum = duration.trim() ? parseInt(duration.trim(), 10) : 30;
-    if (Number.isNaN(priceNum) || priceNum < 0) {
-      setFormError("Enter a valid price.");
-      return;
-    }
-    if (Number.isNaN(durationNum) || durationNum < 5) {
-      setFormError("Duration must be at least 5 minutes.");
+  const handlePlanClick = async (plan: PlanDetails) => {
+    if (plan.comingSoon) return;
+    if (displaySubscription && displaySubscription.plan === plan.id) return;
+
+    if (!plan.price_id) {
+      setSubscribeError("This plan is not available for subscription yet.");
       return;
     }
     if (!technicianId) {
-      setFormError("Technician profile not found.");
+      setSubscribeError(
+        "Technician profile not found. Please complete onboarding first.",
+      );
       return;
     }
-    setSaving(true);
+
+    setSubscribeError(null);
+    setSubscribingPlanId(plan.id);
     try {
-      const promoPayload = offerPromotion
-        ? {
-            discount: 0,
-            price: promoPrice ? parseFloat(promoPrice) : undefined,
-            from: promoFrom || undefined,
-            to: promoTo || undefined,
-            enabled: true,
-            expiry: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
-              .toISOString()
-              .slice(0, 10),
-          }
-        : undefined;
-      const premiumPayload = premiumHours
-        ? {
-            slots: [
-              {
-                from: premiumFrom,
-                to: premiumTo,
-                price: premiumPrice ? parseFloat(premiumPrice) : undefined,
-              },
-            ],
-          }
-        : undefined;
-      if (editingId && editingId.startsWith("OFF-")) {
-        await updateOffering({
-          offering_id: editingId,
-          name: trimmedName,
-          price: priceNum,
-          duration: durationNum,
-          description: description.trim() || undefined,
-          promo_enabled: offerPromotion,
-          promo: promoPayload,
-          premium_hours: premiumPayload,
-        });
-      } else {
-        await createOffering({
-          name: trimmedName,
-          price: priceNum,
-          duration: durationNum,
-          description: description.trim() || undefined,
-          technician_id: technicianId,
-          premium_hours: premiumPayload,
-          promo: promoPayload,
-        });
+      if (isDemoMode()) {
+        setPlanToPurchase(plan);
+        setShowPaymentModal(true);
+        setSubscribingPlanId(null);
+        return;
       }
-      await load(true);
-      clearForm();
-      setSuccessMessage(editingId ? "Service updated." : "Service added.");
-      onSuccess?.();
-    } catch (err) {
-      setFormError(
-        err instanceof Error ? err.message : "Failed to save service.",
+      const { data } = await api.post<{
+        url?: string;
+        data?: { url?: string; checkoutSession?: { url?: string } };
+      }>(API.SUBSCRIPTION.SUBSCRIBE, {
+        price_id: plan.price_id,
+        technician_id: technicianId,
+      });
+      const raw = data && typeof data === "object" ? data : null;
+      const checkoutUrl =
+        (raw && typeof (raw as { url?: string }).url === "string"
+          ? (raw as { url: string }).url
+          : null) ??
+        (raw && (raw as { data?: { url?: string } }).data?.url) ??
+        (raw &&
+          (raw as { data?: { checkoutSession?: { url?: string } } }).data
+            ?.checkoutSession?.url);
+      if (checkoutUrl && typeof checkoutUrl === "string") {
+        window.location.href = checkoutUrl;
+        return;
+      }
+      setSubscribeError(
+        "No checkout URL returned. Please try again or contact support.",
       );
+    } catch (err) {
+      setSubscribeError(getApiErrorMessage(err));
     } finally {
-      setSaving(false);
+      setSubscribingPlanId(null);
     }
   };
 
-  const handleEdit = (s: BarberService) => {
-    setName(s.name);
-    setPrice(s.price);
-    setDuration(s.duration ?? "");
-    setDescription(s.description ?? "");
-    setPremiumHours(s.premiumHours ?? false);
-    setPremiumFrom(s.premiumFrom ?? "19:00");
-    setPremiumTo(s.premiumTo ?? "21:00");
-    setPremiumPrice(s.premiumPrice ?? "");
-    setOfferPromotion(s.offerPromotion ?? false);
-    setPromoFrom(s.promoFrom ?? "11:00");
-    setPromoTo(s.promoTo ?? "13:00");
-    setPromoPrice(s.promoPrice ?? "");
-    setEditingId(s.id);
-    setFormError("");
-    // Only open modal on mobile (sm breakpoint = 640px); on desktop form is inline, avoid locking body scroll
-    if (typeof window !== "undefined" && window.innerWidth < 640)
-      setMobileModalOpen(true);
-  };
-
-  const handleRemoveClick = (id: string, name: string) => {
-    setConfirmRemoveId(id);
-    setConfirmRemoveName(name);
-  };
-
-  const handleRemoveConfirm = async () => {
-    const id = confirmRemoveId;
-    if (!id) return;
-    setConfirmRemoveId(null);
-    setConfirmRemoveName("");
-    if (editingId === id) clearForm();
-    if (id.startsWith("OFF-")) {
-      setDeletingId(id);
-      setListError("");
+  const handlePaymentSuccess = async () => {
+    if (planToPurchase) {
       try {
-        await deleteOffering(id);
-        await load(true);
-        setSuccessMessage("Service removed.");
-      } catch (err) {
-        setListError(
-          err instanceof Error ? err.message : "Failed to delete service.",
-        );
-      } finally {
-        setDeletingId(null);
+        if (displaySubscription && displaySubscription.status === "active") {
+          await updateSubscription(planToPurchase.id as SubscriptionPlan);
+        } else {
+          await subscribe(planToPurchase.id as SubscriptionPlan);
+        }
+        await queryClient.invalidateQueries({
+          queryKey: SUBSCRIPTION_QUERY_KEY,
+        });
+      } catch (e) {
+        console.error("Subscription error:", e);
       }
-    } else {
-      setServices((prev) => prev.filter((s) => s.id !== id));
-      setSuccessMessage("Service removed.");
+      setPlanToPurchase(null);
+      setShowPaymentModal(false);
     }
   };
 
-  useModalKeyboard(mobileModalOpen, () => setMobileModalOpen(false));
-  useModalScrollLock(mobileModalOpen);
+  const handleCancel = async () => {
+    try {
+      await cancelSubscription();
+      await queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_QUERY_KEY });
+      setShowCancelConfirm(false);
+    } catch (error) {
+      console.error("Cancellation error:", error);
+    }
+  };
 
-  if (isTechnicianLoading) {
-    return <PageLoader message="Loading…" />;
-  }
+  const getPlanIcon = (planId: string) => {
+    switch (planId) {
+      case "independent":
+        return <Zap className="w-5 h-5" />;
+      case "professional":
+        return <Crown className="w-5 h-5" />;
+      case "shop-owner":
+        return <Building2 className="w-5 h-5" />;
+      default:
+        return <CreditCard className="w-5 h-5" />;
+    }
+  };
 
-  if (!technician) {
-    const isBarber = progress?.is_technician === true;
-    return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-black pt-12 sm:pt-24 pb-8">
-        <main className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mx-auto rounded-xl bg-card border border-border p-6 text-center">
-            {isBarber ? (
-              <>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  We couldn&apos;t load your barber profile. Please try again.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => refetchTechnician()}
-                  className="mt-4 px-4 py-2 text-sm font-semibold text-primary-foreground bg-primary rounded-full hover:opacity-90 transition-all"
-                >
-                  Try again
-                </button>
-              </>
-            ) : (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Complete barber onboarding to add the services you offer.
-              </p>
-            )}
-          </div>
-        </main>
-      </div>
-    );
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const getNextBillingDate = (startDate: string): string => {
+    const start = new Date(startDate);
+    const next = new Date(start);
+    next.setMonth(next.getMonth() + 1);
+    return next.toISOString();
+  };
+
+  const isValidDate = (dateString: string): boolean => {
+    const d = new Date(dateString);
+    return !isNaN(d.getTime()) && d.getFullYear() > 1971;
+  };
+
+  if (isPageLoading) {
+    return <PageLoader message="Loading subscription…" />;
   }
 
   return (
     <div className="min-h-screen bg-background pt-4 sm:pt-8 pb-8">
       <main className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto space-y-6">
-          {/* Header - full width */}
-          <div>
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-              Services
-            </h1>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              Add the services you offer and their prices. Clients will see this
-              when you share your link.
-            </p>
-            {successMessage && (
-              <p
-                className="mt-3 flex items-center gap-2 text-sm text-green-700 dark:text-green-400"
-                role="status"
+        <div className="max-w-6xl mx-auto">
+          {subscriptionError && (
+            <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <p className="text-sm font-medium">{subscriptionError}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => refetchSubscription()}
+                className="flex items-center justify-center p-2 text-sm font-medium text-amber-800 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/40 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors"
+                aria-label="Retry"
               >
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                {successMessage}
-              </p>
+                <RefreshCw className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Retry</span>
+              </button>
+            </div>
+          )}
+
+          {/* Active subscription – always show; no subscription = prompt to select */}
+          <div className="bg-card rounded-2xl border border-border p-6 mb-8 shadow-sm">
+            <h2 className="text-xl font-bold text-foreground mb-4">
+              Active subscription
+            </h2>
+
+            {displaySubscription ? (
+              <>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      {currentPlan && getPlanIcon(currentPlan.id)}
+                      <span className="text-2xl font-bold text-foreground">
+                        {currentPlan?.name ?? displaySubscription.plan}
+                      </span>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          isActive
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            : isCancelled
+                              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                              : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                        }`}
+                      >
+                        {displaySubscription.status.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-600 dark:text-zinc-400">
+                      <span className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        Next billing: {formatDate(getNextBillingDate(displaySubscription.startDate))}
+                      </span>
+                      {displaySubscription.endDate && isValidDate(displaySubscription.endDate) && (
+                        <span className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          Ends: {formatDate(displaySubscription.endDate)}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-2">
+                        <RefreshCw
+                          className={`w-4 h-4 ${displaySubscription.autoRenew ? "text-green-600 dark:text-green-400" : ""}`}
+                        />
+                        Auto-renew:{" "}
+                        {displaySubscription.autoRenew ? "On" : "Off"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {isActive && (
+                    <div className="border-t sm:border-t-0 sm:border-l border-zinc-200 dark:border-zinc-700 pt-4 sm:pt-0 sm:pl-6 flex flex-col sm:items-end gap-2">
+                      <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        Manage subscription
+                      </p>
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <button
+                          onClick={() => toggleAutoRenew()}
+                          disabled={isLoading}
+                          className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-foreground bg-zinc-100 dark:bg-white/5 border border-border rounded-full hover:bg-foreground/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          aria-label={`Turn auto-renew ${displaySubscription.autoRenew ? "off" : "on"}`}
+                        >
+                          {isLoading ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <>
+                              <RefreshCw className={`w-5 h-5 sm:w-4 sm:h-4 ${displaySubscription.autoRenew ? "text-green-600 outline-green-600" : ""}`} />
+                              <span className="hidden sm:inline ml-2">{`Turn auto-renew ${displaySubscription.autoRenew ? "off" : "on"}`}</span>
+                            </>
+                          )}
+                        </button>
+                        {!showCancelConfirm ? (
+                          <button
+                            onClick={() => setShowCancelConfirm(true)}
+                            className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-red-500 bg-red-500/10 border border-red-500/20 rounded-full hover:bg-red-500/20 transition-all"
+                            aria-label="Cancel subscription"
+                          >
+                            <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
+                            <span className="hidden sm:inline ml-2">Cancel subscription</span>
+                          </button>
+                        ) : (
+                          <div className="flex gap-2">
+                             <button
+                              onClick={handleCancel}
+                              disabled={isLoading}
+                              className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-white bg-red-600 rounded-full hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              aria-label="Confirm cancel"
+                            >
+                              {isLoading ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                              ) : (
+                                <>
+                                  <AlertCircle className="w-5 h-5 sm:w-4 sm:h-4" />
+                                  <span className="hidden sm:inline ml-2">Confirm cancel</span>
+                                </>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => setShowCancelConfirm(false)}
+                              className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-foreground bg-zinc-100 dark:bg-white/5 border border-border rounded-full hover:bg-foreground/5 transition-all"
+                              aria-label="Keep subscription"
+                            >
+                              <Check className="w-5 h-5 sm:w-4 sm:h-4 text-green-500" />
+                              <span className="hidden sm:inline ml-2">Keep subscription</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {isCancelled && displaySubscription.endDate && (
+                  <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+                    Your subscription remains active until{" "}
+                    {formatDate(displaySubscription.endDate)}. You can select a
+                    new plan below before then.
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="py-4">
+                <p className="text-zinc-600 dark:text-zinc-400 mb-2">
+                  You don't have an active subscription.
+                </p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-500">
+                  Select a plan below to get started.
+                </p>
+              </div>
             )}
           </div>
 
-
-
-          {/* Desktop: two columns - form left, list right */}
-          <div className="flex flex-col lg:flex-row lg:gap-8 lg:items-start">
-            {/* Add / Edit form (desktop only) - left column */}
-            <section
-              className="hidden sm:block flex-1 min-w-0 max-w-xl rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm shrink-0"
-              aria-labelledby="add-service-heading"
-            >
+          {/* Plan cards: only when no active subscription (e.g. cancelled or no subscription yet) */}
+          {(!displaySubscription ||
+            displaySubscription.status !== "active") && (
+            <section className="mb-8" aria-labelledby="plans-heading">
               <h2
-                id="add-service-heading"
-                className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-4"
+                id="plans-heading"
+                className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2"
               >
-                {editingId ? "Edit service" : "Add a service"}
+                Compare plans
               </h2>
-              {formError && (
-                <p
-                  className="mb-3 text-sm text-red-600 dark:text-red-400"
-                  role="alert"
-                >
-                  {formError}
-                </p>
-              )}
-              <form
-                onSubmit={(e) => handleAddOrUpdate(e)}
-                className="space-y-5"
-              >
-                <div>
-                  <label htmlFor="service-name" className={FORM_LABEL}>
-                    Name
-                  </label>
-                  <input
-                    id="service-name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Haircut, Beard trim"
-                    className={INPUT_BASE}
-                    autoComplete="off"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="service-price" className={FORM_LABEL}>
-                    Price
-                  </label>
-                  <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50">
-                    <span className="flex items-center px-3 text-zinc-500 dark:text-zinc-400 text-sm border-r border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50">
-                      $
-                    </span>
-                    <input
-                      id="service-price"
-                      type="text"
-                      inputMode="decimal"
-                      value={price}
-                      onChange={(e) => setPrice(toNumericPrice(e.target.value))}
-                      placeholder="0.00"
-                      className="flex-1 px-3 py-2 bg-transparent text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none text-sm min-w-0"
-                      autoComplete="off"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="service-duration" className={FORM_LABEL}>
-                    Duration
-                  </label>
-                  <div className="relative">
-                    <select
-                      id="service-duration"
-                      value={duration}
-                      onChange={(e) => setDuration(e.target.value)}
-                      className={`${INPUT_BASE} appearance-none pr-10`}
-                    >
-                      {DURATION_OPTIONS.map((opt) => (
-                        <option key={opt.value || "empty"} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 dark:text-zinc-400 pointer-events-none" />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="service-desc" className={FORM_LABEL}>
-                    Description
-                  </label>
-                  <textarea
-                    id="service-desc"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="e.g. Includes wash and style, fade on sides"
-                    rows={4}
-                    className={`${INPUT_BASE} resize-y min-h-[100px]`}
-                  />
-                  <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-                    Optional — describe what's included so clients know what to expect.
-                  </p>
-                </div>
+              <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+                Choose the plan that fits your business. You will complete
+                payment on Stripe.
+              </p>
 
-                {/* Premium Hours toggle */}
-                <div className="flex items-start justify-between gap-4 py-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                      Premium Hours
-                    </p>
-                    <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-                      Override the days and times you want this service to be
-                      bookable.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={premiumHours}
-                    onClick={() => setPremiumHours((v) => !v)}
-                    className={`relative w-12 h-6 rounded-full transition-colors shrink-0 focus:outline-none ${
-                      premiumHours
-                        ? "bg-green-600 dark:bg-green-400"
-                        : "bg-zinc-300 dark:bg-zinc-700"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                        premiumHours ? "left-7" : "left-1"
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {premiumHours && (
-                  <div className="grid grid-cols-2 gap-4 p-4 border border-border bg-white/[0.02] rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div>
-                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">From</label>
-                      <input
-                        type="time"
-                        value={premiumFrom}
-                        onChange={(e) => setPremiumFrom(e.target.value)}
-                        className={`${INPUT_BASE} [color-scheme:dark]`}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">To</label>
-                      <input
-                        type="time"
-                        value={premiumTo}
-                        onChange={(e) => setPremiumTo(e.target.value)}
-                        className={`${INPUT_BASE} [color-scheme:dark]`}
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">Premium Price</label>
-                      <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50">
-                        <span className="flex items-center px-3 text-zinc-500 dark:text-zinc-400 text-sm border-r border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50">
-                          $
-                        </span>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={premiumPrice}
-                          onChange={(e) => setPremiumPrice(toNumericPrice(e.target.value))}
-                          placeholder="80.00"
-                          className="flex-1 px-3 py-2 bg-transparent text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none text-sm min-w-0"
-                          autoComplete="off"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Offer Promotion toggle */}
-                <div className="flex items-start justify-between gap-4 py-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                      Offer Promotion
-                    </p>
-                    <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-                      Offer this service at a discount for a certain period of
-                      time.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={offerPromotion}
-                    onClick={() => setOfferPromotion((v) => !v)}
-                    className={`relative w-12 h-6 rounded-full transition-colors shrink-0 focus:outline-none ${
-                      offerPromotion
-                        ? "bg-green-600 dark:bg-green-400"
-                        : "bg-zinc-300 dark:bg-zinc-700"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                        offerPromotion ? "left-7" : "left-1"
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {offerPromotion && (
-                  <div className="grid grid-cols-2 gap-4 p-4 border border-border bg-white/[0.02] rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div>
-                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">From</label>
-                      <input
-                        type="time"
-                        value={promoFrom}
-                        onChange={(e) => setPromoFrom(e.target.value)}
-                        className={`${INPUT_BASE} [color-scheme:dark]`}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">To</label>
-                      <input
-                        type="time"
-                        value={promoTo}
-                        onChange={(e) => setPromoTo(e.target.value)}
-                        className={`${INPUT_BASE} [color-scheme:dark]`}
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">Promotion Price</label>
-                      <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50">
-                        <span className="flex items-center px-3 text-zinc-500 dark:text-zinc-400 text-sm border-r border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50">
-                          $
-                        </span>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={promoPrice}
-                          onChange={(e) => setPromoPrice(toNumericPrice(e.target.value))}
-                          placeholder="35.00"
-                          className="flex-1 px-3 py-2 bg-transparent text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none text-sm min-w-0"
-                          autoComplete="off"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex flex-wrap items-center gap-2 pt-2">
-                  <button
-                    type="submit"
-                    disabled={saving || !name.trim() || !toNumericPrice(price)}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:pointer-events-none"
-                  >
-                    {saving ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Plus className="w-4 h-4" />
-                    )}
-                    {saving
-                      ? "Saving..."
-                      : editingId
-                        ? "Update service"
-                        : "Add service"}
-                  </button>
-                  {editingId && (
-                    <button
-                      type="button"
-                      onClick={clearForm}
-                      className="px-4 py-2.5 rounded-lg text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </form>
-            </section>
-
-            {/* List - right column on desktop */}
-            <section
-              aria-labelledby="services-list-heading"
-              className="flex-1 min-w-0 w-full"
-            >
-              <h2
-                id="services-list-heading"
-                className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3"
-              >
-                Your services ({services.length})
-              </h2>
-              {listError && (
-                <div className="mb-3 flex flex-col sm:flex-row sm:items-center gap-2">
-                  <p
-                    className="text-sm text-red-600 dark:text-red-400 flex-1"
-                    role="alert"
-                  >
-                    {listError}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setListError("");
-                      load(true);
-                    }}
-                    className="text-sm font-medium text-zinc-900 dark:text-zinc-50 hover:underline shrink-0"
-                  >
-                    Try again
-                  </button>
-                </div>
-              )}
-              {listLoading ? (
-                <div className="rounded-2xl border border-border bg-card p-8 flex items-center justify-center">
+              {isLoadingPlans ? (
+                <div className="flex justify-center py-12">
                   <Loader2
-                    className="w-8 h-8 animate-spin text-zinc-400"
+                    className="w-10 h-10 animate-spin text-zinc-500 dark:text-zinc-400"
                     aria-hidden
                   />
-                </div>
-              ) : services.length === 0 ? (
-                <div className="rounded-2xl border border-border bg-card p-8 text-center">
-                  <ClipboardList
-                    className="w-12 h-12 mx-auto text-zinc-300 dark:text-zinc-600 mb-3"
-                    aria-hidden
-                  />
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    No services yet
-                  </p>
-                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
-                    <span className="hidden sm:inline">
-                      Use the form above to add your first service.
-                    </span>
-                    <span className="sm:hidden">
-                      Tap + to add your first service.
-                    </span>
-                  </p>
                 </div>
               ) : (
-                <ul className="space-y-2">
-                  {services.map((s) => (
-                    <li
-                      key={s.id}
-                      className="rounded-2xl border border-border bg-card px-4 py-3 flex flex-row flex-wrap sm:flex-nowrap sm:items-center justify-between gap-3 shadow-sm"
-                    >
-                      {confirmRemoveId === s.id ? (
-                        <>
-                          <p className="text-sm text-zinc-700 dark:text-zinc-300 flex-1 min-w-0">
-                            Remove{" "}
-                            <strong>{confirmRemoveName || s.name}</strong>?
-                          </p>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setConfirmRemoveId(null);
-                                setConfirmRemoveName("");
-                              }}
-                              className="px-3 py-1.5 rounded-lg text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveConfirm()}
-                              className="px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="min-w-0 flex-1 w-full sm:w-auto">
-                            {/* Row 1: name + actions (same row on mobile); on desktop name is here, actions in column 2 */}
-                            <div className="flex flex-row items-center gap-2 sm:block">
-                              <p className="font-medium text-zinc-900 dark:text-zinc-50 min-w-0 flex-1 truncate sm:truncate-none">
-                                {s.name}
-                              </p>
-                              <div className="flex items-center gap-1 shrink-0 sm:hidden">
-                                {editingId !== s.id && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEdit(s)}
-                                    disabled={deletingId !== null}
-                                    className="p-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 disabled:pointer-events-none"
-                                    aria-label={`Edit ${s.name}`}
-                                  >
-                                    <Pencil className="w-4 h-4" />
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleRemoveClick(s.id, s.name)
-                                  }
-                                  disabled={deletingId !== null}
-                                  className="p-2 text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:pointer-events-none"
-                                  aria-label={`Remove ${s.name}`}
-                                >
-                                  {deletingId === s.id ? (
-                                    <Loader2
-                                      className="w-4 h-4 animate-spin"
-                                      aria-hidden
-                                    />
-                                  ) : (
-                                    <Trash2 className="w-4 h-4" />
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5 sm:mt-0">
-                              <span>
-                                {formatPriceDisplay(s.price)}
-                                {s.duration && (
-                                  <span className="text-zinc-500 dark:text-zinc-500">
-                                    {" "}
-                                    · {formatDuration(s.duration)}
-                                  </span>
-                                )}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+                  {displayPlans.map((plan) => {
+                    const isCurrentPlan = displaySubscription?.plan === plan.id;
+                    const isPopular = plan.badge === "Most Popular";
+                    const isComingSoon = plan.comingSoon ?? false;
+                    const isSelectable =
+                      !isCurrentPlan && !isComingSoon && !!plan.price_id;
+
+                    const getCtaLabel = () => {
+                      if (isCurrentPlan) return "Your plan";
+                      if (isComingSoon) return "Contact us";
+                      const shortName = plan.name.replace(/^The\s+/, "");
+                      if (displaySubscription?.status === "active")
+                        return `Switch to ${shortName}`;
+                      return `Get ${shortName}`;
+                    };
+
+                    return (
+                      <article
+                        key={plan.id}
+                        aria-current={isCurrentPlan ? "true" : undefined}
+                        className={`relative flex flex-col rounded-2xl border transition-all duration-200 ${
+                          isCurrentPlan
+                            ? "border-zinc-400 dark:border-zinc-500 bg-zinc-50/50 dark:bg-zinc-800/30 shadow-sm"
+                            : isPopular
+                              ? "border-blue-500 dark:border-blue-400 bg-card shadow-lg shadow-blue-500/10 lg:shadow-xl lg:shadow-blue-500/10"
+                              : "border-border bg-card shadow-sm"
+                        } ${isSelectable ? "hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-md cursor-pointer" : ""}`}
+                      >
+                        {/* Badges */}
+                        <div className="flex items-start justify-between gap-2 p-5 pb-0">
+                          <div className="flex flex-wrap gap-2">
+                            {plan.badge === "Most Popular" && (
+                              <span className="inline-flex items-center rounded-full bg-blue-500 px-2.5 py-0.5 text-xs font-medium text-white">
+                                Recommended
                               </span>
-                            </p>
-                            {s.description && (
-                              <div className="mt-1">
-                                <RichText
-                                  text={s.description}
-                                  className="text-zinc-500 dark:text-zinc-500"
-                                />
-                              </div>
                             )}
-                            {(s.premiumHours || s.offerPromotion) && (
-                              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                                {s.premiumHours && (
-                                  <span className="inline-flex items-center rounded-md bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-200">
-                                    Premium
-                                    {s.premiumFrom && s.premiumTo && (
-                                      <span className="ml-1 font-normal">
-                                        {s.premiumFrom}–{s.premiumTo}
-                                      </span>
-                                    )}
-                                    {s.premiumPrice && (
-                                      <span className="ml-1 font-semibold">
-                                        · {formatPriceDisplay(s.premiumPrice)}
-                                      </span>
-                                    )}
-                                  </span>
-                                )}
-                                {s.offerPromotion && (
-                                  <span className="inline-flex items-center rounded-md bg-green-50 dark:bg-green-900/20 px-2 py-0.5 text-xs font-medium text-green-800 dark:text-green-200">
-                                    Promo
-                                    {s.promoFrom && s.promoTo && (
-                                      <span className="ml-1 font-normal">
-                                        {s.promoFrom}–{s.promoTo}
-                                      </span>
-                                    )}
-                                    {s.promoPrice && (
-                                      <span className="ml-1 font-semibold">
-                                        · {formatPriceDisplay(s.promoPrice)}
-                                      </span>
-                                    )}
-                                  </span>
-                                )}
-                              </div>
+                            {plan.badge === "Coming Soon" && (
+                              <span className="inline-flex items-center rounded-full bg-zinc-200 dark:bg-zinc-700 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                                Coming soon
+                              </span>
+                            )}
+                            {isCurrentPlan && (
+                              <span className="inline-flex items-center rounded-full bg-primary px-2.5 py-0.5 text-xs font-medium text-primary-foreground">
+                                Your plan
+                              </span>
                             )}
                           </div>
-                          <div className="hidden sm:flex items-center gap-1 shrink-0">
-                            {editingId !== s.id && (
-                              <button
-                                type="button"
-                                onClick={() => handleEdit(s)}
-                                disabled={deletingId !== null}
-                                className="p-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 disabled:pointer-events-none"
-                                aria-label={`Edit ${s.name}`}
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </button>
+                          {getPlanIcon(plan.id)}
+                        </div>
+
+                        <div className="p-5 flex flex-col flex-1">
+                          <h3 className="text-lg font-bold text-foreground mb-1">
+                            {plan.name}
+                          </h3>
+                          {plan.tagline && (
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                              {plan.tagline}
+                            </p>
+                          )}
+
+                          <div className="mb-4">
+                            {plan.price != null ? (
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-3xl font-bold tracking-tight text-foreground">
+                                  ${plan.price}
+                                </span>
+                                <span className="text-zinc-500 dark:text-zinc-400">
+                                  /{plan.pricePeriod}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-2xl font-bold text-foreground">
+                                  Custom
+                                </span>
+                                <span className="text-zinc-500 dark:text-zinc-400 text-sm">
+                                  — {plan.pricePeriodLabel ?? "Contact us"}
+                                </span>
+                              </div>
                             )}
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveClick(s.id, s.name)}
-                              disabled={deletingId !== null}
-                              className="p-2 text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:pointer-events-none"
-                              aria-label={`Remove ${s.name}`}
-                            >
-                              {deletingId === s.id ? (
+                            {plan.subtitle && (
+                              <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+                                {plan.subtitle}
+                              </p>
+                            )}
+                          </div>
+
+                          <ul className="space-y-2.5 flex-1 mb-6" role="list">
+                            {plan.features.map((feature, index) => (
+                              <li
+                                key={index}
+                                className="flex items-start gap-2.5 text-sm"
+                              >
+                                <Check
+                                  className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5"
+                                  aria-hidden
+                                />
+                                <span className="text-zinc-600 dark:text-zinc-400">
+                                  {feature}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!isSelectable) return;
+                              handlePlanClick(plan);
+                            }}
+                            disabled={
+                              isComingSoon || subscribingPlanId !== null
+                            }
+                            aria-disabled={isCurrentPlan || isComingSoon}
+                            className={`w-full py-3 px-4 rounded-full font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-900 ${
+                              isCurrentPlan
+                                ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 cursor-default"
+                                : isComingSoon
+                                  ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-default"
+                                  : isPopular
+                                    ? "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500"
+                                    : "bg-primary text-primary-foreground hover:opacity-90 focus:ring-primary"
+                            } ${isCurrentPlan || isComingSoon || subscribingPlanId ? "cursor-not-allowed" : ""}`}
+                          >
+                            {subscribingPlanId === plan.id ? (
+                              <span className="inline-flex items-center justify-center gap-2">
                                 <Loader2
                                   className="w-4 h-4 animate-spin"
                                   aria-hidden
                                 />
-                              ) : (
-                                <Trash2 className="w-4 h-4" />
-                              )}
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                                Subscribing…
+                              </span>
+                            ) : (
+                              getCtaLabel()
+                            )}
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+
+              {subscribeError && (
+                <p className="mt-4 text-sm text-red-600 dark:text-red-400 text-center">
+                  {subscribeError}
+                </p>
               )}
             </section>
+          )}
+
+          {/* Additional Info */}
+          <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-foreground mb-4">
+              Manage your subscription
+            </h3>
+            <div className="space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
+              <p>
+                • To change plan, cancel your current subscription first. Plan
+                options will then appear so you can start a new subscription.
+              </p>
+              <p>
+                • Cancelled subscriptions remain active until the end of the
+                current billing period.
+              </p>
+              <p>• Use the buttons above to turn auto-renew on or off.</p>
+            </div>
           </div>
-          {/* End desktop two-column: form left, list right */}
-
-          {/* Mobile-only modal: Add/Edit service form */}
-          <div className="sm:hidden">
-            {mobileModalOpen && (
-              <div className="fixed inset-0 z-[60] flex flex-col bg-background">
-                <div className="flex items-center justify-between shrink-0 px-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileModalOpen(false);
-                      clearForm();
-                    }}
-                    className="text-sm font-medium text-zinc-600 dark:text-zinc-400"
-                  >
-                    Cancel
-                  </button>
-                  <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-                    {editingId ? "Edit service" : "Add service"}
-                  </h2>
-                  <button
-                    type="submit"
-                    form="mobile-service-form"
-                    disabled={
-                      saving || !name.trim() || !toNumericPrice(price)
-                    }
-                    className="text-sm font-semibold text-primary disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
-                  >
-                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {saving ? "Saving" : "Save"}
-                  </button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-4">
-                  {formError && (
-                    <p
-                      className="mb-3 text-sm text-red-600 dark:text-red-400"
-                      role="alert"
-                    >
-                      {formError}
-                    </p>
-                  )}
-                  <form
-                    id="mobile-service-form"
-                    onSubmit={(e) =>
-                      handleAddOrUpdate(e, () => setMobileModalOpen(false))
-                    }
-                    className="space-y-5"
-                  >
-                    <div>
-                      <label
-                        htmlFor="modal-service-name"
-                        className={FORM_LABEL}
-                      >
-                        Name
-                      </label>
-                      <input
-                        id="modal-service-name"
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Haircut, Beard trim"
-                        className={INPUT_BASE}
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="modal-service-price"
-                        className={FORM_LABEL}
-                      >
-                        Price
-                      </label>
-                      <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50">
-                        <span className="flex items-center px-3 text-zinc-500 dark:text-zinc-400 text-sm border-r border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50">
-                          $
-                        </span>
-                        <input
-                          id="modal-service-price"
-                          type="text"
-                          inputMode="decimal"
-                          value={price}
-                          onChange={(e) =>
-                            setPrice(toNumericPrice(e.target.value))
-                          }
-                          placeholder="0.00"
-                          className="flex-1 px-3 py-2 bg-transparent text-zinc-900 dark:text-zinc-50 text-sm min-w-0 focus:outline-none"
-                          autoComplete="off"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="modal-service-duration"
-                        className={FORM_LABEL}
-                      >
-                        Duration
-                      </label>
-                      <div className="relative">
-                        <select
-                          id="modal-service-duration"
-                          value={duration}
-                          onChange={(e) => setDuration(e.target.value)}
-                          className={`${INPUT_BASE} appearance-none pr-10`}
-                        >
-                          {DURATION_OPTIONS.map((opt) => (
-                            <option
-                              key={opt.value || "empty"}
-                              value={opt.value}
-                            >
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
-                      </div>
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="modal-service-desc"
-                        className={FORM_LABEL}
-                      >
-                        Description
-                      </label>
-                      <textarea
-                        id="modal-service-desc"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="e.g. Includes wash and style, fade on sides"
-                        rows={4}
-                        className={`${INPUT_BASE} resize-y min-h-[100px]`}
-                      />
-                    </div>
-                    <div className="flex items-start justify-between gap-4 py-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                          Premium Hours
-                        </p>
-                        <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-                          Override the days and times you want this service to
-                          be bookable.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={premiumHours}
-                        onClick={() => setPremiumHours((v) => !v)}
-                        className={`relative w-12 h-6 rounded-full transition-colors shrink-0 focus:outline-none ${premiumHours ? "bg-green-600 dark:bg-green-400" : "bg-zinc-300 dark:bg-zinc-700"}`}
-                      >
-                        <span
-                          className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${premiumHours ? "left-7" : "left-1"}`}
-                        />
-                      </button>
-                    </div>
-
-                    {premiumHours && (
-                      <div className="grid grid-cols-2 gap-4 p-4 border border-border bg-white/[0.02] rounded-xl">
-                        <div>
-                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">From</label>
-                          <input
-                            type="time"
-                            value={premiumFrom}
-                            onChange={(e) => setPremiumFrom(e.target.value)}
-                            className={`${INPUT_BASE} [color-scheme:dark]`}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">To</label>
-                          <input
-                            type="time"
-                            value={premiumTo}
-                            onChange={(e) => setPremiumTo(e.target.value)}
-                            className={`${INPUT_BASE} [color-scheme:dark]`}
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">Premium Price</label>
-                          <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50">
-                            <span className="flex items-center px-3 text-zinc-500 dark:text-zinc-400 text-sm border-r border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50">
-                              $
-                            </span>
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              value={premiumPrice}
-                              onChange={(e) => setPremiumPrice(toNumericPrice(e.target.value))}
-                              placeholder="80.00"
-                              className="flex-1 px-3 py-2 bg-transparent text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none text-sm min-w-0"
-                              autoComplete="off"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex items-start justify-between gap-4 py-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                          Offer Promotion
-                        </p>
-                        <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-                          Offer this service at a discount for a certain period
-                          of time.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={offerPromotion}
-                        onClick={() => setOfferPromotion((v) => !v)}
-                        className={`relative w-12 h-6 rounded-full transition-colors shrink-0 focus:outline-none ${offerPromotion ? "bg-green-600 dark:bg-green-400" : "bg-zinc-300 dark:bg-zinc-700"}`}
-                      >
-                        <span
-                          className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${offerPromotion ? "left-7" : "left-1"}`}
-                        />
-                      </button>
-                    </div>
-
-                    {offerPromotion && (
-                      <div className="grid grid-cols-2 gap-4 p-4 border border-border bg-white/[0.02] rounded-xl">
-                        <div>
-                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">From</label>
-                          <input
-                            type="time"
-                            value={promoFrom}
-                            onChange={(e) => setPromoFrom(e.target.value)}
-                            className={`${INPUT_BASE} [color-scheme:dark]`}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">To</label>
-                          <input
-                            type="time"
-                            value={promoTo}
-                            onChange={(e) => setPromoTo(e.target.value)}
-                            className={`${INPUT_BASE} [color-scheme:dark]`}
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">Promotion Price</label>
-                          <div className="flex rounded-lg border border-border bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50">
-                            <span className="flex items-center px-3 text-zinc-500 dark:text-zinc-400 text-sm border-r border-border bg-zinc-50 dark:bg-zinc-800/50">
-                              $
-                            </span>
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              value={promoPrice}
-                              onChange={(e) => setPromoPrice(toNumericPrice(e.target.value))}
-                              placeholder="35.00"
-                              className="flex-1 px-3 py-2 bg-transparent text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none text-sm min-w-0"
-                              autoComplete="off"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </form>
-                </div>
-              </div>
-            )}
-          </div>
-          {/* Global FAB for Services (Mobile Only) */}
-          <button
-            type="button"
-            onClick={() => setMobileModalOpen(true)}
-            className="fixed bottom-24 right-6 z-40 sm:hidden flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground hover:opacity-90 shadow-2xl active:scale-95 transition-all"
-            aria-label="Add service"
-          >
-            <Plus className="w-8 h-8" />
-          </button>
         </div>
       </main>
+
+      {/* Payment Modal - loading / success / failure */}
+      {planToPurchase && (
+        <SubscriptionPaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setPlanToPurchase(null);
+          }}
+          plan={planToPurchase}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }
