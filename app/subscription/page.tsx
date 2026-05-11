@@ -300,7 +300,7 @@ export default function SubscriptionPage() {
               <button
                 type="button"
                 onClick={() => refetchSubscription()}
-                className="flex items-center justify-center p-2 text-sm font-medium text-amber-800 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/40 rounded-lg hover:bg-amber-200 dark:hover:bg-amb[...]
+                className="flex items-center justify-center p-2 text-sm font-medium text-amber-800 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/40 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors"
                 aria-label="Retry"
               >
                 <RefreshCw className="w-4 h-4 sm:mr-2" />
