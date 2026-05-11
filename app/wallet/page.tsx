@@ -133,7 +133,7 @@ export default function WalletPage() {
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <button
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-card border border-border rounded-full text-sm font-bold text-foreground/60 hover:text-foregro[...]
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-card border border-border rounded-full text-sm font-bold text-foreground/60 hover:text-foreground transition-all active:scale-95 shadow-sm"
               >
                 <Filter className="w-4 h-4" />
                 Filter
