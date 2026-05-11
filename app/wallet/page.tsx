@@ -126,7 +126,7 @@ export default function WalletPage() {
               <input
                 type="text"
                 placeholder="Search transactions..."
-                className="w-full bg-card border border-border rounded-full py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transi[...]
+                className="w-full bg-card border border-border rounded-full py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -139,7 +139,7 @@ export default function WalletPage() {
                 Filter
               </button>
               <button
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-card border border-border rounded-full text-sm font-bold text-foreground/60 hover:text-foregro[...]
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-card border border-border rounded-full text-sm font-bold text-foreground/60 hover:text-foreground transition-all active:scale-95 shadow-sm"
               >
                 Export CSV
               </button>
