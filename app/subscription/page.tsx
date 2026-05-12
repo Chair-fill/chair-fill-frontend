@@ -271,6 +271,18 @@ export default function SubscriptionPage() {
     });
   };
 
+  const getNextBillingDate = (startDate: string): string => {
+    const start = new Date(startDate);
+    const next = new Date(start);
+    next.setMonth(next.getMonth() + 1);
+    return next.toISOString();
+  };
+
+  const isValidDate = (dateString: string): boolean => {
+    const d = new Date(dateString);
+    return !isNaN(d.getTime()) && d.getFullYear() > 1971;
+  };
+
   if (isPageLoading) {
     return <PageLoader message="Loading subscription…" />;
   }
@@ -327,9 +339,9 @@ export default function SubscriptionPage() {
                     <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-600 dark:text-zinc-400">
                       <span className="flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
-                        Started: {formatDate(displaySubscription.startDate)}
+                        Next billing: {formatDate(getNextBillingDate(displaySubscription.startDate))}
                       </span>
-                      {displaySubscription.endDate && (
+                      {displaySubscription.endDate && isValidDate(displaySubscription.endDate) && (
                         <span className="flex items-center gap-2">
                           <Calendar className="w-4 h-4" />
                           Ends: {formatDate(displaySubscription.endDate)}
@@ -354,7 +366,7 @@ export default function SubscriptionPage() {
                         <button
                           onClick={() => toggleAutoRenew()}
                           disabled={isLoading}
-                          className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-foreground bg-zinc-100 dark:bg-white/5 border border-border rounded-full hover:bg-foreground/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-foreground bg-zinc-100 dark:bg-white/5 border border-border rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
                           aria-label={`Turn auto-renew ${displaySubscription.autoRenew ? "off" : "on"}`}
                         >
                           {isLoading ? (
@@ -369,7 +381,7 @@ export default function SubscriptionPage() {
                         {!showCancelConfirm ? (
                           <button
                             onClick={() => setShowCancelConfirm(true)}
-                            className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-red-500 bg-red-500/10 border border-red-500/20 rounded-full hover:bg-red-500/20 transition-all"
+                            className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-red-500 bg-red-500/10 border border-red-500/20 rounded-full hover:bg-red-500/20 transition-colors"
                             aria-label="Cancel subscription"
                           >
                             <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
@@ -380,7 +392,7 @@ export default function SubscriptionPage() {
                              <button
                               onClick={handleCancel}
                               disabled={isLoading}
-                              className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-white bg-red-600 rounded-full hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-white bg-red-600 rounded-full hover:bg-red-700 transition-all disabled:opacity-50"
                               aria-label="Confirm cancel"
                             >
                               {isLoading ? (
@@ -394,7 +406,7 @@ export default function SubscriptionPage() {
                             </button>
                             <button
                               onClick={() => setShowCancelConfirm(false)}
-                              className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-foreground bg-zinc-100 dark:bg-white/5 border border-border rounded-full hover:bg-foreground/5 transition-all"
+                              className="flex items-center justify-center p-3 sm:px-4 sm:py-2 text-sm font-semibold text-foreground bg-zinc-100 dark:bg-white/5 border border-border rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors"
                               aria-label="Keep subscription"
                             >
                               <Check className="w-5 h-5 sm:w-4 sm:h-4 text-green-500" />
@@ -417,7 +429,7 @@ export default function SubscriptionPage() {
             ) : (
               <div className="py-4">
                 <p className="text-zinc-600 dark:text-zinc-400 mb-2">
-                  You don’t have an active subscription.
+                  You don't have an active subscription.
                 </p>
                 <p className="text-sm text-zinc-500 dark:text-zinc-500">
                   Select a plan below to get started.
@@ -526,7 +538,7 @@ export default function SubscriptionPage() {
                                   Custom
                                 </span>
                                 <span className="text-zinc-500 dark:text-zinc-400 text-sm">
-                                  — {plan.pricePeriodLabel ?? "Contact us"}
+                                  �� {plan.pricePeriodLabel ?? "Contact us"}
                                 </span>
                               </div>
                             )}
@@ -564,7 +576,7 @@ export default function SubscriptionPage() {
                               isComingSoon || subscribingPlanId !== null
                             }
                             aria-disabled={isCurrentPlan || isComingSoon}
-                            className={`w-full py-3 px-4 rounded-full font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-900 ${
+                            className={`w-full py-3 px-4 rounded-full font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-950 ${
                               isCurrentPlan
                                 ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 cursor-default"
                                 : isComingSoon

@@ -66,9 +66,9 @@ export default function RevenueChart({ data, height = 300 }: RevenueChartProps) 
             className="w-full h-full overflow-visible"
           >
             {/* Grid Lines */}
-            <line x1="0" y1="0" x2="100" y2="0" stroke="currentColor" strokeWidth="0.1" className="text-border/30" />
-            <line x1="0" y1="50" x2="100" y2="50" stroke="currentColor" strokeWidth="0.1" className="text-border/30" />
-            <line x1="0" y1="100" x2="100" y2="100" stroke="currentColor" strokeWidth="0.1" className="text-border/30" />
+            <line x1="0" y1="0" x2="100" y2="0" stroke="currentColor" strokeWidth="0.1" vectorEffect="non-scaling-stroke" className="text-border/30" />
+            <line x1="0" y1="50" x2="100" y2="50" stroke="currentColor" strokeWidth="0.1" vectorEffect="non-scaling-stroke" className="text-border/30" />
+            <line x1="0" y1="100" x2="100" y2="100" stroke="currentColor" strokeWidth="0.1" vectorEffect="non-scaling-stroke" className="text-border/30" />
 
             {/* Area under the line */}
             <path
@@ -85,6 +85,7 @@ export default function RevenueChart({ data, height = 300 }: RevenueChartProps) 
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
               className="text-primary transition-all duration-700 ease-in-out"
               style={{ filter: "drop-shadow(0px 4px 8px rgba(212,175,55,0.3))" }}
             />
@@ -96,6 +97,7 @@ export default function RevenueChart({ data, height = 300 }: RevenueChartProps) 
                 cx={p.x}
                 cy={p.y}
                 r="1.5"
+                vectorEffect="non-scaling-stroke"
                 className="fill-primary border-4 border-background hover:r-2 transition-all cursor-pointer"
               />
             ))}

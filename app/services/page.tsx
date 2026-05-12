@@ -32,7 +32,7 @@ import RichText from "@/app/components/ui/RichText";
 import { useModalKeyboard, useModalScrollLock } from "@/lib/hooks/use-modal";
 
 const INPUT_BASE =
-  "w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50 focus:border-transparent text-sm";
+  "w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50 text-sm";
 
 const DURATION_OPTIONS = [
   { value: "", label: "Select duration" },
@@ -442,7 +442,7 @@ export default function ServicesPage() {
                   <label htmlFor="service-price" className={FORM_LABEL}>
                     Price
                   </label>
-                  <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50 focus-within:border-transparent">
+                  <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50">
                     <span className="flex items-center px-3 text-zinc-500 dark:text-zinc-400 text-sm border-r border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50">
                       $
                     </span>
@@ -486,20 +486,12 @@ export default function ServicesPage() {
                     id="service-desc"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Short description. Use line breaks for new lines, **bold** for bold, and - or * for lists."
+                    placeholder="e.g. Includes wash and style, fade on sides"
                     rows={4}
                     className={`${INPUT_BASE} resize-y min-h-[100px]`}
                   />
                   <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-                    Formatting: new lines, <strong>**bold**</strong>, and lists
-                    with{" "}
-                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800">
-                      - item
-                    </code>{" "}
-                    or{" "}
-                    <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800">
-                      * item
-                    </code>
+                    Optional — describe what's included so clients know what to expect.
                   </p>
                 </div>
 
@@ -555,7 +547,7 @@ export default function ServicesPage() {
                     </div>
                     <div className="col-span-2">
                       <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">Premium Price</label>
-                      <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50 focus-within:border-transparent">
+                      <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50">
                         <span className="flex items-center px-3 text-zinc-500 dark:text-zinc-400 text-sm border-r border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50">
                           $
                         </span>
@@ -625,7 +617,7 @@ export default function ServicesPage() {
                     </div>
                     <div className="col-span-2">
                       <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">Promotion Price</label>
-                      <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50 focus-within:border-transparent">
+                      <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50">
                         <span className="flex items-center px-3 text-zinc-500 dark:text-zinc-400 text-sm border-r border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50">
                           $
                         </span>
@@ -647,7 +639,7 @@ export default function ServicesPage() {
                   <button
                     type="submit"
                     disabled={saving || !name.trim() || !toNumericPrice(price)}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:pointer-events-none transition-all"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:pointer-events-none"
                   >
                     {saving ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -1020,7 +1012,7 @@ export default function ServicesPage() {
                         id="modal-service-desc"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Short description. Use line breaks, **bold**, - or * for lists."
+                        placeholder="e.g. Includes wash and style, fade on sides"
                         rows={4}
                         className={`${INPUT_BASE} resize-y min-h-[100px]`}
                       />
@@ -1070,7 +1062,7 @@ export default function ServicesPage() {
                         </div>
                         <div className="col-span-2">
                           <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">Premium Price</label>
-                          <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50 focus-within:border-transparent">
+                          <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50">
                             <span className="flex items-center px-3 text-zinc-500 dark:text-zinc-400 text-sm border-r border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50">
                               $
                             </span>
@@ -1132,7 +1124,7 @@ export default function ServicesPage() {
                         </div>
                         <div className="col-span-2">
                           <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5 block">Promotion Price</label>
-                          <div className="flex rounded-lg border border-border bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50 focus-within:border-transparent">
+                          <div className="flex rounded-lg border border-border bg-white dark:bg-zinc-800 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-900 dark:focus-within:ring-zinc-50">
                             <span className="flex items-center px-3 text-zinc-500 dark:text-zinc-400 text-sm border-r border-border bg-zinc-50 dark:bg-zinc-800/50">
                               $
                             </span>
