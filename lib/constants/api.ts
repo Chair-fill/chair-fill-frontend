@@ -162,6 +162,13 @@ export const API = {
     /** GET - List my transactions. Query: cursor, from, to, page_size, owner, category?, status?, mode?, paginate? */
     LIST: '/transactions/list',
   },
+  /** Referral program */
+  REFERRAL: {
+    /** GET - Get current user's referral code + stats + history. Creates code if none exists. */
+    ME: '/referrals/me',
+    /** POST - Apply a referral code at signup/checkout. Body: { code: string } */
+    APPLY: '/referrals/apply',
+  },
   /** Analytics */
   ANALYTICS: {
     /** GET - Global transaction stats for a date range. Query: from, to, by (D/M/Y) */
