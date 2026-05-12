@@ -34,7 +34,7 @@ export function removeToken(): void {
 }
 
 /** Routes that do not require authentication */
-export const PUBLIC_ROUTES = ["/login", "/signup", "/forgot-password", "/book"] as const;
+export const PUBLIC_ROUTES = ["/login", "/signup", "/forgot-password", "/book", "/barber-booth-rental", "/shops", "/claim", "/barbers", "/inquiries"] as const;
 
 /** Onboarding steps (require auth; access app only after completing all). */
 export const ONBOARDING_ROUTES = [

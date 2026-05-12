@@ -73,21 +73,9 @@ export default function BookingList({ bookings, selectedDate, isBlocked = false,
             </span>
           )}
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onToggleBlock}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              isBlocked
-                ? "bg-green-500/10 text-green-500 hover:bg-green-500/20 border border-green-500/20"
-                : "bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20"
-            }`}
-          >
-            {isBlocked ? "Unblock Day" : "Block Day"}
-          </button>
-          <span className="text-sm font-medium text-foreground/40 shrink-0">
-            {bookings.length} {bookings.length === 1 ? "booking" : "bookings"}
-          </span>
-        </div>
+        <span className="text-sm font-medium text-foreground/40 shrink-0">
+          {bookings.length} {bookings.length === 1 ? "booking" : "bookings"}
+        </span>
       </div>
 
       {(isBlocked || isClosedByOverride) && (
