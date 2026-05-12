@@ -102,7 +102,7 @@ export default function WalletPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-card rounded-2xl border border-border p-5">
                 <p className="text-xs font-bold text-foreground/40 uppercase tracking-widest mb-1">
-                  Lifetime Credits
+                  Total Earned
                 </p>
                 <p className="text-xl font-bold text-foreground">
                   ${totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -110,7 +110,7 @@ export default function WalletPage() {
               </div>
               <div className="bg-card rounded-2xl border border-border p-5">
                 <p className="text-xs font-bold text-foreground/40 uppercase tracking-widest mb-1">
-                  Lifetime Debits
+                  Total Paid Out
                 </p>
                 <p className="text-xl font-bold text-foreground">
                   ${totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
