@@ -56,11 +56,10 @@ export default function ShopPage({ params }: Props) {
       <main className="min-h-screen bg-background text-foreground">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 pb-20">
 
-          {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-[12px] text-foreground/40 mb-8 font-mono flex-wrap">
             <Link href="/barber-booth-rental" className="hover:text-primary transition-colors">Booth Rental</Link>
             <span>/</span>
-            <Link href={`/barber-booth-rental/${citySlug}`} className="hover:text-primary transition-colors">
+            <Link href={"/barber-booth-rental/" + citySlug} className="hover:text-primary transition-colors">
               {city.name}, {city.state}
             </Link>
             <span>/</span>
@@ -68,7 +67,6 @@ export default function ShopPage({ params }: Props) {
           </nav>
 
           <div className="flex flex-col lg:flex-row gap-8">
-            {/* Main */}
             <div className="flex-1 min-w-0 space-y-6">
               <div>
                 <div className="flex items-center gap-3 flex-wrap mb-2">
@@ -82,25 +80,22 @@ export default function ShopPage({ params }: Props) {
                 <p className="text-[14px] text-foreground/50">{shop.address}</p>
               </div>
 
-              {/* Gallery placeholder */}
               <div className="grid grid-cols-3 gap-2 rounded-xl overflow-hidden">
                 {[0, 1, 2].map((i) => (
                   <div
                     key={i}
-                    className={`bg-card border border-border flex items-center justify-center text-foreground/20 text-[12px] font-mono ${i === 0 ? "col-span-2 h-48" : "h-48"}`}
+                    className={"bg-card border border-border flex items-center justify-center text-foreground/20 text-[12px] font-mono " + (i === 0 ? "col-span-2 h-48" : "h-48")}
                   >
                     {shop.claimed ? "Photo" : "No photos"}
                   </div>
                 ))}
               </div>
 
-              {/* About */}
               <div className="bg-card border border-border rounded-xl p-6">
                 <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-foreground/40 mb-3">About</p>
                 <p className="text-[14px] text-foreground/80 leading-relaxed">{shop.description}</p>
               </div>
 
-              {/* Amenities */}
               {shop.amenities.length > 0 && (
                 <div className="bg-card border border-border rounded-xl p-6">
                   <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-foreground/40 mb-4">Amenities</p>
@@ -114,7 +109,6 @@ export default function ShopPage({ params }: Props) {
                 </div>
               )}
 
-              {/* Booth plans */}
               <div className="bg-card border border-border rounded-xl p-6">
                 <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-foreground/40 mb-4">Booth Plans</p>
                 {shop.hidePricing ? (
@@ -146,7 +140,6 @@ export default function ShopPage({ params }: Props) {
               <ChairFillCTA variant="banner" />
             </div>
 
-            {/* Side rail */}
             <aside className="lg:w-72 shrink-0 space-y-4">
               {shop.claimed ? (
                 <div className="bg-card border border-border rounded-xl p-6 sticky top-20">
