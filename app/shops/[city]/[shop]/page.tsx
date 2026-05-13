@@ -144,7 +144,7 @@ export default async function ShopPage({ params }: Props) {
                     <p className="text-[13px] text-foreground/60">Call directly or claim this listing to enable inquiries.</p>
                   </div>
                   {shop.phone && (
-                    
+                    <a
                       href={"tel:" + shop.phone}
                       className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-border font-semibold text-[14px] hover:border-primary/40 hover:text-primary transition-all"
                     >
