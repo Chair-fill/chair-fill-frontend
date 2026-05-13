@@ -3,10 +3,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { useState, use } from "react";
-import { SHOPS, CITIES, getShop, getCity } from "@/lib/marketplace/data";
+import { SHOPS, getShop, getCity } from "@/lib/marketplace/data";
 import MarketplaceNav from "@/app/components/marketplace/MarketplaceNav";
 import MarketplaceFooter from "@/app/components/marketplace/MarketplaceFooter";
 import ChairFillCTA from "@/app/components/marketplace/ChairFillCTA";
+
+export function generateStaticParams() {
+  return SHOPS.map((s) => ({ city: s.city, shop: s.slug }));
+}
 
 interface Props {
   params: Promise<{ city: string; shop: string }>;
@@ -39,7 +43,6 @@ export default function ShopPage({ params }: Props) {
 
   function handleInquiry(e: React.FormEvent) {
     e.preventDefault();
-    // TODO: POST /marketplace/inquiries { shopSlug, citySlug, ...form }
     setInquirySent(true);
   }
 
@@ -67,7 +70,6 @@ export default function ShopPage({ params }: Props) {
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Main */}
             <div className="flex-1 min-w-0 space-y-6">
-              {/* Header */}
               <div>
                 <div className="flex items-center gap-3 flex-wrap mb-2">
                   <h1 className="font-black text-[clamp(24px,4vw,40px)] leading-tight">{shop.name}</h1>
@@ -147,7 +149,6 @@ export default function ShopPage({ params }: Props) {
             {/* Side rail */}
             <aside className="lg:w-72 shrink-0 space-y-4">
               {shop.claimed ? (
-                /* Inquiry form */
                 <div className="bg-card border border-border rounded-xl p-6 sticky top-20">
                   <p className="font-bold text-[16px] mb-1">Inquire about a booth</p>
                   <p className="text-[13px] text-foreground/50 mb-5">Send a message directly to {shop.name}.</p>
@@ -205,16 +206,13 @@ export default function ShopPage({ params }: Props) {
                   )}
                 </div>
               ) : (
-                /* Unclaimed state */
                 <div className="bg-card border border-border rounded-xl p-6 sticky top-20 space-y-4">
                   <div>
                     <p className="font-bold text-[15px] mb-1">This shop hasn&apos;t been claimed yet.</p>
-                    <p className="text-[13px] text-foreground/60">
-                      Call directly or claim this listing to enable inquiries.
-                    </p>
+                    <p className="text-[13px] text-foreground/60">Call directly or claim this listing to enable inquiries.</p>
                   </div>
                   {shop.phone && (
-                    <a
+                    
                       href={`tel:${shop.phone}`}
                       className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-border font-semibold text-[14px] hover:border-primary/40 hover:text-primary transition-all"
                     >
@@ -223,9 +221,7 @@ export default function ShopPage({ params }: Props) {
                   )}
                   <div className="border-t border-border pt-4">
                     <p className="text-[13px] font-semibold text-foreground mb-1">Own this shop?</p>
-                    <p className="text-[12px] text-foreground/50 mb-3">
-                      Claim it free and start receiving inquiries from barbers.
-                    </p>
+                    <p className="text-[12px] text-foreground/50 mb-3">Claim it free and start receiving inquiries from barbers.</p>
                     <Link
                       href="/claim"
                       className="block text-center py-2.5 rounded-lg bg-primary text-black font-bold text-[13px] hover:brightness-110 transition-all"
@@ -242,11 +238,4 @@ export default function ShopPage({ params }: Props) {
       <MarketplaceFooter />
     </>
   );
-}
-
-// Static params for prerendering
-export { generateStaticParams };
-
-function generateStaticParams() {
-  return SHOPS.map((s) => ({ city: s.city, shop: s.slug }));
 }
