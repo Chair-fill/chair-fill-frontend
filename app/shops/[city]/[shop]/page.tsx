@@ -213,7 +213,7 @@ export default function ShopPage({ params }: Props) {
                   </div>
                   {shop.phone && (
                     
-                      href={`tel:${shop.phone}`}
+                      href={"tel:" + shop.phone}
                       className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-border font-semibold text-[14px] hover:border-primary/40 hover:text-primary transition-all"
                     >
                       📞 {shop.phone}
