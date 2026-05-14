@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import MarketplaceNav from "@/app/components/marketplace/MarketplaceNav";
+import MarketplaceNav from "@/app/components/ui/marketplace/MarketplaceNav";
 
 // Mock threads — swap for GET /marketplace/inquiries when backend is ready
 const MOCK_THREADS = [

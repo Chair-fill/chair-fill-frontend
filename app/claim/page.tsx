@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { SHOPS } from "@/lib/marketplace/data";
-import MarketplaceNav from "@/app/components/marketplace/MarketplaceNav";
-import ChairFillCTA from "@/app/components/marketplace/ChairFillCTA";
+import MarketplaceNav from "@/app/components/ui/marketplace/MarketplaceNav";
+import ChairFillCTA from "@/app/components/ui/marketplace/ChairFillCTA";
 
 type Step = "find" | "verify" | "profile" | "done";
 

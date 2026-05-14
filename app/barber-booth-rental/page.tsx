@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CITIES } from "@/lib/marketplace/data";
-import MarketplaceNav from "@/app/components/marketplace/MarketplaceNav";
-import MarketplaceFooter from "@/app/components/marketplace/MarketplaceFooter";
+import MarketplaceNav from "@/app/components/ui/marketplace/MarketplaceNav";
+import MarketplaceFooter from "@/app/components/ui/marketplace/MarketplaceFooter";
 
 export const metadata: Metadata = {
   title: "Barber Booth Rental — Find Available Chairs Near You | ChairFill",

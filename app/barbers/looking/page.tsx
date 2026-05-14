@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import MarketplaceNav from "@/app/components/marketplace/MarketplaceNav";
+import MarketplaceNav from "@/app/components/ui/marketplace/MarketplaceNav";
 import { CITIES } from "@/lib/marketplace/data";
 
 export default function LookingPage() {

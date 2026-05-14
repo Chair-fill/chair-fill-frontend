@@ -7,9 +7,9 @@ import {
   getShopsByCity,
   countLookingBarbersForCity,
 } from "@/lib/marketplace/data";
-import MarketplaceNav from "@/app/components/marketplace/MarketplaceNav";
-import MarketplaceFooter from "@/app/components/marketplace/MarketplaceFooter";
-import ChairFillCTA from "@/app/components/marketplace/ChairFillCTA";
+import MarketplaceNav from "@/app/components/ui/marketplace/MarketplaceNav";
+import MarketplaceFooter from "@/app/components/ui/marketplace/MarketplaceFooter";
+import ChairFillCTA from "@/app/components/ui/marketplace/ChairFillCTA";
 
 interface Props {
   params: Promise<{ city: string }>;
