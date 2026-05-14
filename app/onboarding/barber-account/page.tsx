@@ -27,6 +27,7 @@ export default function BarberAccountPage() {
   const [state, setState] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccessRedirect, setIsSuccessRedirect] = useState(false);
 
   const country = "United States";
 
@@ -55,6 +56,7 @@ export default function BarberAccountPage() {
       return;
     }
     setIsSubmitting(true);
+    let success = false;
     try {
       await createTechnician({
         nick_name: nickName.trim() || undefined,
@@ -65,19 +67,24 @@ export default function BarberAccountPage() {
         },
       });
       await refetchProgress();
+      success = true;
+      setIsSuccessRedirect(true);
       router.replace(ONBOARDING_CHOOSE_PLAN);
       router.refresh();
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
-      setIsSubmitting(false);
+      if (!success) {
+        setIsSubmitting(false);
+      }
     }
   };
 
-  const loading = isTechnicianLoading || isSubmitting;
+  const loading = isTechnicianLoading || isSubmitting || isSuccessRedirect;
 
   // Wait for progress before showing content (avoids flash before redirect)
-  if (isProgressLoading || progress == null) {
+  const isAutoRedirecting = !isProgressLoading && progress != null && (progress.has_subscribed === true || progress.is_technician === true);
+  if (isProgressLoading || progress == null || isAutoRedirecting || isSuccessRedirect) {
     return <PageLoader message="Loading…" />;
   }
 

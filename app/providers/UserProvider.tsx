@@ -128,7 +128,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Only clear user after initial restore has completed, so a 401 from a parallel request (e.g. technician/me) doesn't log the user out on reload.
   useEffect(() => {
     setUnauthorizedHandler(() => {
-      if (restoreCompletedRef.current) setUser(null);
+      if (restoreCompletedRef.current) {
+        clearSessionOnly();
+        setUser(null);
+      }
     });
   }, []);
 
@@ -157,11 +160,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
     if (!token) {
       try {
-        const stored = localStorage.getItem(STORAGE_KEY_USER);
-        if (stored) {
-          const parsed = JSON.parse(stored) as UserProfile;
-          setUser({ ...parsed, defaultOutreachMessage: parsed.defaultOutreachMessage ?? storage.defaultOutreachMessage.get() ?? null });
-        }
+        localStorage.removeItem(STORAGE_KEY_USER);
       } catch {
         // ignore
       }
@@ -207,7 +206,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => {
-        removeToken();
+        clearSessionOnly();
         setUser(null);
       })
       .finally(() => {

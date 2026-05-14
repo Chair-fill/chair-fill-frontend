@@ -49,6 +49,7 @@ export default function OnboardingChoosePlanPage() {
   );
   const [error, setError] = useState("");
   const [didRefetchTechnician, setDidRefetchTechnician] = useState(false);
+  const [isSuccessRedirect, setIsSuccessRedirect] = useState(false);
 
   const technicianId = technician?.technician_id ?? technician?.id;
 
@@ -164,10 +165,13 @@ export default function OnboardingChoosePlanPage() {
     }
     setError("");
     setSubscribingPlanId(plan.id);
+    let success = false;
     try {
       if (isDemoMode()) {
         await new Promise((r) => setTimeout(r, 800));
         await refetchProgress();
+        success = true;
+        setIsSuccessRedirect(true);
         router.push("/contacts");
         return;
       }
@@ -188,6 +192,8 @@ export default function OnboardingChoosePlanPage() {
           (raw as { data?: { checkoutSession?: { url?: string } } }).data
             ?.checkoutSession?.url);
       if (checkoutUrl && typeof checkoutUrl === "string") {
+        success = true;
+        setIsSuccessRedirect(true);
         window.location.href = checkoutUrl;
         return;
       }
@@ -197,7 +203,9 @@ export default function OnboardingChoosePlanPage() {
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
-      setSubscribingPlanId(null);
+      if (!success) {
+        setSubscribingPlanId(null);
+      }
     }
   };
 
@@ -215,8 +223,12 @@ export default function OnboardingChoosePlanPage() {
   };
 
   // Full-page loading until progress, technician (when needed), and plans are ready
+  const isAutoRedirecting = !isDemoMode() && !isProgressLoading && progress != null && (progress.has_subscribed === true || progress.is_technician !== true);
+  
   const isPageLoading =
     isLoadingPlans ||
+    isAutoRedirecting ||
+    isSuccessRedirect ||
     (!isDemoMode() && (isProgressLoading || progress == null)) ||
     (!isDemoMode() &&
       progress?.is_technician === true &&

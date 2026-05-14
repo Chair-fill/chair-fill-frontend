@@ -164,7 +164,7 @@ export default function LoginPage() {
   return (
     <AuthLayout>
       <div className="text-center mb-8 flex flex-col items-center">
-        <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
+        <h1 className="text-2xl font-bold text-foreground">Welcome back testing staging</h1>
         <p className={AUTH_SUBTITLE}>
           {step === "credentials"
             ? "Enter your email and password to continue"
