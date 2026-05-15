@@ -5,6 +5,7 @@ import ConditionalHeader from "@/app/components/layout/ConditionalHeader";
 import ConditionalBottomNav from "@/app/components/layout/ConditionalBottomNav";
 import Providers from "@/app/providers/Providers";
 import RequireAuth from "@/app/components/auth/RequireAuth";
+import EmailCapturePopup from "@/app/components/EmailCapturePopup";
 
 const satoshi = localFont({
   src: [
@@ -75,6 +76,7 @@ export default function RootLayout({
             <RequireAuth>{children}</RequireAuth>
           </div>
           <ConditionalBottomNav />
+          <EmailCapturePopup />
         </Providers>
       </body>
     </html>
